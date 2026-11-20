@@ -1,0 +1,3 @@
+[submodule "strix-src"]
+	path = strix-src
+	url = https://github.com/usestrix/strix.git

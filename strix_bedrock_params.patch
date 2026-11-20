@@ -1,0 +1,23 @@
+diff --git a/strix/core/inputs.py b/strix/core/inputs.py
+index 22f2012..beb6ac1 100644
+--- a/strix/core/inputs.py
++++ b/strix/core/inputs.py
+@@ -280,6 +280,18 @@ def make_model_settings(
+                 extra_args={**(model_settings.extra_args or {}), **cache_extra_args},
+             ),
+         )
++    # LiteLLM maps standard Bedrock parameters only when supplied at the top
++    # level; extra_body is reserved for provider-specific request fields.
++    if model_name.startswith("bedrock/") and model_settings.extra_body:
++        body = dict(model_settings.extra_body)
++        if "max_tokens" in body:
++            model_settings.max_tokens = body.pop("max_tokens")
++        if "service_tier" in body:
++            model_settings.extra_args = {
++                **(model_settings.extra_args or {}),
++                "service_tier": body.pop("service_tier"),
++            }
++        model_settings.extra_body = body or None
+     return model_settings
+ 
+ 

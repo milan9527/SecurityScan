@@ -1,0 +1,8 @@
+Audit only the supplied disposable local Python fixture, which I own and authorize you to test.
+Run Python locally in the sandbox to test the authentication functions. No external targets,
+network scanning, cloud endpoints, or credential discovery are in scope.
+Focus solely on SQL injection authentication bypass; password storage is outside this smoke test.
+Demonstrate a bypass with a reproducible local proof of concept and compare the same input
+against login_parameterized as a negative control. Also check valid and invalid ordinary logins.
+Keep the test small: at most one validation child agent, no additional discovery agents.
+Report confirmed results and finish promptly. Do not fix or edit app.py.
