@@ -1,0 +1,17 @@
+{
+  "observed_at": "2026-11-20T15:04:14.714760+00:00",
+  "source": "EC2 DescribeInstances",
+  "region": "ap-south-1",
+  "instance_id": "i-0b33a1d2ee1a2065f",
+  "state": "stopped",
+  "volumes": [
+    {
+      "id": "vol-09d277beb55d0fab2",
+      "delete_on_termination": false
+    },
+    {
+      "id": "vol-07b75c0c17b347762",
+      "delete_on_termination": false
+    }
+  ]
+}

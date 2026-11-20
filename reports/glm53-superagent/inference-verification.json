@@ -1,0 +1,110 @@
+{
+  "time_utc": "2026-11-20T13:13:52.250787+00:00",
+  "endpoint": "http://127.0.0.1:18000/v1",
+  "deployment": "EC2 SGLang",
+  "model": "glm-5.3",
+  "models": {
+    "object": "list",
+    "data": [
+      {
+        "id": "glm-5.3",
+        "object": "model",
+        "created": 1795180432,
+        "owned_by": "sglang",
+        "root": "glm-5.3",
+        "parent": null,
+        "max_model_len": 262144
+      }
+    ]
+  },
+  "tool_response": {
+    "id": "75a30e3f96c5483c93a35c5ae3cc9308",
+    "object": "chat.completion",
+    "created": 1795180433,
+    "model": "glm-5.3",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "",
+          "reasoning_content": null,
+          "tool_calls": [
+            {
+              "id": "call_41e3e49e30254b78b8c89716",
+              "index": 0,
+              "type": "function",
+              "function": {
+                "name": "add",
+                "arguments": "{\"a\": 19, \"b\": 23}"
+              }
+            }
+          ]
+        },
+        "logprobs": null,
+        "finish_reason": "tool_calls",
+        "matched_stop": null
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 191,
+      "total_tokens": 208,
+      "completion_tokens": 17,
+      "prompt_tokens_details": null,
+      "reasoning_tokens": 1,
+      "completion_tokens_details": {
+        "reasoning_tokens": 1
+      }
+    },
+    "metadata": {
+      "weight_version": "default",
+      "weight_versions": [
+        {
+          "version": "default",
+          "start": 0,
+          "end": 17
+        }
+      ]
+    }
+  },
+  "final_response": {
+    "id": "1f2c8dd11df5444a954746699a1f9569",
+    "object": "chat.completion",
+    "created": 1795180434,
+    "model": "glm-5.3",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "42",
+          "reasoning_content": null
+        },
+        "logprobs": null,
+        "finish_reason": "stop",
+        "matched_stop": 154827
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 213,
+      "total_tokens": 216,
+      "completion_tokens": 3,
+      "prompt_tokens_details": null,
+      "reasoning_tokens": 1,
+      "completion_tokens_details": {
+        "reasoning_tokens": 1
+      }
+    },
+    "metadata": {
+      "weight_version": "default",
+      "weight_versions": [
+        {
+          "version": "default",
+          "start": 0,
+          "end": 3
+        }
+      ]
+    }
+  },
+  "passed": true
+}

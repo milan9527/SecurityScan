@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-11-20T14:41:30.100550+00:00",
+  "python": "3.9.25 (main, Oct 19 2026, 00:00:00) \n[GCC 11.5.0 20240719 (Red Hat 11.5.0-5)]",
+  "test": "python -m zipfile -e with ../marker.txt",
+  "exit_code": 0,
+  "outside_marker_exists": false,
+  "inside_marker_exists": true,
+  "extracted_files": [
+    "test.zip",
+    "extract/marker.txt"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "verdict": "Traversal not reproduced; archive member normalized into extraction root. Finding evidence contradicted on tested interpreter; production interpreter not tested."
+}
