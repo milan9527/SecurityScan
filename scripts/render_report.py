@@ -54,8 +54,8 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <main>
 <div class="cards" aria-label="测试摘要">
 <div class="card"><b>4 场景 / 770 请求</b><span>32 条原始发现，尚未全部核验</span></div>
-<div class="card"><b>40 / 40</b><span>流式审计请求正常结束并产生正文</span></div>
-<div class="card"><b>0.339 秒</b><span>并发 2 TTFT p50；首次正文 7.330 秒</span></div>
+<div class="card"><b>120 / 120</b><span>独立对照请求正常结束并产生正文</span></div>
+<div class="card"><b>9.89 秒</b><span>MTP 并发 2 TTOT 均值，降低 49.6%</span></div>
 </div>
 """ + body + """
 </main>

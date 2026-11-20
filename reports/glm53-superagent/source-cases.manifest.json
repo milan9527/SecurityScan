@@ -1,0 +1,105 @@
+{
+  "commit": "0a20b8b14ab9abdf7301ec1e475be2d6dc2effde",
+  "cases": {
+    "auth": {
+      "files": [
+        {
+          "path": "super-agent/backend/src/middleware/auth.ts",
+          "bytes": 9191,
+          "sha256": "ba2f23b31743495374eb71c3d50929556b0459a5c7c3cfce8e62234f09066fc5"
+        },
+        {
+          "path": "super-agent/backend/src/authorization/auth.middleware.ts",
+          "bytes": 3665,
+          "sha256": "b9bb000e4d8e2618f2f13cb03583bfeca8a93b12c2de8a7c8af5aff6ec5e8b9a"
+        },
+        {
+          "path": "super-agent/backend/src/authorization/authorization.ts",
+          "bytes": 3361,
+          "sha256": "3e05883a76edbeb547c4789f29d846a772918be5066b4ba8c043f1b733c637e9"
+        },
+        {
+          "path": "super-agent/backend/src/authorization/permissions.ts",
+          "bytes": 3359,
+          "sha256": "f10f004b61270bcc5ae5dfc3a11548f378585495fa6943230e2f10d439089b0a"
+        },
+        {
+          "path": "super-agent/backend/src/routes/auth.routes.ts",
+          "bytes": 11610,
+          "sha256": "8bcfcbad6772b8897eb317ef28661ddc221465a6aac693666c0cf49cddb35b9c"
+        }
+      ],
+      "prompt_chars": 35407
+    },
+    "paths": {
+      "files": [
+        {
+          "path": "super-agent/backend/src/routes/files.routes.ts",
+          "bytes": 8671,
+          "sha256": "9228c210870a3edb9cb0dc8aab7aa33ea31ce4c73bd26246ea171efc2a00730c"
+        },
+        {
+          "path": "super-agent/backend/src/services/workspace-manager.ts",
+          "bytes": 66591,
+          "sha256": "afb14005275efa7603204847cd269d913eff4233d432e8bf52e61e818d9478a0"
+        },
+        {
+          "path": "super-agent/backend/src/services/workflow-workspace.ts",
+          "bytes": 10267,
+          "sha256": "4eb04c2356152e71f8c93907eed126da11f850f6951e61ef89875b0de3d7fd43"
+        },
+        {
+          "path": "super-agent/agentcore/src/workspace-sync.ts",
+          "bytes": 4803,
+          "sha256": "71845bf4b49d4bc946ee5c4d18c3b2bb336e24eb9bbbab1c2854b56273332049"
+        }
+      ],
+      "prompt_chars": 103208
+    },
+    "webhook": {
+      "files": [
+        {
+          "path": "super-agent/backend/src/routes/webhooks.routes.ts",
+          "bytes": 13464,
+          "sha256": "ecf38f3223cf511589a44b297ac2902c7b8f20cbe467cbd1e5ab77ead11692fc"
+        },
+        {
+          "path": "super-agent/backend/src/services/webhook.service.ts",
+          "bytes": 15621,
+          "sha256": "6dfa0162ce0426441a054f71271b5f4f6496d3aaf2c93507f7ba9eb815955aa7"
+        },
+        {
+          "path": "super-agent/backend/src/services/oauth-flow.service.ts",
+          "bytes": 7915,
+          "sha256": "3dd69eb35287f010f3fafff0283617ca56a43134ecd66c008119f368672f1142"
+        }
+      ],
+      "prompt_chars": 42811
+    },
+    "tools": {
+      "files": [
+        {
+          "path": "super-agent/backend/src/routes/execution.routes.ts",
+          "bytes": 20725,
+          "sha256": "3882f3144902e369fdd1e7f338495afed2e2f2c7304358e78e3446e39ccdcea2"
+        },
+        {
+          "path": "super-agent/backend/src/routes/mcp.routes.ts",
+          "bytes": 12314,
+          "sha256": "14f36ee07289571f835f9337d391fc9bbfefd40fa4cd09960ca28a1a951a4bb8"
+        },
+        {
+          "path": "super-agent/agentcore/src/agent-runner.ts",
+          "bytes": 19840,
+          "sha256": "9b3ca61708fc05498042fa63576a9eef5defa0303909902b3dec8d99a6946b3d"
+        },
+        {
+          "path": "super-agent/agentcore/src/index.ts",
+          "bytes": 4699,
+          "sha256": "0491a978e65e360643f10fb06f702261b70e5d18167964f593fceccc4506d64b"
+        }
+      ],
+      "prompt_chars": 66047
+    }
+  }
+}

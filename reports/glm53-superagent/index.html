@@ -31,8 +31,8 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <main>
 <div class="cards" aria-label="测试摘要">
 <div class="card"><b>4 场景 / 770 请求</b><span>32 条原始发现，尚未全部核验</span></div>
-<div class="card"><b>40 / 40</b><span>流式审计请求正常结束并产生正文</span></div>
-<div class="card"><b>0.339 秒</b><span>并发 2 TTFT p50；首次正文 7.330 秒</span></div>
+<div class="card"><b>120 / 120</b><span>独立对照请求正常结束并产生正文</span></div>
+<div class="card"><b>9.89 秒</b><span>MTP 并发 2 TTOT 均值，降低 49.6%</span></div>
 </div>
 <h1>GLM-5.3 自建推理与 Strix 仓库测试（2026-11-20）</h1>
 <h2>测试对象与环境</h2>
@@ -103,7 +103,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </li>
 </ol>
 <p>其余发现未完成独立验证。模型生成的 PoC 描述及 CVE 编号均应逐项核验，不宜直接作为可利用漏洞发布。</p>
-<h2>流式性能测试方法</h2>
+<h2>历史流式性能测试方法</h2>
 <p>另用四份实际源码包做只读审计请求，分别覆盖认证、路径、Webhook、工具，输入约 9399 / 27662 / 11281 / 17698 tokens。每个场景在并发 1 和 2 下各重复 5 次，共 40 次正式请求，另有一次排除统计的预热。</p>
 <ul>
 <li>输出预算 32768 tokens，reasoning_effort=low，temperature=0。该预算与推理档位降低了先前 8192/high 配置中思考耗尽输出预算的风险；由于输入也发生变化，不能将差异归因于单个参数。</li>
@@ -114,7 +114,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <li>每个并发档只有 20 个样本，p95 为插值估计。非 InferenceX 同协议实验，不能直接用于与其排名比较。</li>
 <li><code>useful_completion</code> 只表示存在正文、正常 stop 且无协议错误，不代表审计结论正确。</li>
 </ul>
-<h2>流式性能结果</h2>
+<h2>历史流式性能结果</h2>
 <p>40/40 次正式请求均正常结束并产生正文；错误、截断和仅思考无正文均为 0。</p>
 <table>
 <thead>
@@ -148,10 +148,155 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </table>
 <p>并发 1 / 2 的 e2e p50 分别为 18.819 / 19.135 秒；近似 TPOT p50 分别为 7.641 / 8.094 毫秒。吞吐量为该批所有输出 tokens 除以批次墙钟时间，包含思考 tokens，不能当作每请求正文生成速度。</p>
 <p>请求指标和汇总：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/stream-metrics.jsonl">stream-metrics.jsonl</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/stream-summary.json">stream-summary.json</a>。发布的请求指标仅移除模型回答正文，保留预热标记、时序和 token 用量；统计排除预热。此次样本证明 32768 输出预算与 low 推理配置下能够完成这些源码审计请求，不能保证更大任务永不耗尽预算。Strix 上下文与输出预算覆盖参数的相关测试此前已通过（22 项）。</p>
+<h2>精简输出与 MTP 独立对照（已完成）</h2>
+<p>三组共享相同模型、源码和输出预算，精简组只追加格式要求，MTP 组只启用 NextN/EAGLE；没有同时叠加两项优化。每组 40 次正式请求和 4 次预热，正式请求共 <strong>120/120 正常结束且有正文，错误和截断均为 0</strong>。这次在 GPU 实例 localhost 测量，与上面的历史 SSM 测量分开。</p>
+<table>
+<thead>
+<tr>
+<th>组别</th>
+<th style="text-align:right">并发</th>
+<th style="text-align:right">请求数</th>
+<th style="text-align:right">TTOT 均值 / p50 / p95（秒）</th>
+<th style="text-align:right">相对基线均值</th>
+<th style="text-align:right">TPOT 均值（毫秒）</th>
+<th style="text-align:right">聚合输出 tokens/s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">20</td>
+<td style="text-align:right">19.65 / 19.51 / 28.52</td>
+<td style="text-align:right">—</td>
+<td style="text-align:right">8.197</td>
+<td style="text-align:right">121.38</td>
+</tr>
+<tr>
+<td>concise</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">20</td>
+<td style="text-align:right">15.77 / 15.11 / 21.70</td>
+<td style="text-align:right">−19.7%</td>
+<td style="text-align:right">8.197</td>
+<td style="text-align:right">121.30</td>
+</tr>
+<tr>
+<td>mtp</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">20</td>
+<td style="text-align:right">8.64 / 7.06 / 14.20</td>
+<td style="text-align:right">−56.0%</td>
+<td style="text-align:right">3.476</td>
+<td style="text-align:right">284.01</td>
+</tr>
+<tr>
+<td>baseline</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">20</td>
+<td style="text-align:right">19.63 / 20.52 / 28.08</td>
+<td style="text-align:right">—</td>
+<td style="text-align:right">8.594</td>
+<td style="text-align:right">227.43</td>
+</tr>
+<tr>
+<td>concise</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">20</td>
+<td style="text-align:right">17.24 / 14.94 / 28.07</td>
+<td style="text-align:right">−12.2%</td>
+<td style="text-align:right">8.587</td>
+<td style="text-align:right">225.72</td>
+</tr>
+<tr>
+<td>mtp</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">20</td>
+<td style="text-align:right">9.89 / 9.04 / 15.22</td>
+<td style="text-align:right">−49.6%</td>
+<td style="text-align:right">4.023</td>
+<td style="text-align:right">482.07</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>组别</th>
+<th style="text-align:right">并发</th>
+<th style="text-align:right">TTFT 均值 / p50 / p95（秒）</th>
+<th style="text-align:right">首次正文均值（秒）</th>
+<th style="text-align:right">E2E 均值（秒）</th>
+<th style="text-align:right">平均输出 / 思考 tokens</th>
+<th style="text-align:right">平均正文字符数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">0.067 / 0.065 / 0.072</td>
+<td style="text-align:right">7.868</td>
+<td style="text-align:right">19.655</td>
+<td style="text-align:right">2385.6 / 948.9</td>
+<td style="text-align:right">5714.9</td>
+</tr>
+<tr>
+<td>concise</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">0.071 / 0.071 / 0.072</td>
+<td style="text-align:right">0.330</td>
+<td style="text-align:right">15.784</td>
+<td style="text-align:right">1914.7 / 32.4</td>
+<td style="text-align:right">7704.5</td>
+</tr>
+<tr>
+<td>mtp</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">0.073 / 0.070 / 0.082</td>
+<td style="text-align:right">3.622</td>
+<td style="text-align:right">8.644</td>
+<td style="text-align:right">2454.9 / 983.2</td>
+<td style="text-align:right">5831.3</td>
+</tr>
+<tr>
+<td>baseline</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">0.071 / 0.064 / 0.115</td>
+<td style="text-align:right">7.150</td>
+<td style="text-align:right">19.643</td>
+<td style="text-align:right">2275.9 / 822.9</td>
+<td style="text-align:right">5780.2</td>
+</tr>
+<tr>
+<td>concise</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">0.071 / 0.071 / 0.073</td>
+<td style="text-align:right">0.595</td>
+<td style="text-align:right">17.245</td>
+<td style="text-align:right">1998.0 / 61.8</td>
+<td style="text-align:right">7926.9</td>
+</tr>
+<tr>
+<td>mtp</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">0.160 / 0.074 / 0.930</td>
+<td style="text-align:right">4.389</td>
+<td style="text-align:right">9.895</td>
+<td style="text-align:right">2415.9 / 1007.4</td>
+<td style="text-align:right">5540.2</td>
+</tr>
+</tbody>
+</table>
+<p><strong>结论：MTP 是本次更有效的 TTOT 优化。</strong> 并发 1 / 2 的 TPOT 分别降低 57.6% / 53.2%，即使平均输出 tokens 增加 2.9% / 6.2%，请求仍明显变快。服务日志确认加载 GLM NextN，TP0 的接受长度约 2.40–2.65、接受率约 0.47–0.55。不过，并发 2 的 TTFT p95 从 0.115 秒升至 0.930 秒，不能声称所有延迟指标均改善。</p>
+<p><strong>精简指令缩短了思考，并没有缩短正文。</strong> 思考 tokens 减少约 96.6% / 92.5%，正文字符数反而增加约 34.8% / 37.1%；TPOT 基本不变。它提前呈现正文、降低总输出和平均 TTOT，但不能将其解释成“正文压缩成功”。并发 2 的 TTOT p95 几乎没有改善。</p>
+<p>人工阅读了三组每场景、每并发的首份响应，共 24 份。核心源码风险有保留，但各组均存在前提遗漏、错误验证建议和未经执行就声称观察到结果的问题；没有证明质量无损。MTP 路径响应仍出现 Python Zip Slip、默认 Git 行为的错误主张，个别修复建议把路径相对计算参数写反。详见 <a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ABLATION-QUALITY.md">质量核验</a>。本轮没有执行这些响应中的 PoC，也不是完整 Strix 工具循环的加速测量。</p>
+<p>固定按 baseline → concise → mtp 执行，非随机交错；每场景/并发只有 5 次，汇总每格 20 次。每组清空缓存后预热，测试代表重复审计负载。模型加载不计入请求时间，TPOT 是客户端流式估算。与 InferenceX 的模型版本、量化、缓存命中、输入输出长度和硬件条件未对齐，不能直接排名；此前参考数据中的 B200 条目是 GLM-5.2，B300 条目才是 GLM-5.3。</p>
+<p>复现与证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ABLATION-PROTOCOL.md">实验协议</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/comparison.json">统计汇总</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/baseline-metrics.jsonl">baseline 指标</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/concise-metrics.jsonl">concise 指标</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/mtp-metrics.jsonl">MTP 指标</a>。公开指标移除回答正文；原始答案与运行日志已保存在本地和私有 S3 备份，供复核。</p>
 <h2>Codex 对话断流</h2>
 <p><code>stream closed before response.completed</code> <strong>仍未证实修复</strong>。这是 Codex 到其模型提供方的连接，与本轮自建 GLM 推理链路不同。后台扫描完成不代表对话流故障解决。已保留请求 ID、时间和配置限制：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/stream-incident-20261120.md">故障记录</a>。需要服务端按请求 ID 关联调查，现有证据不足以确定断开连接的具体环节。</p>
 <h2>资源收尾</h2>
-<p>40 次正式流式测试结束且结果落盘后，已调用 <code>StopInstances</code>。截至 2026-11-20T15:04:14.714760+00:00，<code>DescribeInstances</code> 已确认实例为 <strong>stopped</strong>。未执行 terminate，未取消持久型 Spot。两块 EBS（200 GB 根盘和 2048 GB 模型缓存盘）保留，DeleteOnTermination=false，仍产生存储费用。最新观察见 <a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/resource-status.json">resource-status.json</a>。</p>
+<p>120 次正式对照请求完成后，结果归档并验证上传至私有 S3。2026-11-20 16:22:29 UTC 调用 <code>StopInstances</code>，随后 <code>DescribeInstances</code> 已确认 GPU 实例 <strong>stopped</strong>。未执行 terminate，未取消持久型 Spot。两块 EBS（200 GB 根盘和 2048 GB 模型缓存盘）保留，DeleteOnTermination=false，仍产生存储费用。最新观察及备份校验见 <a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/resource-status.json">resource-status.json</a>。</p>
 
 </main>
 <footer>从 RESULTS.md 自动生成。证据链接指向 GitHub；阅读本文无需外部脚本或样式。
