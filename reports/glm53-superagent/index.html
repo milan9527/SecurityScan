@@ -17,6 +17,7 @@ main{max-width:1100px;margin:24px auto;background:white;border:1px solid var(--l
 .card b{display:block;font-size:28px}.card span{color:var(--muted)}
 h1{font-size:27px;line-height:1.45}h2{font-size:22px;margin-top:38px;border-bottom:1px solid var(--line);padding-bottom:8px}
 a{color:var(--accent);text-underline-offset:3px;overflow-wrap:anywhere}
+svg{display:block;width:100%;height:auto;margin:20px 0}
 code{font-size:.88em;background:#f1f4f7;border-radius:3px;padding:2px 4px;overflow-wrap:anywhere}
 table{display:block;overflow-x:auto;border-collapse:collapse;width:100%;font-size:14px;margin:20px 0}
 th,td{padding:12px;border:1px solid var(--line);white-space:nowrap}th{background:#eaf2f6;text-align:left}
@@ -26,16 +27,110 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </style>
 </head>
 <body>
-<header><p>SECURITYSCAN · 2026-11-20</p><strong>GLM-5.3 × Strix</strong>
+<header><p>SECURITYSCAN · 2026-11-21</p><strong>GLM-5.3 × Strix</strong>
 <p>EC2 自建模型 · 仓库审计 · 流式推理实测</p></header>
 <main>
 <div class="cards" aria-label="测试摘要">
-<div class="card"><b>4 场景 / 770 请求</b><span>32 条原始发现，尚未全部核验</span></div>
-<div class="card"><b>120 / 120</b><span>独立对照请求正常结束并产生正文</span></div>
-<div class="card"><b>9.89 秒</b><span>MTP 并发 2 TTOT 均值，降低 49.6%</span></div>
+<div class="card"><b>637 / 637 请求</b><span>完整 Strix deep 扫描完成，用时 704 秒</span></div>
+<div class="card"><b>29 条待核验</b><span>611 次工具调用；发现数不等于已确认漏洞数</span></div>
+<div class="card"><b>10.213 / 11.105 秒</b><span>独立流式 TTOT 均值，并发 1 / 2；24/24 成功</span></div>
 </div>
-<h1>GLM-5.3 自建推理与 Strix 仓库测试（2026-11-20）</h1>
-<h2>测试对象与环境</h2>
+<h1>GLM-5.3 自建推理与 Strix 仓库测试（更新于 2026-11-21）</h1>
+<h2>最新测试结论（2026-11-21）</h2>
+<p><strong>完整 Strix deep 扫描已完成，用时 704 秒（11 分 44 秒）；637/637 次模型请求成功，611 次工具调用。</strong> 单次模型请求平均延迟为 <strong>4.001 秒</strong>。生成 <strong>29 条待独立核验发现</strong>：Critical 6、High 6、Medium 12、Low 4、Info 1。退出码 2 表示发现达到 fail-on 阈值；产物状态为 <code>completed</code>，不是模型调用失败。</p>
+<p>目标为 <code>agentcore-superagent-update</code> 的固定提交 <code>0a20b8b14ab9abdf7301ec1e475be2d6dc2effde</code>。完成时间为 <strong>2026-11-21 04:15 UTC</strong>，运行 ID 为 <code>agentcore-superagent-update_e35b</code>。704 秒不包含模型加载（本次约 25 分钟）。发现尚未逐项核验，也不能与历史 32 条直接相加为独立漏洞数。</p>
+<h3>本轮测试部署架构</h3>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="540" viewBox="0 0 1100 540" role="img" aria-labelledby="title desc">
+<title id="title">GLM-5.3 自建 Strix 测试部署架构</title><desc id="desc">控制主机经 AWS Systems Manager 端口转发访问 Mumbai GPU EC2 上的 SGLang 服务；扫描证据用于生成 Markdown 和 HTML 报告。</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#096770"/></marker></defs>
+<rect width="1100" height="540" rx="16" fill="#edf2f6"/>
+<g font-family="system-ui,sans-serif" fill="#172d43"><text x="30" y="38" font-size="24" font-weight="bold">GLM-5.3 × Strix · EC2 自建推理 · 2026-11-21</text>
+<rect x="25" y="65" width="455" height="365" rx="12" fill="white" stroke="#b5cad8"/><text x="45" y="98" font-size="20" font-weight="bold">控制主机 / 测试工作区</text>
+<text x="45" y="133" font-size="16">systemd: glm53-full-suite（后台执行）</text>
+<text x="45" y="165" font-size="16">就绪检查 → 模型验证 → 流式基准 → Strix deep</text>
+<rect x="45" y="190" width="415" height="92" rx="8" fill="#eaf2f6"/><text x="60" y="218" font-size="17">Strix Agent + Docker 工具沙箱</text><text x="60" y="247" font-size="15">本地目标：agentcore-superagent-update</text><text x="60" y="270" font-size="14">固定提交 0a20b8b… · 源码审计 / 隔离验证</text>
+<text x="45" y="320" font-size="17">OpenAI-compatible API: 127.0.0.1:18000/v1</text><text x="45" y="355" font-size="16">systemd: glm53-test-tunnel</text><text x="45" y="394" font-size="16">JSONL / Strix 产物 → README + HTML</text>
+<rect x="670" y="65" width="405" height="365" rx="12" fill="white" stroke="#b5cad8"/><text x="690" y="98" font-size="20" font-weight="bold">GPU EC2 · ap-south-1a（Mumbai）</text>
+<text x="690" y="131" font-size="17">p6-b200.48xlarge · 8 × NVIDIA B200</text><text x="690" y="160" font-size="15">持久型 Spot · i-0b33a1d2ee1a2065f</text>
+<rect x="690" y="184" width="365" height="167" rx="8" fill="#e5f4f0"/><text x="705" y="212" font-size="17">SGLang 0.5.23 · :8000/v1</text><text x="705" y="240" font-size="16">zai-org/GLM-5.3 · TP8 · FP8 KV</text><text x="705" y="268" font-size="15">MTP / EAGLE: steps 3 · top-k 1 · draft 4</text><text x="705" y="296" font-size="15">context 262144 · max-running-requests 2</text><text x="705" y="328" font-size="15">container: glm53-mtp-ablation</text>
+<text x="690" y="382" font-size="16">保留 EBS：200 GiB 根盘 + 2048 GiB 缓存</text><text x="690" y="410" font-size="15">/model-cache · 测试结束后按要求保持运行</text>
+<path d="M480 310 H665" stroke="#096770" stroke-width="3" marker-end="url(#arrow)"/><text x="500" y="248" font-size="16">AWS SSM</text><text x="500" y="274" font-size="16">端口转发</text><text x="495" y="340" font-size="14">18000 → 8000</text>
+<text x="30" y="469" font-size="16">模型请求走 SSM 隧道，无需开放公网模型入站端口；本轮不是 Bedrock 托管调用。</text>
+<text x="30" y="502" font-size="16">Codex 对话流与上述推理链路独立；扫描成功不代表对话断流已修复。</text></g></svg>
+<p>SGLang 0.5.23 自建服务启用 MTP（EAGLE，steps=3、top-k=1、draft tokens=4），TP=8、FP8 KV cache、context=262144、并行请求上限 2。控制主机通过 SSM 将本机 18000 转发到 GPU 8000；后台 systemd 服务将进度和证据落盘。本轮测试时 GPU 保持运行，自动停止已禁用；<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/resource-status.json">资源记录</a>中的 <code>running</code> 是带时间戳的观察值。</p>
+<h3>最新独立流式性能（MTP，经过 SSM）</h3>
+<table>
+<thead>
+<tr>
+<th>并发</th>
+<th style="text-align:right">成功请求</th>
+<th style="text-align:right">TTFT 均值 / P95（秒）</th>
+<th style="text-align:right">首次正文均值（秒）</th>
+<th style="text-align:right">TTOT 均值 / P95（秒）</th>
+<th style="text-align:right">E2E 均值（秒）</th>
+<th style="text-align:right">估算 TPOT 均值（毫秒）</th>
+<th style="text-align:right">聚合输出 tokens/s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">0.325 / 0.372</td>
+<td style="text-align:right">4.353</td>
+<td style="text-align:right">10.213 / 18.178</td>
+<td style="text-align:right">10.220</td>
+<td style="text-align:right">3.653</td>
+<td style="text-align:right">263.3</td>
+</tr>
+<tr>
+<td>2</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">0.337 / 0.423</td>
+<td style="text-align:right">4.973</td>
+<td style="text-align:right">11.105 / 17.317</td>
+<td style="text-align:right">11.111</td>
+<td style="text-align:right">4.209</td>
+<td style="text-align:right">447.5</td>
+</tr>
+</tbody>
+</table>
+<p>认证、路径、Webhook、工具四类源码审计，每类每并发重复 3 次，输出预算 8192、reasoning=low；24 次请求均无错误、截断或仅思考输出。并发 2 提高聚合吞吐，但单请求平均 TTOT 略增。TTFT 取首个非空 reasoning/content/tool 增量，首次正文单列；TTOT 截止最后生成增量，E2E 截止流结束。吞吐包含思考 tokens。</p>
+<p><strong>完整 Strix 扫描采用非流式请求，没有 TTFT 测量；上表是独立基准，不能当作完整扫描指标。</strong> 每档仅 12 个样本，P95 仅供参考；与历史实验及 InferenceX 的预算、缓存、硬件和负载不一致，不能直接排名或据此计算 MTP 加速比。Codex 对话断流仍未证实修复。</p>
+<p>证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/README.md">完整扫描摘要</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/progress-summary.json">结构化汇总</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/stream-metrics-public.jsonl">流式指标</a>。</p>
+<h3>补充完整扫描（2026-11-21）</h3>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th style="text-align:right">扫描耗时（秒）</th>
+<th style="text-align:right">成功模型请求</th>
+<th style="text-align:right">工具调用</th>
+<th style="text-align:right">请求平均 / P95（秒）</th>
+<th style="text-align:right">待核验发现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AgentcoreShell deep</td>
+<td style="text-align:right">120</td>
+<td style="text-align:right">66/66</td>
+<td style="text-align:right">66</td>
+<td style="text-align:right">1.829 / 4.511</td>
+<td style="text-align:right">1</td>
+</tr>
+<tr>
+<td>Superagent 前端与部署</td>
+<td style="text-align:right">781</td>
+<td style="text-align:right">575/575</td>
+<td style="text-align:right">559</td>
+<td style="text-align:right">2.847 / 8.985</td>
+<td style="text-align:right">28</td>
+</tr>
+</tbody>
+</table>
+<p>两次扫描均完成，采用自建 GLM-5.3、TP8 和 MTP，顺序执行。请求延迟来自非流式调用，不代表 TTFT 或流式 TTOT；发现尚未独立核验，不与其他扫描相加为独立漏洞总数。详见<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-additional-full/20261121T095600Z/README.md">补充扫描摘要</a>。</p>
+<h2>历史测试环境与证据（2026-11-20）</h2>
 <ul>
 <li>仓库：<code>https://github.com/milan9527/agentcore-superagent-update</code>，提交 <code>0a20b8b14ab9abdf7301ec1e475be2d6dc2effde</code>，本地约 56 MB。</li>
 <li>模型：<code>zai-org/GLM-5.3</code>，revision <code>ba32f8c19c8738e2c57c71798c601d477a7bf844</code>。本轮为 EC2 自建 SGLang 推理，非 Bedrock 托管调用。</li>
@@ -44,7 +139,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <li>配置：TP=8、FP8 KV cache、context=262144、max-running-requests=2、mem-fraction-static=0.85、chunked-prefill-size=32768；关闭异步权重加载使启动成功，但尚未证明其故障根因。</li>
 <li>模型识别与工具调用证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/inference-verification.json">inference-verification.json</a>。</li>
 </ul>
-<h2>Strix 执行结果</h2>
+<h2>历史四场景 Strix 执行结果（2026-11-20）</h2>
 <p>四个场景均记录 <code>scan_completed=true</code>，共 770 次模型请求记录成功。退出码均为 2；完成状态依据扫描产物判断，而非将其当作退出码 0。原始发现含重复项，不能等同于已确认漏洞数。</p>
 <table>
 <thead>
@@ -295,8 +390,9 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <p>复现与证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ABLATION-PROTOCOL.md">实验协议</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/comparison.json">统计汇总</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/baseline-metrics.jsonl">baseline 指标</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/concise-metrics.jsonl">concise 指标</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/mtp-metrics.jsonl">MTP 指标</a>。公开指标移除回答正文；原始答案与运行日志已保存在本地和私有 S3 备份，供复核。</p>
 <h2>Codex 对话断流</h2>
 <p><code>stream closed before response.completed</code> <strong>仍未证实修复</strong>。这是 Codex 到其模型提供方的连接，与本轮自建 GLM 推理链路不同。后台扫描完成不代表对话流故障解决。已保留请求 ID、时间和配置限制：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/stream-incident-20261120.md">故障记录</a>。需要服务端按请求 ID 关联调查，现有证据不足以确定断开连接的具体环节。</p>
-<h2>资源收尾</h2>
+<h2>历史资源收尾（2026-11-20）</h2>
 <p>120 次正式对照请求完成后，结果归档并验证上传至私有 S3。2026-11-20 16:22:29 UTC 调用 <code>StopInstances</code>，随后 <code>DescribeInstances</code> 已确认 GPU 实例 <strong>stopped</strong>。未执行 terminate，未取消持久型 Spot。两块 EBS（200 GB 根盘和 2048 GB 模型缓存盘）保留，DeleteOnTermination=false，仍产生存储费用。最新观察及备份校验见 <a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/resource-status.json">resource-status.json</a>。</p>
+<p>2026-11-21 本轮完整扫描时已重新启动并保持运行；上述停止记录仅描述历史实验收尾。</p>
 
 </main>
 <footer>从 RESULTS.md 自动生成。证据链接指向 GitHub；阅读本文无需外部脚本或样式。

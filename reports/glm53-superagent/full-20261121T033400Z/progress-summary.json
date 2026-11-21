@@ -1,0 +1,118 @@
+{
+  "observed_utc": "2026-11-21T08:42:09.831163+00:00",
+  "model": "self-hosted GLM-5.3, SGLang TP8 MTP, p6-b200.48xlarge",
+  "benchmark": [
+    {
+      "type": "summary",
+      "concurrency": 1,
+      "requests": 12,
+      "batch_s": 122.64027574902866,
+      "output_tokens_per_s": 263.29849474637825,
+      "errors": 0,
+      "truncated": 0,
+      "ttft_s": {
+        "n": 12,
+        "mean": 0.3254732482406932,
+        "p50": 0.3164056239766069,
+        "p95": 0.3719877945666667
+      },
+      "first_visible_s": {
+        "n": 12,
+        "mean": 4.353486980330975,
+        "p50": 4.416666976467241,
+        "p95": 8.770179663668387
+      },
+      "ttot_s": {
+        "n": 12,
+        "mean": 10.21310816492769,
+        "p50": 9.282380034972448,
+        "p95": 18.178320364892716
+      },
+      "e2e_s": {
+        "n": 12,
+        "mean": 10.21980959791108,
+        "p50": 9.288717079500202,
+        "p95": 18.18577385006938
+      },
+      "approx_tpot_s": {
+        "n": 12,
+        "mean": 0.003653127873613083,
+        "p50": 0.0036888018929914675,
+        "p95": 0.0038973660366104644
+      },
+      "useful_completions": 12,
+      "reasoning_only": 0
+    },
+    {
+      "type": "summary",
+      "concurrency": 2,
+      "requests": 12,
+      "batch_s": 68.37710966798477,
+      "output_tokens_per_s": 447.48893523831504,
+      "errors": 0,
+      "truncated": 0,
+      "ttft_s": {
+        "n": 12,
+        "mean": 0.33746230547937256,
+        "p50": 0.3229350989568047,
+        "p95": 0.4227514161844737
+      },
+      "first_visible_s": {
+        "n": 12,
+        "mean": 4.972514948924072,
+        "p50": 4.56902033748338,
+        "p95": 8.967303199251178
+      },
+      "ttot_s": {
+        "n": 12,
+        "mean": 11.10545870490023,
+        "p50": 9.985636356926989,
+        "p95": 17.316573719691945
+      },
+      "e2e_s": {
+        "n": 12,
+        "mean": 11.110977948837293,
+        "p50": 9.987132491951343,
+        "p95": 17.317887362849426
+      },
+      "approx_tpot_s": {
+        "n": 12,
+        "mean": 0.0042086864635546275,
+        "p50": 0.00429597823984978,
+        "p95": 0.004480321382788959
+      },
+      "useful_completions": 12,
+      "reasoning_only": 0
+    }
+  ],
+  "scan": {
+    "run_id": "agentcore-superagent-update_e35b",
+    "status": "completed",
+    "runner_status": {
+      "start_epoch": 1795233798,
+      "end_epoch": 1795234502,
+      "elapsed_s": 704,
+      "exit_code": 2,
+      "mode": "deep",
+      "ttft_measured": false
+    },
+    "completed_with_findings": true,
+    "findings_count": 29,
+    "findings_by_severity": {
+      "critical": 6,
+      "low": 4,
+      "medium": 12,
+      "info": 1,
+      "high": 6
+    },
+    "findings_validation": "Not independently verified",
+    "request_attempts": 637,
+    "outcomes": {
+      "success": 637
+    },
+    "request_latency_mean_ms": 4000.664050235479,
+    "tool_calls": 611,
+    "evidence": "strix-src/strix_runs/agentcore-superagent-update_e35b"
+  },
+  "ec2_lifecycle": "Keep running per user instruction; this reporter has no AWS mutations."
+}

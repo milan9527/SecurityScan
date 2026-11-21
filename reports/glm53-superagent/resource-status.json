@@ -1,9 +1,9 @@
 {
-  "observed_at": "2026-11-20T16:32:44.212921+00:00",
+  "observed_at": "2026-11-21T03:44:43.146647+00:00",
   "source": "EC2 DescribeInstances",
   "region": "ap-south-1",
   "instance_id": "i-0b33a1d2ee1a2065f",
-  "state": "stopped",
+  "state": "running",
   "volumes": [
     {
       "id": "vol-09d277beb55d0fab2",
@@ -14,10 +14,21 @@
       "delete_on_termination": false
     }
   ],
-  "stop_requested_at": "2026-11-20T16:22:29Z",
   "backup": {
     "s3_uri": "s3://agentcore-artifacts-632930644527-us-west-2/securityscan/glm53-ablation-20261120/results.tgz",
     "bytes": 718737,
     "sha256": "0138cdb5961bddf0d2118dda853dcb833d4efc1d5aa885968cc4d614ff196930"
-  }
+  },
+  "previous_stop_requested_at": "2026-11-20T16:22:29Z",
+  "stop_request_date": "2026-11-21",
+  "previous_stop_reason": "SSM confirmed no running containers or Strix/SGLang processes at 2026-11-21T03:20:37Z; StopInstances accepted. Full scan has not started; stream issue unresolved.",
+  "launch_time": "2026-11-21T03:32:06+00:00",
+  "active_test_directory": "reports/glm53-superagent/full-20261121T033400Z",
+  "automatic_stop": "disabled by user instruction: keep EC2 running after testing",
+  "shutdown_cancellation": {
+    "command_id": "c8d2748b-7461-4873-b26a-6a420acf94f3",
+    "status": "Success",
+    "scheduled_shutdown_absent": true
+  },
+  "suite_stop_hook_removed": true
 }

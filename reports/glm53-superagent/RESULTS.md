@@ -1,6 +1,40 @@
-# GLM-5.3 自建推理与 Strix 仓库测试（2026-11-20）
+# GLM-5.3 自建推理与 Strix 仓库测试（更新于 2026-11-21）
 
-## 测试对象与环境
+## 最新测试结论（2026-11-21）
+
+**完整 Strix deep 扫描已完成，用时 704 秒（11 分 44 秒）；637/637 次模型请求成功，611 次工具调用。** 单次模型请求平均延迟为 **4.001 秒**。生成 **29 条待独立核验发现**：Critical 6、High 6、Medium 12、Low 4、Info 1。退出码 2 表示发现达到 fail-on 阈值；产物状态为 `completed`，不是模型调用失败。
+
+目标为 `agentcore-superagent-update` 的固定提交 `0a20b8b14ab9abdf7301ec1e475be2d6dc2effde`。完成时间为 **2026-11-21 04:15 UTC**，运行 ID 为 `agentcore-superagent-update_e35b`。704 秒不包含模型加载（本次约 25 分钟）。发现尚未逐项核验，也不能与历史 32 条直接相加为独立漏洞数。
+
+### 本轮测试部署架构
+
+![GLM-5.3 与 Strix 部署架构](assets/deployment-architecture.svg)
+
+SGLang 0.5.23 自建服务启用 MTP（EAGLE，steps=3、top-k=1、draft tokens=4），TP=8、FP8 KV cache、context=262144、并行请求上限 2。控制主机通过 SSM 将本机 18000 转发到 GPU 8000；后台 systemd 服务将进度和证据落盘。本轮测试时 GPU 保持运行，自动停止已禁用；[资源记录](resource-status.json)中的 `running` 是带时间戳的观察值。
+
+### 最新独立流式性能（MTP，经过 SSM）
+
+| 并发 | 成功请求 | TTFT 均值 / P95（秒） | 首次正文均值（秒） | TTOT 均值 / P95（秒） | E2E 均值（秒） | 估算 TPOT 均值（毫秒） | 聚合输出 tokens/s |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 12/12 | 0.325 / 0.372 | 4.353 | 10.213 / 18.178 | 10.220 | 3.653 | 263.3 |
+| 2 | 12/12 | 0.337 / 0.423 | 4.973 | 11.105 / 17.317 | 11.111 | 4.209 | 447.5 |
+
+认证、路径、Webhook、工具四类源码审计，每类每并发重复 3 次，输出预算 8192、reasoning=low；24 次请求均无错误、截断或仅思考输出。并发 2 提高聚合吞吐，但单请求平均 TTOT 略增。TTFT 取首个非空 reasoning/content/tool 增量，首次正文单列；TTOT 截止最后生成增量，E2E 截止流结束。吞吐包含思考 tokens。
+
+**完整 Strix 扫描采用非流式请求，没有 TTFT 测量；上表是独立基准，不能当作完整扫描指标。** 每档仅 12 个样本，P95 仅供参考；与历史实验及 InferenceX 的预算、缓存、硬件和负载不一致，不能直接排名或据此计算 MTP 加速比。Codex 对话断流仍未证实修复。
+
+证据：[完整扫描摘要](full-20261121T033400Z/README.md)、[结构化汇总](full-20261121T033400Z/progress-summary.json)、[流式指标](full-20261121T033400Z/stream-metrics-public.jsonl)。
+
+### 补充完整扫描（2026-11-21）
+
+| 场景 | 扫描耗时（秒） | 成功模型请求 | 工具调用 | 请求平均 / P95（秒） | 待核验发现 |
+|---|---:|---:|---:|---:|---:|
+| AgentcoreShell deep | 120 | 66/66 | 66 | 1.829 / 4.511 | 1 |
+| Superagent 前端与部署 | 781 | 575/575 | 559 | 2.847 / 8.985 | 28 |
+
+两次扫描均完成，采用自建 GLM-5.3、TP8 和 MTP，顺序执行。请求延迟来自非流式调用，不代表 TTFT 或流式 TTOT；发现尚未独立核验，不与其他扫描相加为独立漏洞总数。详见[补充扫描摘要](../glm53-additional-full/20261121T095600Z/README.md)。
+
+## 历史测试环境与证据（2026-11-20）
 
 - 仓库：`https://github.com/milan9527/agentcore-superagent-update`，提交 `0a20b8b14ab9abdf7301ec1e475be2d6dc2effde`，本地约 56 MB。
 - 模型：`zai-org/GLM-5.3`，revision `ba32f8c19c8738e2c57c71798c601d477a7bf844`。本轮为 EC2 自建 SGLang 推理，非 Bedrock 托管调用。
@@ -9,7 +43,7 @@
 - 配置：TP=8、FP8 KV cache、context=262144、max-running-requests=2、mem-fraction-static=0.85、chunked-prefill-size=32768；关闭异步权重加载使启动成功，但尚未证明其故障根因。
 - 模型识别与工具调用证据：[inference-verification.json](inference-verification.json)。
 
-## Strix 执行结果
+## 历史四场景 Strix 执行结果（2026-11-20）
 
 四个场景均记录 `scan_completed=true`，共 770 次模型请求记录成功。退出码均为 2；完成状态依据扫描产物判断，而非将其当作退出码 0。原始发现含重复项，不能等同于已确认漏洞数。
 
@@ -94,6 +128,8 @@
 
 `stream closed before response.completed` **仍未证实修复**。这是 Codex 到其模型提供方的连接，与本轮自建 GLM 推理链路不同。后台扫描完成不代表对话流故障解决。已保留请求 ID、时间和配置限制：[故障记录](stream-incident-20261120.md)。需要服务端按请求 ID 关联调查，现有证据不足以确定断开连接的具体环节。
 
-## 资源收尾
+## 历史资源收尾（2026-11-20）
 
 120 次正式对照请求完成后，结果归档并验证上传至私有 S3。2026-11-20 16:22:29 UTC 调用 `StopInstances`，随后 `DescribeInstances` 已确认 GPU 实例 **stopped**。未执行 terminate，未取消持久型 Spot。两块 EBS（200 GB 根盘和 2048 GB 模型缓存盘）保留，DeleteOnTermination=false，仍产生存储费用。最新观察及备份校验见 [resource-status.json](resource-status.json)。
+
+2026-11-21 本轮完整扫描时已重新启动并保持运行；上述停止记录仅描述历史实验收尾。

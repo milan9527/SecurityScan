@@ -15,9 +15,20 @@ def main():
     body = MarkdownIt("commonmark", {"html": False}).enable("table").render(
         (REPORT / "RESULTS.md").read_text(encoding="utf-8")
     )
+    # Bundle the architecture so the downloaded report works offline.
+    architecture = (REPORT / "assets/deployment-architecture.svg").read_text(
+        encoding="utf-8"
+    )
+    import re
+    body, embedded = re.subn(
+        r'<p><img src="assets/deployment-architecture\.svg"[^>]*></p>',
+        lambda _: architecture,
+        body,
+    )
+    if embedded != 1:
+        raise ValueError("Expected exactly one deployment architecture image")
     # Evidence links remain usable when only this HTML file is downloaded.
     from urllib.parse import urljoin
-    import re
     base = "https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/"
     body = re.sub(r'href="([^"]+)"',
                   lambda m: 'href="' + urljoin(base, m.group(1)) + '"', body)
@@ -40,6 +51,7 @@ main{max-width:1100px;margin:24px auto;background:white;border:1px solid var(--l
 .card b{display:block;font-size:28px}.card span{color:var(--muted)}
 h1{font-size:27px;line-height:1.45}h2{font-size:22px;margin-top:38px;border-bottom:1px solid var(--line);padding-bottom:8px}
 a{color:var(--accent);text-underline-offset:3px;overflow-wrap:anywhere}
+svg{display:block;width:100%;height:auto;margin:20px 0}
 code{font-size:.88em;background:#f1f4f7;border-radius:3px;padding:2px 4px;overflow-wrap:anywhere}
 table{display:block;overflow-x:auto;border-collapse:collapse;width:100%;font-size:14px;margin:20px 0}
 th,td{padding:12px;border:1px solid var(--line);white-space:nowrap}th{background:#eaf2f6;text-align:left}
@@ -49,13 +61,13 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </style>
 </head>
 <body>
-<header><p>SECURITYSCAN · 2026-11-20</p><strong>GLM-5.3 × Strix</strong>
+<header><p>SECURITYSCAN · 2026-11-21</p><strong>GLM-5.3 × Strix</strong>
 <p>EC2 自建模型 · 仓库审计 · 流式推理实测</p></header>
 <main>
 <div class="cards" aria-label="测试摘要">
-<div class="card"><b>4 场景 / 770 请求</b><span>32 条原始发现，尚未全部核验</span></div>
-<div class="card"><b>120 / 120</b><span>独立对照请求正常结束并产生正文</span></div>
-<div class="card"><b>9.89 秒</b><span>MTP 并发 2 TTOT 均值，降低 49.6%</span></div>
+<div class="card"><b>637 / 637 请求</b><span>完整 Strix deep 扫描完成，用时 704 秒</span></div>
+<div class="card"><b>29 条待核验</b><span>611 次工具调用；发现数不等于已确认漏洞数</span></div>
+<div class="card"><b>10.213 / 11.105 秒</b><span>独立流式 TTOT 均值，并发 1 / 2；24/24 成功</span></div>
 </div>
 """ + body + """
 </main>

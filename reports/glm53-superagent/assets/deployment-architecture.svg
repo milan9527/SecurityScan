@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="540" viewBox="0 0 1100 540" role="img" aria-labelledby="title desc">
+<title id="title">GLM-5.3 自建 Strix 测试部署架构</title><desc id="desc">控制主机经 AWS Systems Manager 端口转发访问 Mumbai GPU EC2 上的 SGLang 服务；扫描证据用于生成 Markdown 和 HTML 报告。</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#096770"/></marker></defs>
+<rect width="1100" height="540" rx="16" fill="#edf2f6"/>
+<g font-family="system-ui,sans-serif" fill="#172d43"><text x="30" y="38" font-size="24" font-weight="bold">GLM-5.3 × Strix · EC2 自建推理 · 2026-11-21</text>
+<rect x="25" y="65" width="455" height="365" rx="12" fill="white" stroke="#b5cad8"/><text x="45" y="98" font-size="20" font-weight="bold">控制主机 / 测试工作区</text>
+<text x="45" y="133" font-size="16">systemd: glm53-full-suite（后台执行）</text>
+<text x="45" y="165" font-size="16">就绪检查 → 模型验证 → 流式基准 → Strix deep</text>
+<rect x="45" y="190" width="415" height="92" rx="8" fill="#eaf2f6"/><text x="60" y="218" font-size="17">Strix Agent + Docker 工具沙箱</text><text x="60" y="247" font-size="15">本地目标：agentcore-superagent-update</text><text x="60" y="270" font-size="14">固定提交 0a20b8b… · 源码审计 / 隔离验证</text>
+<text x="45" y="320" font-size="17">OpenAI-compatible API: 127.0.0.1:18000/v1</text><text x="45" y="355" font-size="16">systemd: glm53-test-tunnel</text><text x="45" y="394" font-size="16">JSONL / Strix 产物 → README + HTML</text>
+<rect x="670" y="65" width="405" height="365" rx="12" fill="white" stroke="#b5cad8"/><text x="690" y="98" font-size="20" font-weight="bold">GPU EC2 · ap-south-1a（Mumbai）</text>
+<text x="690" y="131" font-size="17">p6-b200.48xlarge · 8 × NVIDIA B200</text><text x="690" y="160" font-size="15">持久型 Spot · i-0b33a1d2ee1a2065f</text>
+<rect x="690" y="184" width="365" height="167" rx="8" fill="#e5f4f0"/><text x="705" y="212" font-size="17">SGLang 0.5.23 · :8000/v1</text><text x="705" y="240" font-size="16">zai-org/GLM-5.3 · TP8 · FP8 KV</text><text x="705" y="268" font-size="15">MTP / EAGLE: steps 3 · top-k 1 · draft 4</text><text x="705" y="296" font-size="15">context 262144 · max-running-requests 2</text><text x="705" y="328" font-size="15">container: glm53-mtp-ablation</text>
+<text x="690" y="382" font-size="16">保留 EBS：200 GiB 根盘 + 2048 GiB 缓存</text><text x="690" y="410" font-size="15">/model-cache · 测试结束后按要求保持运行</text>
+<path d="M480 310 H665" stroke="#096770" stroke-width="3" marker-end="url(#arrow)"/><text x="500" y="248" font-size="16">AWS SSM</text><text x="500" y="274" font-size="16">端口转发</text><text x="495" y="340" font-size="14">18000 → 8000</text>
+<text x="30" y="469" font-size="16">模型请求走 SSM 隧道，无需开放公网模型入站端口；本轮不是 Bedrock 托管调用。</text>
+<text x="30" y="502" font-size="16">Codex 对话流与上述推理链路独立；扫描成功不代表对话断流已修复。</text></g></svg>
