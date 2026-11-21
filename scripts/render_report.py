@@ -16,17 +16,16 @@ def main():
         (REPORT / "RESULTS.md").read_text(encoding="utf-8")
     )
     # Bundle the architecture so the downloaded report works offline.
-    architecture = (REPORT / "assets/deployment-architecture.svg").read_text(
-        encoding="utf-8"
-    )
     import re
-    body, embedded = re.subn(
-        r'<p><img src="assets/deployment-architecture\.svg"[^>]*></p>',
-        lambda _: architecture,
-        body,
-    )
-    if embedded != 1:
-        raise ValueError("Expected exactly one deployment architecture image")
+    for name in ("console-architecture.svg", "deployment-architecture.svg"):
+        architecture = (REPORT / "assets" / name).read_text(encoding="utf-8")
+        body, embedded = re.subn(
+            rf'<p><img src="assets/{re.escape(name)}"[^>]*></p>',
+            lambda _: architecture,
+            body,
+        )
+        if embedded != 1:
+            raise ValueError(f"Expected exactly one {name} image")
     # Evidence links remain usable when only this HTML file is downloaded.
     from urllib.parse import urljoin
     base = "https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/"

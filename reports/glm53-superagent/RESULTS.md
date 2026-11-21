@@ -6,6 +6,16 @@
 
 目标为 `agentcore-superagent-update` 的固定提交 `0a20b8b14ab9abdf7301ec1e475be2d6dc2effde`。完成时间为 **2026-11-21 04:15 UTC**，运行 ID 为 `agentcore-superagent-update_e35b`。704 秒不包含模型加载（本次约 25 分钟）。发现尚未逐项核验，也不能与历史 32 条直接相加为独立漏洞数。
 
+### 演示应用部署架构
+
+![SecurityScan AWS 风格应用架构](assets/console-architecture.svg)
+
+前端由私有 S3 + CloudFront OAC 提供；用户先以用户名、密码登录。`/api/*` 通过 CloudFront VPC Origin 转发至内部 ALB 和 ECS Fargate API，任务进入 SQS FIFO，由 ECS EC2 Worker 运行 Strix 与 Docker 工具沙箱。Worker 通过私网调用 Spot GPU 上的 GLM-5.3，扫描产物写入私有 S3；DynamoDB 保存账户、会话、任务及 GPU 租约。
+
+演示接管 GPU 后，EventBridge 每分钟触发 Lambda：所有会话与扫描结束、空闲满 600 秒后执行 `StopInstances`，保留实例。活动扫描保活；浏览器关闭后需等待会话租约过期。首次模型加载可能约 25 分钟，Spot 启动受容量影响。此图依据 2026-11-21 部署配置和记录绘制，不表示实时运行状态；应用完整扫描、报告下载及自动停止后重启的端到端链路仍需核验。
+
+两张图使用 AWS 服务分类配色和自绘矢量图标；应用推理走私网，以下历史性能测试走 SSM 隧道。HTML 内嵌 SVG，可离线查看。更新图表可运行 `python3 scripts/render_architecture.py`，然后运行 `uv run scripts/render_report.py`。
+
 ### 本轮测试部署架构
 
 ![GLM-5.3 与 Strix 部署架构](assets/deployment-architecture.svg)
