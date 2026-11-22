@@ -1,0 +1,23 @@
+{
+  "name": "http",
+  "url": "http://d2ic29y1hc1eco.cloudfront.net/",
+  "final_url": "https://d2ic29y1hc1eco.cloudfront.net/",
+  "status": 200,
+  "headers": {
+    "Content-Type": "text/html",
+    "Content-Length": "644",
+    "Connection": "close",
+    "Accept-Ranges": "bytes",
+    "Date": "Fri, 20 Nov 2026 03:43:04 GMT",
+    "Server": "AmazonS3",
+    "Last-Modified": "Sat, 03 Jan 2026 14:44:04 GMT",
+    "ETag": "\"5166e6494d0d27fcf255b643934aae1f\"",
+    "Cache-Control": "no-cache",
+    "x-amz-server-side-encryption": "AES256",
+    "X-Cache": "Miss from cloudfront",
+    "Via": "1.1 f9d8b248b09e5c0a77a4319a8bfbc9d0.cloudfront.net (CloudFront)",
+    "X-Amz-Cf-Pop": "IAD89-P3",
+    "X-Amz-Cf-Id": "dx1PQUcvgX2CXhbPZSR4fLJ9vipJBOO6O5F61CfFM_q4SR4jtGttJQ=="
+  },
+  "bytes": 644
+}

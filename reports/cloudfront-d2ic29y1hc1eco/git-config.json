@@ -1,0 +1,18 @@
+{
+  "name": "git-config",
+  "url": "https://d2ic29y1hc1eco.cloudfront.net/.git/config",
+  "final_url": "https://d2ic29y1hc1eco.cloudfront.net/.git/config",
+  "status": 403,
+  "headers": {
+    "Content-Type": "application/xml",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close",
+    "Date": "Fri, 20 Nov 2026 03:43:04 GMT",
+    "Server": "AmazonS3",
+    "X-Cache": "Error from cloudfront",
+    "Via": "1.1 d1be83cd914d81587556aa04bd645fce.cloudfront.net (CloudFront)",
+    "X-Amz-Cf-Pop": "IAD89-P3",
+    "X-Amz-Cf-Id": "qXX5yTLb3gVmhB37WUCbnQWzxa7aK4Mqjv_ISnU1tuCRX0aTcv5oew=="
+  },
+  "bytes": 111
+}

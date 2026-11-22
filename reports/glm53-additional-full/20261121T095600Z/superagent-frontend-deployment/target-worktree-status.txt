@@ -1,0 +1,8 @@
+ M super-agent/backend/package-lock.json
+?? super-agent/backend/tests/unit/auth-forgery.poc.test.ts
+?? super-agent/backend/tests/unit/avatar-routes.authz.poc.test.ts
+?? super-agent/backend/tests/unit/im-webhook-auth.poc.test.ts
+?? super-agent/backend/tests/unit/kb-idor.poc.test.ts
+?? super-agent/backend/tests/unit/pack-deploy-traversal.poc.test.ts
+?? super-agent/backend/tests/unit/tenant-isolation.audit.test.ts
+?? super-agent/backend/tests/unit/webhook-trigger-authz.poc.test.ts

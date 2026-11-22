@@ -1,0 +1,45 @@
+{
+  "InstanceId": "i-0b33a1d2ee1a2065f",
+  "State": {
+    "Code": 64,
+    "Name": "stopping"
+  },
+  "BlockDeviceMappings": [
+    {
+      "DeviceName": "/dev/sda1",
+      "Ebs": {
+        "AttachTime": "2026-11-20T06:47:07+00:00",
+        "DeleteOnTermination": false,
+        "Status": "attached",
+        "VolumeId": "vol-09d277beb55d0fab2",
+        "EbsCardIndex": 0
+      }
+    },
+    {
+      "DeviceName": "/dev/sdf",
+      "Ebs": {
+        "AttachTime": "2026-11-20T06:47:06.562000+00:00",
+        "DeleteOnTermination": false,
+        "Status": "attached",
+        "VolumeId": "vol-07b75c0c17b347762",
+        "EbsCardIndex": 0
+      }
+    }
+  ],
+  "SpotInstanceRequestId": "sir-ki5zqhrh",
+  "observed_at": "2026-11-20T07:34:28.038545+00:00",
+  "region": "ap-south-1",
+  "spot_request": {
+    "SpotInstanceRequestId": "sir-ki5zqhrh",
+    "State": "active",
+    "Status": {
+      "Code": "marked-for-stop",
+      "Message": "Your Spot instance is marked for stop due to user-initiated stop.",
+      "UpdateTime": "2026-11-20T07:29:37+00:00"
+    },
+    "Type": "persistent",
+    "InstanceInterruptionBehavior": "stop"
+  },
+  "requested_action": "stop",
+  "do_not_terminate": true
+}

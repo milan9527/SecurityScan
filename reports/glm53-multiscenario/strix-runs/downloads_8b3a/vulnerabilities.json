@@ -1,0 +1,37 @@
+[
+  {
+    "id": "vuln-0001",
+    "title": "Path traversal / arbitrary file read in download() via unvalidated filename",
+    "severity": "medium",
+    "timestamp": "2026-11-20 07:29:12 UTC",
+    "description": "The **`download()`** function in `app.py` joins a user-supplied `filename` onto the administrator-configured `root` without any validation or containment check, allowing arbitrary file reads anywhere the process can access. Both relative traversal sequences (`../../`) and absolute paths (which entirely replace the root when joined) escape the intended download root.",
+    "impact": "An attacker able to supply the `filename` parameter can read any file accessible to the application process, including files outside the download root: credentials, configuration, source code, and other users' data. This fully breaks the documented trust boundary that restricts downloads to the configured root.",
+    "target": "local_code: /home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/downloads (app.py)",
+    "technical_analysis": "In `app.py` line 7, `(Path(root) / filename)` is passed directly to `.read_bytes()`. `pathlib` performs no sanitization of the right-hand operand: a relative payload containing `..` segments escapes the root after resolution, and an absolute `filename` discards the root entirely (pathlib semantics: `Path('/a') / '/b'` yields `/b`). The documented trust boundary (root and ancestors are admin-controlled, no client symlink creation) makes this an attacker-controlled input reaching an unguarded filesystem sink. The sibling function `download_v2` (lines 9-14) implements the correct control — resolve both paths and require `target.is_relative_to(base)` — demonstrating the intended invariant that `download` fails to enforce.",
+    "poc_description": "Set up a synthetic download root and a secret file outside it. Call `download(root, filename)` with a benign filename to establish baseline behavior. Then call it with a relative traversal payload (`../../secret/flag.txt`) and an absolute path payload (the direct path to the secret file). Both payload classes return the secret file's contents. Call `download_v2()` with the same payloads as a control and observe it rejects them.",
+    "poc_script_code": "```python\nimport sys\nsys.path.insert(0, '/workspace/downloads')\nfrom app import download, download_v2\nfrom pathlib import Path\n\nbase = Path('/tmp/poc_test')\n(base / 'root/downloads').mkdir(parents=True, exist_ok=True)\n(base / 'secret').mkdir(exist_ok=True)\n(base / 'root/downloads/readme.txt').write_bytes(b'public-file-content\\n')\n(base / 'secret/flag.txt').write_bytes(b'TOP-SECRET-VALUE\\n')\n\nroot = str(base / 'root/downloads')\n\nprint(download(root, 'readme.txt'))                      # baseline: works\nprint(download(root, '../../secret/flag.txt'))            # traversal: b'TOP-SECRET-VALUE\\n'\nprint(download(root, str(base / 'secret/flag.txt')))      # absolute: b'TOP-SECRET-VALUE\\n'\n\nfor payload in ['../../secret/flag.txt', str(base / 'secret/flag.txt')]:\n    try:\n        download_v2(root, payload)\n        print('v2 leaked', payload)\n    except PermissionError:\n        print('v2 blocked:', payload)\n```",
+    "remediation_steps": "Replace `download()` with the containment logic already implemented in `download_v2()`: resolve the root once, resolve the joined target, and verify the resolved target is relative to the resolved root (e.g. `Path.is_relative_to`) before opening the file, rejecting otherwise. Alternatively, restrict filenames to a safe character set and reject separators and absolute paths, though the resolve-and-containment approach is the robust fix because it holds after symlink resolution.",
+    "evidence": "Local Python process executing the module's functions:\n\n```\ndownload benign: b'public-file-content\\n'\ndownload absolute RESULT: b'TOP-SECRET-VALUE\\n'\ndownload relative traversal RESULT: b'TOP-SECRET-VALUE\\n'\ndownload_v2 blocked: PermissionError\n```\n\n`download()` returned `TOP-SECRET-VALUE` for a file outside the root via two distinct payload classes; `download_v2()` correctly rejected the same inputs with `PermissionError: outside download root`, serving as the control.",
+    "assumptions": "Assumes the filename parameter is client-controlled (per the module docstring) and the attacker knows or can guess a target path; the documented boundary of an immutable admin-configured root is trusted per contract.",
+    "counterevidence": "The docstring confirms the root and ancestors are admin-controlled and clients cannot create symlinks, so symlink races and root-tampering variants are out of contract and were not tested. Absolute-path joining is standard Path behavior, not a framework bug. The only mitigating observation found is that the sibling download_v2 function implements a correct resolve-and-containment check, which shows the intended invariant exists but does not protect the unguarded download() path.",
+    "confidence": "high",
+    "confidence_rationale": "Working PoC executed in a local Python process with synthetic data, demonstrating arbitrary file read both via relative traversal and absolute-path injection, with a negative control (v2) proving the environment otherwise permits the operation when guarded.",
+    "severity_change_conditions": "If the application were confirmed to run as an unprivileged user in a container with no sensitive files readable, the confidentiality impact would lower; conversely, proof that the filename reaches an unauthenticated network interface would confirm network-reachable exploitation.",
+    "fix_effort": "trivial",
+    "cvss": 6.5,
+    "cvss_breakdown": {
+      "attack_complexity": "L",
+      "attack_vector": "N",
+      "availability": "N",
+      "confidentiality": "H",
+      "integrity": "N",
+      "privileges_required": "L",
+      "scope": "U",
+      "user_interaction": "N"
+    },
+    "cwe": "CWE-22",
+    "finding_class": "dynamic",
+    "agent_id": "31cf5f83",
+    "agent_name": "Root Agent"
+  }
+]

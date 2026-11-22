@@ -1,0 +1,84 @@
+{
+  "checked_at": "2026-11-20T06:10:22.513615+00:00",
+  "instances": [
+    {
+      "Id": "i-0e45eeaa532318d93",
+      "State": "terminated"
+    }
+  ],
+  "complete": true,
+  "volumes": [],
+  "network_interfaces": [],
+  "security_group_deleted": true,
+  "spot": [
+    {
+      "CreateTime": "2026-11-20T05:20:29+00:00",
+      "InstanceId": "i-0e45eeaa532318d93",
+      "LaunchSpecification": {
+        "BlockDeviceMappings": [
+          {
+            "Ebs": {
+              "DeleteOnTermination": true,
+              "VolumeSize": 200,
+              "VolumeType": "gp3",
+              "Encrypted": true
+            },
+            "DeviceName": "/dev/sda1"
+          },
+          {
+            "Ebs": {
+              "DeleteOnTermination": true,
+              "Iops": 6000,
+              "VolumeSize": 2048,
+              "VolumeType": "gp3",
+              "Throughput": 1000,
+              "Encrypted": true
+            },
+            "DeviceName": "/dev/sdf"
+          }
+        ],
+        "IamInstanceProfile": {
+          "Arn": "arn:aws:iam::632930644527:instance-profile/strix-glm53-ssm-global",
+          "Name": "strix-glm53-ssm-global"
+        },
+        "ImageId": "ami-03035d342e03827e5",
+        "InstanceType": "p6-b200.48xlarge",
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": true,
+            "DeviceIndex": 0,
+            "SubnetId": "subnet-067474a3e1e0e2ff2"
+          }
+        ],
+        "Placement": {
+          "AvailabilityZone": "ap-south-1a",
+          "Tenancy": "default",
+          "AvailabilityZoneId": "aps1-az1"
+        },
+        "SecurityGroups": [
+          {
+            "GroupId": "sg-05601a7a439e0aaa5",
+            "GroupName": "strix-glm53-test-global"
+          }
+        ],
+        "Monitoring": {
+          "Enabled": false
+        }
+      },
+      "LaunchedAvailabilityZone": "ap-south-1a",
+      "LaunchedAvailabilityZoneId": "aps1-az1",
+      "ProductDescription": "Linux/UNIX",
+      "SpotInstanceRequestId": "sir-ifnfm7ig",
+      "SpotPrice": "160.645250",
+      "State": "cancelled",
+      "Status": {
+        "Code": "request-canceled-and-instance-running",
+        "Message": "Your Spot request is canceled, but your instance i-0e45eeaa532318d93 is still running.",
+        "UpdateTime": "2026-11-20T06:01:52+00:00"
+      },
+      "Tags": [],
+      "Type": "one-time",
+      "InstanceInterruptionBehavior": "terminate"
+    }
+  ]
+}

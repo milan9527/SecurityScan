@@ -1,0 +1,15 @@
+HTTP/2 200 
+content-type: text/html
+content-length: 644
+accept-ranges: bytes
+date: Fri, 20 Nov 2026 03:42:46 GMT
+server: AmazonS3
+last-modified: Sat, 03 Jan 2026 14:44:04 GMT
+etag: "5166e6494d0d27fcf255b643934aae1f"
+cache-control: no-cache
+x-amz-server-side-encryption: AES256
+x-cache: Miss from cloudfront
+via: 1.1 e907cf8941244cce88eeb7bc240528b8.cloudfront.net (CloudFront)
+x-amz-cf-pop: IAD89-P3
+x-amz-cf-id: wgpOXctQCZZah-d394ormguvY4OB6BlG6sT4s5f-uSYK49kFztvnAA==
+

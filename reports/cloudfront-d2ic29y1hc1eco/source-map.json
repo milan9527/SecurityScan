@@ -1,0 +1,23 @@
+{
+  "name": "source-map",
+  "url": "https://d2ic29y1hc1eco.cloudfront.net/static/js/main.320dac4d.js.map",
+  "final_url": "https://d2ic29y1hc1eco.cloudfront.net/static/js/main.320dac4d.js.map",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/octet-stream",
+    "Content-Length": "1143284",
+    "Connection": "close",
+    "Accept-Ranges": "bytes",
+    "Date": "Fri, 20 Nov 2026 03:43:04 GMT",
+    "Server": "AmazonS3",
+    "Last-Modified": "Sat, 03 Jan 2026 14:44:12 GMT",
+    "ETag": "\"f5af1f41d1b427d1612b26cde7a07750\"",
+    "Cache-Control": "max-age=31536000",
+    "x-amz-server-side-encryption": "AES256",
+    "X-Cache": "Miss from cloudfront",
+    "Via": "1.1 61aaa713659e16ea5564e9032008b4e2.cloudfront.net (CloudFront)",
+    "X-Amz-Cf-Pop": "IAD89-P3",
+    "X-Amz-Cf-Id": "QDJBxQ0qtYzbl6uK-Y9ZfiHboLMSlyi79GBs6xkfz0ox88uXx2Lw9Q=="
+  },
+  "bytes": 1143284
+}

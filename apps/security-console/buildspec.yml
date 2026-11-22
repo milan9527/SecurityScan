@@ -1,0 +1,13 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+  build:
+    commands:
+      - docker build -f apps/security-console/Dockerfile.api -t "$REGISTRY/strix-console-api:demo" .
+      - docker build -f apps/security-console/Dockerfile.worker -t "$REGISTRY/strix-console-worker:demo" .
+  post_build:
+    commands:
+      - docker push "$REGISTRY/strix-console-api:demo"
+      - docker push "$REGISTRY/strix-console-worker:demo"

@@ -27,15 +27,61 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </style>
 </head>
 <body>
-<header><p>SECURITYSCAN · 2026-11-21</p><strong>GLM-5.3 × Strix</strong>
-<p>EC2 自建模型 · 仓库审计 · 流式推理实测</p></header>
+<header><p>SECURITYSCAN · 2026-11-22</p><strong>GLM-5.3 × Strix</strong>
+<p>p6-b200.48xlarge · 8×NVIDIA B200 · 自建模型仓库扫描</p></header>
 <main>
 <div class="cards" aria-label="测试摘要">
 <div class="card"><b>637 / 637 请求</b><span>完整 Strix deep 扫描完成，用时 704 秒</span></div>
 <div class="card"><b>29 条待核验</b><span>611 次工具调用；发现数不等于已确认漏洞数</span></div>
-<div class="card"><b>10.213 / 11.105 秒</b><span>独立流式 TTOT 均值，并发 1 / 2；24/24 成功</span></div>
+<div class="card"><b>4.001 秒</b><span>完整 Strix 扫描内单次模型请求 E2E 均值</span></div>
 </div>
-<h1>GLM-5.3 自建推理与 Strix 仓库测试（更新于 2026-11-21）</h1>
+<h1>GLM-5.3 自建推理与 Strix 仓库测试（更新于 2026-11-22）</h1>
+<h2>Strix + GLM-5.3 实际扫描性能（2026-11-22 汇总）</h2>
+<p><strong>扫描推理机型：AWS EC2 <code>p6-b200.48xlarge</code>，单机 8×NVIDIA B200（ap-south-1）。</strong> 使用自建 GLM-5.3、SGLang 0.5.23、TP=8 和 MTP；下表为已完成的 Strix deep 扫描，工具在独立沙箱运行。</p>
+<table>
+<thead>
+<tr>
+<th>扫描场景</th>
+<th style="text-align:right">扫描 E2E</th>
+<th style="text-align:right">成功模型请求 / 总请求</th>
+<th style="text-align:right">工具调用</th>
+<th style="text-align:right">单次模型请求 E2E 均值</th>
+<th style="text-align:right">待核验发现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>agentcore-superagent-update 完整仓库</td>
+<td style="text-align:right">704 秒（11 分 44 秒）</td>
+<td style="text-align:right">637 / 637</td>
+<td style="text-align:right">611</td>
+<td style="text-align:right">4.001 秒</td>
+<td style="text-align:right">29</td>
+</tr>
+<tr>
+<td>AgentcoreShell deep</td>
+<td style="text-align:right">120 秒（2 分钟）</td>
+<td style="text-align:right">66 / 66</td>
+<td style="text-align:right">66</td>
+<td style="text-align:right">1.829 秒</td>
+<td style="text-align:right">1</td>
+</tr>
+<tr>
+<td>superagent 前端与部署专项 deep</td>
+<td style="text-align:right">781 秒（13 分 1 秒）</td>
+<td style="text-align:right">575 / 575</td>
+<td style="text-align:right">559</td>
+<td style="text-align:right">2.847 秒</td>
+<td style="text-align:right">28</td>
+</tr>
+</tbody>
+</table>
+<p>扫描 E2E 是扫描任务总墙钟耗时，包含模型、工具和编排，<strong>不包含 GPU 启动和模型加载</strong>；单次请求 E2E 是一次模型调用从发出到完整响应的耗时。请求可能并行，不能将均值乘以请求数当作扫描总耗时。上述请求为非流式，<strong>未测得扫描内 TTFT 或 TPOT</strong>。请求成功率不代表漏洞验证准确率；发现可能重叠，不应相加为独立漏洞数。</p>
+<p>证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/progress-summary.json">完整仓库扫描</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-additional-full/20261121T095600Z/progress.json">补充扫描</a>。</p>
+<p><strong>H200 已完成的是独立流式推理基准，尚无完整 Strix 扫描成绩。</strong> 机型为 <code>p5en.48xlarge</code>（8×NVIDIA H200，ap-northeast-1）。并发 1 / 2 时，请求 E2E 均值为 <strong>13.740 / 15.407 秒</strong>，TTFT 均值为 <strong>0.140 / 0.184 秒</strong>，聚合输出吞吐为 <strong>203.93 / 341.99 tokens/s</strong>（整台 8 卡实例）。共 24 次正式请求，另有 4 次预热请求不计入统计。B200 对应独立基准 E2E 为 10.220 / 11.111 秒；两组输出长度、调用路径和内核配置存在差异，不能据此推断纯硬件速度差异。详见 <a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-h200-comparison/README.md">H200/B200 对照报告</a>。</p>
+<h2>本地部署与运行</h2>
+<p><a href="https://github.com/milan9527/SecurityScan/blob/main/docs/local-deployment.md">本地部署指南</a> 包含 Strix 安装、8×B200 上的 GLM-5.3 服务启动、模型连接、本地源码/GitHub/Web/API 扫描及报告查看。已有模型服务时，控制主机无需 GPU。基础启动示例未启用 MTP，与下文 MTP 实测配置有区别。</p>
+<p>控制台前端可通过 <code>npm ci</code>、<code>npm run dev</code> 本地开发；完整登录与扫描仍依赖 AWS 后端及 HTTPS 同源配置。本地 CLI 没有空闲自动停止 EC2 的机制，结束后需要单独停止 GPU 实例。详细命令与前提见上述指南。</p>
 <h2>最新测试结论（2026-11-21）</h2>
 <p><strong>完整 Strix deep 扫描已完成，用时 704 秒（11 分 44 秒）；637/637 次模型请求成功，611 次工具调用。</strong> 单次模型请求平均延迟为 <strong>4.001 秒</strong>。生成 <strong>29 条待独立核验发现</strong>：Critical 6、High 6、Medium 12、Low 4、Info 1。退出码 2 表示发现达到 fail-on 阈值；产物状态为 <code>completed</code>，不是模型调用失败。</p>
 <p>目标为 <code>agentcore-superagent-update</code> 的固定提交 <code>0a20b8b14ab9abdf7301ec1e475be2d6dc2effde</code>。完成时间为 <strong>2026-11-21 04:15 UTC</strong>，运行 ID 为 <code>agentcore-superagent-update_e35b</code>。704 秒不包含模型加载（本次约 25 分钟）。发现尚未逐项核验，也不能与历史 32 条直接相加为独立漏洞数。</p>
@@ -89,7 +135,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <rect x="870" y="440" width="300" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="870" y="440" width="5" height="104" fill="#c925d1"/><rect x="884" y="455" width="38" height="38" fill="#c925d1"/>
 <g transform="translate(884 455)" fill="none" stroke="white" stroke-width="1.5"><ellipse cx="19" cy="11" rx="11" ry="4"/><path d="M8 11v17c0 6 22 6 22 0V11M8 19c0 6 22 6 22 0"/></g>
 <text x="934" y="472" class="label">Amazon DynamoDB</text>
-<text x="886" y="510" class="detail">用户 / 登录会话 / 扫描任务</text>
+<text x="886" y="510" class="detail">用户 / 会话 / 任务 / 授权目标</text>
 <text x="886" y="529" class="detail">GPU 租约与生命周期状态</text>
 <polyline points="795,402 847,402 847,468 870,468" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#console-arrow)" />
 <text x="853" y="422" class="edge">读写状态</text>
@@ -97,7 +143,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <g transform="translate(504 570)" fill="none" stroke="white" stroke-width="1.5"><rect x="10" y="10" width="18" height="18"/><path d="M6 13h4m-4 6h4m-4 6h4m18-12h4m-4 6h4m-4 6h4M13 6v4m6-4v4m6-4v4m-12 18v4m6-4v4m6-4v4"/></g>
 <text x="554" y="587" class="label">Amazon ECS · Worker</text>
 <text x="506" y="625" class="detail">EC2 m7i.xlarge · Strix</text>
-<text x="506" y="644" class="detail">Docker 工具沙箱 · 执行扫描</text>
+<text x="506" y="644" class="detail">编排 Agent · 调用模型与工具</text>
 <rect x="870" y="585" width="300" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="870" y="585" width="5" height="104" fill="#c925d1"/><rect x="884" y="600" width="38" height="38" fill="#c925d1"/>
 <g transform="translate(884 600)" fill="none" stroke="white" stroke-width="1.5"><rect x="7" y="8" width="24" height="23"/><path d="M12 14h14m-14 5h14m-14 5h14"/></g>
 <text x="934" y="617" class="label">Amazon SQS · FIFO</text>
@@ -109,9 +155,9 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <text x="805" y="619" class="edge">消费任务</text>
 <rect x="85" y="555" width="280" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="85" y="555" width="5" height="104" fill="#8c4fff"/><rect x="99" y="570" width="38" height="38" fill="#8c4fff"/>
 <g transform="translate(99 570)" fill="none" stroke="white" stroke-width="1.5"><path d="M7 11h24M7 19h24M7 27h24M12 7v8m14 0v8m-14 0v8"/></g>
-<text x="149" y="587" class="label">Strix 测试工具</text>
-<text x="101" y="625" class="detail">本地仓库分析 / 外部 Web、API 测试</text>
-<text x="101" y="644" class="detail">外部目标受 allowlist 约束</text>
+<text x="149" y="587" class="label">Docker 工具沙箱</text>
+<text x="101" y="625" class="detail">与 Worker 同宿主机的独立容器</text>
+<text x="101" y="644" class="detail">仓库分析 / Web 与 API 测试</text>
 <polyline points="490,607 365,607" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#console-arrow)" />
 <text x="386" y="592" class="edge">工具调用</text>
 <rect x="490" y="755" width="305" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="490" y="755" width="5" height="104" fill="#ed7100"/><rect x="504" y="770" width="38" height="38" fill="#ed7100"/>
@@ -141,14 +187,113 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <text x="101" y="1020" class="detail">每分钟触发 GPU 生命周期检查</text>
 <polyline points="365,1002 490,1002" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#console-arrow)" stroke-dasharray="6 4"/>
 <text x="386" y="988" class="edge">定时触发</text>
-<text x="55" y="1110" class="detail">演示接管后：无活动会话 / 扫描持续 600 秒 → 停止 GPU（不终止实例）。</text>
-<text x="55" y="1136" class="detail">Lambda 根据 DynamoDB 租约判断；活动扫描保活，浏览器关闭后租约有过期延迟。</text>
+<text x="55" y="1110" class="detail">演示接管后：没有活动扫描，最后一次用户操作满 600 秒 → 停止 GPU（不终止实例）。</text>
+<text x="55" y="1136" class="detail">每分钟检查，通常第 10–11 分钟停止；活动扫描保活，后台状态轮询不续期。</text>
 <text x="55" y="1162" class="detail">GPU 冷启动含模型加载；应用 EC2、API 与 ALB 持续运行。架构图不代表当前资源状态。</text>
 </svg>
 
-<p>前端由私有 S3 + CloudFront OAC 提供；用户先以用户名、密码登录。<code>/api/*</code> 通过 CloudFront VPC Origin 转发至内部 ALB 和 ECS Fargate API，任务进入 SQS FIFO，由 ECS EC2 Worker 运行 Strix 与 Docker 工具沙箱。Worker 通过私网调用 Spot GPU 上的 GLM-5.3，扫描产物写入私有 S3；DynamoDB 保存账户、会话、任务及 GPU 租约。</p>
-<p>演示接管 GPU 后，EventBridge 每分钟触发 Lambda：所有会话与扫描结束、空闲满 600 秒后执行 <code>StopInstances</code>，保留实例。活动扫描保活；浏览器关闭后需等待会话租约过期。首次模型加载可能约 25 分钟，Spot 启动受容量影响。此图依据 2026-11-21 部署配置和记录绘制，不表示实时运行状态；应用完整扫描、报告下载及自动停止后重启的端到端链路仍需核验。</p>
-<p>两张图使用 AWS 服务分类配色和自绘矢量图标；应用推理走私网，以下历史性能测试走 SSM 隧道。HTML 内嵌 SVG，可离线查看。更新图表可运行 <code>python3 scripts/render_architecture.py</code>，然后运行 <code>uv run scripts/render_report.py</code>。</p>
+<p>前端由私有 S3 + CloudFront OAC 提供；用户先以用户名、密码登录。<code>/api/*</code> 通过 CloudFront VPC Origin 转发至内部 ALB 和 ECS Fargate API，任务进入 SQS FIFO，由 ECS EC2 Worker 运行 Strix 与 Docker 工具沙箱。Worker 通过私网调用 Spot GPU 上的 GLM-5.3，扫描产物写入私有 S3；DynamoDB 保存账户、会话、任务、授权目标及 GPU 租约。</p>
+<p>演示接管 GPU 后，EventBridge 每分钟触发 Lambda 检查空闲状态。没有活动扫描时，最后一次用户操作满 600 秒后执行 <code>StopInstances</code>，通常在第 10–11 分钟停止；后台状态轮询不会延长租约。活动扫描保活，显式结束演示或最后任务结束后的空闲倒计时为 10 分钟。停止保留实例和 EBS。模型加载需要单独等待，历史一次冷启动约 25 分钟，Spot 启动受容量影响。此图依据 2026-11-21 部署配置和记录绘制，不表示实时运行状态；历史测试结果与当前应用验证记录分别记录。</p>
+<p>架构图使用 AWS 服务分类配色和自绘矢量图标；应用推理走私网，以下历史性能测试走 SSM 隧道。HTML 内嵌 SVG，可离线查看。更新图表可运行 <code>python3 scripts/render_architecture.py</code>，然后运行 <code>uv run scripts/render_report.py</code>。</p>
+<h3>Strix 工作原理与工具沙箱</h3>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="880" viewBox="0 0 1400 880" role="img" aria-labelledby="strix-title strix-desc">
+<title id="strix-title">SecurityScan · Strix 工作流程</title><desc id="strix-desc">本项目集成方式 · 模型推理与 Docker 工具执行分工</desc>
+<defs><marker id="strix-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#546578"/></marker></defs>
+<rect width="1400" height="880" fill="white"/>
+<rect width="1400" height="100" fill="#232f3e"/>
+<path d="M32 78 H1368" stroke="#ff9900" stroke-width="3"/>
+<style>text{font-family:'Noto Sans CJK SC',Arial,'Microsoft YaHei',sans-serif;fill:#232f3e} .title{font-size:27px;font-weight:700;fill:white} .sub{font-size:15px;fill:#d5dbdb} .label{font-size:16px;font-weight:700} .detail{font-size:14px;fill:#526273} .edge{font-size:13px;fill:#35485d}</style>
+<text x="32" y="39" class="title">SecurityScan · Strix 工作流程</text>
+<text x="32" y="65" class="sub">本项目集成方式 · 模型推理与 Docker 工具执行分工</text>
+<rect x="40" y="135" width="350" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="40" y="135" width="5" height="104" fill="#8c4fff"/><rect x="54" y="150" width="38" height="38" fill="#8c4fff"/>
+<g transform="translate(54 150)" fill="none" stroke="white" stroke-width="1.5"><path d="M7 11h24M7 19h24M7 27h24M12 7v8m14 0v8m-14 0v8"/></g>
+<text x="104" y="167" class="label">1. 用户提交目标</text>
+<text x="56" y="205" class="detail">GitHub 仓库 / Web / API</text>
+<text x="56" y="224" class="detail">登录后选择目标和扫描模式</text>
+<rect x="525" y="135" width="350" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="525" y="135" width="5" height="104" fill="#c925d1"/><rect x="539" y="150" width="38" height="38" fill="#c925d1"/>
+<g transform="translate(539 150)" fill="none" stroke="white" stroke-width="1.5"><rect x="7" y="8" width="24" height="23"/><path d="M12 14h14m-14 5h14m-14 5h14"/></g>
+<text x="589" y="167" class="label">2. API 校验与入队</text>
+<text x="541" y="205" class="detail">校验登录身份和授权目标</text>
+<text x="541" y="224" class="detail">DynamoDB 记录任务 · SQS 排队</text>
+<rect x="1010" y="135" width="350" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="1010" y="135" width="5" height="104" fill="#ed7100"/><rect x="1024" y="150" width="38" height="38" fill="#ed7100"/>
+<g transform="translate(1024 150)" fill="none" stroke="white" stroke-width="1.5"><rect x="10" y="10" width="18" height="18"/><path d="M6 13h4m-4 6h4m-4 6h4m18-12h4m-4 6h4m-4 6h4M13 6v4m6-4v4m6-4v4m-12 18v4m6-4v4m6-4v4"/></g>
+<text x="1074" y="167" class="label">3. ECS Worker</text>
+<text x="1026" y="205" class="detail">领取任务并启动 Strix</text>
+<text x="1026" y="224" class="detail">等待模型就绪 · 保存执行状态</text>
+<polyline points="390,187 525,187" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#strix-arrow)" />
+<text x="442" y="174" class="edge">提交</text>
+<polyline points="875,187 1010,187" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#strix-arrow)" />
+<text x="906" y="174" class="edge">消费队列</text>
+<rect x="40" y="300" width="835" height="365" fill="none" stroke="#ed7100" stroke-width="1.5" />
+<text x="56" y="325" class="label">Worker EC2 主机 · m7i.xlarge</text>
+<rect x="75" y="380" width="340" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="75" y="380" width="5" height="104" fill="#ed7100"/><rect x="89" y="395" width="38" height="38" fill="#ed7100"/>
+<g transform="translate(89 395)" fill="none" stroke="white" stroke-width="1.5"><rect x="10" y="10" width="18" height="18"/><path d="M6 13h4m-4 6h4m-4 6h4m18-12h4m-4 6h4m-4 6h4M13 6v4m6-4v4m6-4v4m-12 18v4m6-4v4m6-4v4"/></g>
+<text x="139" y="412" class="label">Strix Agent · Worker 容器</text>
+<text x="91" y="450" class="detail">规划检查 → 分析证据 → 决定下一步</text>
+<text x="91" y="469" class="detail">循环调用模型与工具</text>
+<rect x="490" y="380" width="350" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="490" y="380" width="5" height="104" fill="#8c4fff"/><rect x="504" y="395" width="38" height="38" fill="#8c4fff"/>
+<g transform="translate(504 395)" fill="none" stroke="white" stroke-width="1.5"><rect x="10" y="10" width="18" height="18"/><path d="M6 13h4m-4 6h4m-4 6h4m18-12h4m-4 6h4m-4 6h4M13 6v4m6-4v4m6-4v4m-12 18v4m6-4v4m6-4v4"/></g>
+<text x="554" y="412" class="label">Docker 工具沙箱</text>
+<text x="506" y="450" class="detail">执行命令、脚本、源码与 HTTP 检查</text>
+<text x="506" y="469" class="detail">通过宿主机 Docker daemon 创建</text>
+<polyline points="415,422 490,422" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#strix-arrow)" />
+<text x="420" y="405" class="edge">调用工具</text>
+<polyline points="665,484 665,535 245,535 245,484" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#strix-arrow)" />
+<text x="380" y="560" class="edge">工具结果返回 Agent</text>
+<text x="75" y="612" class="detail">两个独立容器共享宿主机内核；沙箱不是独立虚拟机。</text>
+<rect x="1010" y="380" width="350" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="1010" y="380" width="5" height="104" fill="#ed7100"/><rect x="1024" y="395" width="38" height="38" fill="#ed7100"/>
+<g transform="translate(1024 395)" fill="none" stroke="white" stroke-width="1.5"><rect x="10" y="10" width="18" height="18"/><path d="M6 13h4m-4 6h4m-4 6h4m18-12h4m-4 6h4m-4 6h4M13 6v4m6-4v4m6-4v4m-12 18v4m6-4v4m6-4v4"/></g>
+<text x="1074" y="412" class="label">GPU EC2 · GLM-5.3</text>
+<text x="1026" y="450" class="detail">SGLang 提供模型推理</text>
+<text x="1026" y="469" class="detail">分析上下文并生成工具调用或结论</text>
+<polyline points="1185,239 1185,280 245,280 245,380" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#strix-arrow)" />
+<text x="690" y="270" class="edge">启动 Agent</text>
+<polyline points="415,390 455,390 455,335 960,335 960,432 1010,432" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#strix-arrow)" />
+<text x="720" y="325" class="edge">私网模型请求</text>
+<polyline points="1010,465 945,465 945,590 415,590 415,484" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#strix-arrow)" />
+<text x="880" y="578" class="edge">模型响应</text>
+<rect x="1010" y="710" width="350" height="104" rx="3" fill="#fafbfc" stroke="#d5dbdb"/><rect x="1010" y="710" width="5" height="104" fill="#3f8624"/><rect x="1024" y="725" width="38" height="38" fill="#3f8624"/>
+<g transform="translate(1024 725)" fill="none" stroke="white" stroke-width="1.5"><ellipse cx="19" cy="11" rx="11" ry="4"/><path d="M8 11v17c0 6 22 6 22 0V11M8 19c0 6 22 6 22 0"/></g>
+<text x="1074" y="742" class="label">4. 保存报告与历史</text>
+<text x="1026" y="780" class="detail">S3 保存扫描产物 · DynamoDB 状态</text>
+<text x="1026" y="799" class="detail">前端查看记录与下载报告</text>
+<polyline points="245,484 245,760 1010,760" fill="none" stroke="#546578" stroke-width="1.6" marker-end="url(#strix-arrow)" />
+<text x="650" y="747" class="edge">扫描结束 · 收集报告</text>
+<text x="40" y="835" class="detail">发现需复核；完整扫描耗时包含模型推理、工具执行和编排。独立流式基准用于测量 TTFT / E2E。</text>
+</svg>
+
+<p>Strix 是由大模型驱动的安全测试 Agent。它根据目标规划检查步骤，调用工具收集证据，将执行结果交给模型分析，再决定下一步测试，最后生成报告。本项目由 ECS Worker 启动 Strix；GLM-5.3 通过 GPU 实例上的 SGLang 服务提供推理。</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>在本项目中的职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Strix / ECS Worker</td>
+<td>消费队列任务、组织 Agent 执行、调用模型与工具、收集报告</td>
+</tr>
+<tr>
+<td>Docker 工具沙箱</td>
+<td>执行源码读取、命令、脚本和网络测试；工具的实际执行环境</td>
+</tr>
+<tr>
+<td>GLM-5.3 / GPU EC2</td>
+<td>分析上下文并生成下一步工具调用或结论；模型服务与工具执行分开</td>
+</tr>
+<tr>
+<td>API / DynamoDB / S3</td>
+<td>校验用户与目标、保存任务和历史状态、提供报告下载</td>
+</tr>
+</tbody>
+</table>
+<p><strong>工具沙箱是 Docker 容器。</strong> Worker 通过宿主机 Docker daemon 创建沙箱，Worker 容器和沙箱是同一 EC2 主机上的独立容器；它不是独立虚拟机，也不运行在 GPU 实例内。容器提供工具依赖和进程、文件系统隔离，但共享宿主机内核。本演示环境适合受信任管理员使用；目标授权列表不是完整的网络出口隔离。</p>
+<p>支持的任务入口包括 GitHub 仓库、Web 和 API：仓库扫描分析源码中的认证、权限、输入处理和依赖使用；Web/API 测试根据目标和可用上下文执行 HTTP 交互与漏洞验证。具体覆盖范围取决于目标可达性、工具、凭据和执行预算，不能保证每次扫描覆盖全部漏洞类型。目前没有私有仓库凭证或专用 API 凭证输入表单。</p>
+<p>用户登录后提交授权目标，API 校验并入队；Worker 等待并调用模型，在沙箱中循环执行测试，结束后保存报告。关闭页面不会取消后台任务。管理员可在前端“授权目标”中管理仓库与 Web/API 主机列表，配置保存到 DynamoDB；其他用户无修改权限。</p>
+<p>报告中的发现需要独立复核。扫描总耗时包含模型、工具和编排开销；当前完整扫描使用非流式模型请求，不能从中得到 TTFT。本文的流式 TTFT/E2E 数值来自独立基准。</p>
+<p>参考：<a href="https://docs.strix.ai/usage/cli">Strix CLI</a>、<a href="https://docs.strix.ai/llms.txt">Strix 文档索引</a>。上图描述本项目集成方式。</p>
 <h3>本轮测试部署架构</h3>
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="720" viewBox="0 0 1400 720" role="img" aria-labelledby="benchmark-title benchmark-desc">
 <title id="benchmark-title">SecurityScan · Strix 扫描与性能测试架构</title><desc id="benchmark-desc">历史测试路径 · 独立流式基准经 SSM 隧道 · EC2 自建 GLM-5.3</desc>
@@ -194,7 +339,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <text x="535" y="430" class="detail">18000 → 8000</text>
 <rect x="32" y="590" width="1333" height="100" fill="none" stroke="#3f8624" stroke-width="1.5" />
 <text x="48" y="615" class="label">测量口径与运行边界</text>
-<text x="50" y="645" class="detail">独立流式基准：TTFT / TTOT / E2E / 吞吐。完整 Strix 扫描：非流式延迟与总耗时，无 TTFT。</text>
+<text x="50" y="645" class="detail">独立流式基准：TTFT / E2E / 吞吐。完整 Strix 扫描：非流式延迟与总耗时，无 TTFT。</text>
 <text x="50" y="671" class="detail">历史测试自动停止禁用；模型端口不直接暴露公网。本图对应测试证据，应用演示的自动停止策略见另一张架构图。</text>
 </svg>
 
@@ -207,8 +352,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <th style="text-align:right">成功请求</th>
 <th style="text-align:right">TTFT 均值 / P95（秒）</th>
 <th style="text-align:right">首次正文均值（秒）</th>
-<th style="text-align:right">TTOT 均值 / P95（秒）</th>
-<th style="text-align:right">E2E 均值（秒）</th>
+<th style="text-align:right">E2E 均值 / P95（秒）</th>
 <th style="text-align:right">估算 TPOT 均值（毫秒）</th>
 <th style="text-align:right">聚合输出 tokens/s</th>
 </tr>
@@ -219,8 +363,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td style="text-align:right">12/12</td>
 <td style="text-align:right">0.325 / 0.372</td>
 <td style="text-align:right">4.353</td>
-<td style="text-align:right">10.213 / 18.178</td>
-<td style="text-align:right">10.220</td>
+<td style="text-align:right">10.220 / 18.186</td>
 <td style="text-align:right">3.653</td>
 <td style="text-align:right">263.3</td>
 </tr>
@@ -229,14 +372,13 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td style="text-align:right">12/12</td>
 <td style="text-align:right">0.337 / 0.423</td>
 <td style="text-align:right">4.973</td>
-<td style="text-align:right">11.105 / 17.317</td>
-<td style="text-align:right">11.111</td>
+<td style="text-align:right">11.111 / 17.318</td>
 <td style="text-align:right">4.209</td>
 <td style="text-align:right">447.5</td>
 </tr>
 </tbody>
 </table>
-<p>认证、路径、Webhook、工具四类源码审计，每类每并发重复 3 次，输出预算 8192、reasoning=low；24 次请求均无错误、截断或仅思考输出。并发 2 提高聚合吞吐，但单请求平均 TTOT 略增。TTFT 取首个非空 reasoning/content/tool 增量，首次正文单列；TTOT 截止最后生成增量，E2E 截止流结束。吞吐包含思考 tokens。</p>
+<p>认证、路径、Webhook、工具四类源码审计，每类每并发重复 3 次，输出预算 8192、reasoning=low；24 次请求均无错误、截断或仅思考输出。并发 2 提高聚合吞吐，但单请求平均 E2E 略增。TTFT 取首个非空 reasoning/content/tool 增量，首次正文单列；E2E 从请求发出计至完整响应流结束。吞吐包含思考 tokens。</p>
 <p><strong>完整 Strix 扫描采用非流式请求，没有 TTFT 测量；上表是独立基准，不能当作完整扫描指标。</strong> 每档仅 12 个样本，P95 仅供参考；与历史实验及 InferenceX 的预算、缓存、硬件和负载不一致，不能直接排名或据此计算 MTP 加速比。Codex 对话断流仍未证实修复。</p>
 <p>证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/README.md">完整扫描摘要</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/progress-summary.json">结构化汇总</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/stream-metrics-public.jsonl">流式指标</a>。</p>
 <h3>补充完整扫描（2026-11-21）</h3>
@@ -270,7 +412,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </tr>
 </tbody>
 </table>
-<p>两次扫描均完成，采用自建 GLM-5.3、TP8 和 MTP，顺序执行。请求延迟来自非流式调用，不代表 TTFT 或流式 TTOT；发现尚未独立核验，不与其他扫描相加为独立漏洞总数。详见<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-additional-full/20261121T095600Z/README.md">补充扫描摘要</a>。</p>
+<p>两次扫描均完成，采用自建 GLM-5.3、TP8 和 MTP，顺序执行。请求延迟为非流式调用的 E2E，无法从中推导 TTFT；发现尚未独立核验，不与其他扫描相加为独立漏洞总数。详见<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-additional-full/20261121T095600Z/README.md">补充扫描摘要</a>。</p>
 <h2>历史测试环境与证据（2026-11-20）</h2>
 <ul>
 <li>仓库：<code>https://github.com/milan9527/agentcore-superagent-update</code>，提交 <code>0a20b8b14ab9abdf7301ec1e475be2d6dc2effde</code>，本地约 56 MB。</li>
@@ -323,7 +465,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </tr>
 </tbody>
 </table>
-<p>这些请求使用非流式调用，因此没有可用于计算 TTFT 的事件。扫描耗时包括代理及工具运行，不能当作单次推理 TTOT。</p>
+<p>这些请求使用非流式调用，因此没有可用于计算 TTFT 的事件。扫描耗时包括代理及工具运行，不能当作单次推理 E2E。</p>
 <p>发布证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/scan-summary.json">扫描汇总</a>。汇总省略逐请求 usage 和本地原始报告路径；完整扫描日志、模型生成的未核验报告及目标源码保留在本地。</p>
 <h2>独立核验</h2>
 <ol>
@@ -344,7 +486,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <ul>
 <li>输出预算 32768 tokens，reasoning_effort=low，temperature=0。该预算与推理档位降低了先前 8192/high 配置中思考耗尽输出预算的风险；由于输入也发生变化，不能将差异归因于单个参数。</li>
 <li>TTFT：首个内容、思考或工具增量；首次可见正文另记 first_visible_s。</li>
-<li>TTOT：请求开始至最后生成增量；e2e 包含终止事件接收。</li>
+<li>E2E：请求开始至完整响应流结束，包含终止事件接收。</li>
 <li>TPOT：以生成 token 数估算；SSE 分块并非逐 token，结果是近似值。</li>
 <li>指标由客户端经过 SSM 隧道测量，包含网络及隧道开销。重复输入可能命中缓存；未控制冷缓存。</li>
 <li>每个并发档只有 20 个样本，p95 为插值估计。非 InferenceX 同协议实验，不能直接用于与其排名比较。</li>
@@ -359,7 +501,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <th style="text-align:right">请求数</th>
 <th style="text-align:right">TTFT p50 / p95（秒）</th>
 <th style="text-align:right">首次正文 p50 / p95（秒）</th>
-<th style="text-align:right">TTOT p50 / p95（秒）</th>
+<th style="text-align:right">E2E p50 / p95（秒）</th>
 <th style="text-align:right">聚合输出 tokens/s</th>
 </tr>
 </thead>
@@ -369,7 +511,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td style="text-align:right">20</td>
 <td style="text-align:right">0.353 / 1.019</td>
 <td style="text-align:right">7.131 / 15.504</td>
-<td style="text-align:right">18.809 / 31.808</td>
+<td style="text-align:right">18.819 / 31.819</td>
 <td style="text-align:right">127.19</td>
 </tr>
 <tr>
@@ -377,7 +519,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td style="text-align:right">20</td>
 <td style="text-align:right">0.339 / 0.400</td>
 <td style="text-align:right">7.330 / 18.137</td>
-<td style="text-align:right">19.125 / 37.264</td>
+<td style="text-align:right">19.135 / 37.275</td>
 <td style="text-align:right">236.18</td>
 </tr>
 </tbody>
@@ -392,7 +534,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <th>组别</th>
 <th style="text-align:right">并发</th>
 <th style="text-align:right">请求数</th>
-<th style="text-align:right">TTOT 均值 / p50 / p95（秒）</th>
+<th style="text-align:right">E2E 均值 / p50 / p95（秒）</th>
 <th style="text-align:right">相对基线均值</th>
 <th style="text-align:right">TPOT 均值（毫秒）</th>
 <th style="text-align:right">聚合输出 tokens/s</th>
@@ -403,7 +545,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td>baseline</td>
 <td style="text-align:right">1</td>
 <td style="text-align:right">20</td>
-<td style="text-align:right">19.65 / 19.51 / 28.52</td>
+<td style="text-align:right">19.65 / 19.52 / 28.53</td>
 <td style="text-align:right">—</td>
 <td style="text-align:right">8.197</td>
 <td style="text-align:right">121.38</td>
@@ -412,7 +554,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td>concise</td>
 <td style="text-align:right">1</td>
 <td style="text-align:right">20</td>
-<td style="text-align:right">15.77 / 15.11 / 21.70</td>
+<td style="text-align:right">15.78 / 15.12 / 21.71</td>
 <td style="text-align:right">−19.7%</td>
 <td style="text-align:right">8.197</td>
 <td style="text-align:right">121.30</td>
@@ -421,7 +563,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td>mtp</td>
 <td style="text-align:right">1</td>
 <td style="text-align:right">20</td>
-<td style="text-align:right">8.64 / 7.06 / 14.20</td>
+<td style="text-align:right">8.64 / 7.07 / 14.20</td>
 <td style="text-align:right">−56.0%</td>
 <td style="text-align:right">3.476</td>
 <td style="text-align:right">284.01</td>
@@ -430,7 +572,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td>baseline</td>
 <td style="text-align:right">2</td>
 <td style="text-align:right">20</td>
-<td style="text-align:right">19.63 / 20.52 / 28.08</td>
+<td style="text-align:right">19.64 / 20.53 / 28.09</td>
 <td style="text-align:right">—</td>
 <td style="text-align:right">8.594</td>
 <td style="text-align:right">227.43</td>
@@ -439,7 +581,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <td>concise</td>
 <td style="text-align:right">2</td>
 <td style="text-align:right">20</td>
-<td style="text-align:right">17.24 / 14.94 / 28.07</td>
+<td style="text-align:right">17.24 / 14.95 / 28.08</td>
 <td style="text-align:right">−12.2%</td>
 <td style="text-align:right">8.587</td>
 <td style="text-align:right">225.72</td>
@@ -524,8 +666,8 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </tr>
 </tbody>
 </table>
-<p><strong>结论：MTP 是本次更有效的 TTOT 优化。</strong> 并发 1 / 2 的 TPOT 分别降低 57.6% / 53.2%，即使平均输出 tokens 增加 2.9% / 6.2%，请求仍明显变快。服务日志确认加载 GLM NextN，TP0 的接受长度约 2.40–2.65、接受率约 0.47–0.55。不过，并发 2 的 TTFT p95 从 0.115 秒升至 0.930 秒，不能声称所有延迟指标均改善。</p>
-<p><strong>精简指令缩短了思考，并没有缩短正文。</strong> 思考 tokens 减少约 96.6% / 92.5%，正文字符数反而增加约 34.8% / 37.1%；TPOT 基本不变。它提前呈现正文、降低总输出和平均 TTOT，但不能将其解释成“正文压缩成功”。并发 2 的 TTOT p95 几乎没有改善。</p>
+<p><strong>结论：MTP 是本次更有效的 E2E 优化。</strong> 并发 1 / 2 的 TPOT 分别降低 57.6% / 53.2%，即使平均输出 tokens 增加 2.9% / 6.2%，请求仍明显变快。服务日志确认加载 GLM NextN，TP0 的接受长度约 2.40–2.65、接受率约 0.47–0.55。不过，并发 2 的 TTFT p95 从 0.115 秒升至 0.930 秒，不能声称所有延迟指标均改善。</p>
+<p><strong>精简指令缩短了思考，并没有缩短正文。</strong> 思考 tokens 减少约 96.6% / 92.5%，正文字符数反而增加约 34.8% / 37.1%；TPOT 基本不变。它提前呈现正文、降低总输出和平均 E2E，但不能将其解释成“正文压缩成功”。并发 2 的 E2E p95 几乎没有改善。</p>
 <p>人工阅读了三组每场景、每并发的首份响应，共 24 份。核心源码风险有保留，但各组均存在前提遗漏、错误验证建议和未经执行就声称观察到结果的问题；没有证明质量无损。MTP 路径响应仍出现 Python Zip Slip、默认 Git 行为的错误主张，个别修复建议把路径相对计算参数写反。详见 <a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ABLATION-QUALITY.md">质量核验</a>。本轮没有执行这些响应中的 PoC，也不是完整 Strix 工具循环的加速测量。</p>
 <p>固定按 baseline → concise → mtp 执行，非随机交错；每场景/并发只有 5 次，汇总每格 20 次。每组清空缓存后预热，测试代表重复审计负载。模型加载不计入请求时间，TPOT 是客户端流式估算。与 InferenceX 的模型版本、量化、缓存命中、输入输出长度和硬件条件未对齐，不能直接排名；此前参考数据中的 B200 条目是 GLM-5.2，B300 条目才是 GLM-5.3。</p>
 <p>复现与证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ABLATION-PROTOCOL.md">实验协议</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/comparison.json">统计汇总</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/baseline-metrics.jsonl">baseline 指标</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/concise-metrics.jsonl">concise 指标</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/ablation-20261120/mtp-metrics.jsonl">MTP 指标</a>。公开指标移除回答正文；原始答案与运行日志已保存在本地和私有 S3 备份，供复核。</p>

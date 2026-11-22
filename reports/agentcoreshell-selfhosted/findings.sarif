@@ -1,0 +1,445 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Strix",
+          "informationUri": "https://strix.ai",
+          "rules": [
+            {
+              "id": "vuln-0001",
+              "name": "Shell command injection via unescaped `task` interpolation in coding_workflow.py",
+              "shortDescription": {
+                "text": "Shell command injection via unescaped `task` interpolation in coding_workflow.py"
+              },
+              "fullDescription": {
+                "text": "The `task` parameter of `coding_workflow()` is interpolated unescaped into four `/bin/bash -c \"...\"` command strings (branch name, `git checkout -b`, `git commit -m`, `git push`). A task string containing a double quote breaks out of the quoted command, allowing arbitrary shell command execution on the AgentCore runtime with the session's privileges. In the repository as committed, `task` comes only from the operator's `sys.argv[1]`; the vulnerability is realized when `task` is supplied by an untrusted source (ticket title, webhook payload, LLM-derived task string), which the function's design (a JIRA-style ticket identifier) makes the plausible integration."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The `task` parameter of `coding_workflow()` is interpolated unescaped into four `/bin/bash -c \"...\"` command strings (branch name, `git checkout -b`, `git commit -m`, `git push`). A task string containing a double quote breaks out of the quoted command, allowing arbitrary shell command execution on the AgentCore runtime with the session's privileges. In the repository as committed, `task` comes only from the operator's `sys.argv[1]`; the vulnerability is realized when `task` is supplied by an untrusted source (ticket title, webhook payload, LLM-derived task string), which the function's design (a JIRA-style ticket identifier) makes the plausible integration.\n\nArbitrary command execution on the AgentCore runtime container (full read/write/execute within that session's privileges, including the `/workspace` checkout it operates on and any credentials available to the runtime session) whenever a task string under attacker influence reaches the workflow. Demonstrated harmlessly with a file-creation marker; no AWS APIs or deployed targets were contacted.\n\nTreat `task` as untrusted data at the point where it crosses into command construction. Preferred: stop building shell strings entirely — pass commands as argument lists (or have the runtime accept `argv`) so no shell metacharacter interpretation occurs, and derive the branch name and commit message from a validated identifier rather than the raw string. At minimum: validate `task` against a strict allowlist (for example `^[A-Z][A-Z0-9]*-[0-9]+$` for ticket-style identifiers) and reject anything else before it is interpolated; apply `shlex.quote()` to every interpolated value if free-form text must be supported. Both the allowlist and the quoting were verified in a mocked reproduction to block the payload while leaving benign task identifiers working. If ticket content is ever forwarded to `shell.invoke_agent` as well, sanitize or bound it there too to avoid pairing this with prompt injection.",
+                "markdown": "The `task` parameter of `coding_workflow()` is interpolated unescaped into four `/bin/bash -c \"...\"` command strings (branch name, `git checkout -b`, `git commit -m`, `git push`). A task string containing a double quote breaks out of the quoted command, allowing arbitrary shell command execution on the AgentCore runtime with the session's privileges. In the repository as committed, `task` comes only from the operator's `sys.argv[1]`; the vulnerability is realized when `task` is supplied by an untrusted source (ticket title, webhook payload, LLM-derived task string), which the function's design (a JIRA-style ticket identifier) makes the plausible integration.\n\nArbitrary command execution on the AgentCore runtime container (full read/write/execute within that session's privileges, including the `/workspace` checkout it operates on and any credentials available to the runtime session) whenever a task string under attacker influence reaches the workflow. Demonstrated harmlessly with a file-creation marker; no AWS APIs or deployed targets were contacted.\n\nTreat `task` as untrusted data at the point where it crosses into command construction. Preferred: stop building shell strings entirely — pass commands as argument lists (or have the runtime accept `argv`) so no shell metacharacter interpretation occurs, and derive the branch name and commit message from a validated identifier rather than the raw string. At minimum: validate `task` against a strict allowlist (for example `^[A-Z][A-Z0-9]*-[0-9]+$` for ticket-style identifiers) and reject anything else before it is interpolated; apply `shlex.quote()` to every interpolated value if free-form text must be supported. Both the allowlist and the quoting were verified in a mocked reproduction to block the payload while leaving benign task identifiers working. If ticket content is ever forwarded to `shell.invoke_agent` as well, sanitize or bound it there too to avoid pairing this with prompt injection."
+              },
+              "properties": {
+                "security-severity": "7.8",
+                "tags": [
+                  "security",
+                  "stride:T",
+                  "stride:I"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/prompt-injection-via-untrusted-task-content-reaching-the-reasoning-prompt",
+              "name": "Prompt injection via untrusted task content reaching the reasoning prompt",
+              "shortDescription": {
+                "text": "Coverage: Prompt injection via untrusted task content reaching the reasoning prompt"
+              },
+              "fullDescription": {
+                "text": "Coverage of Prompt injection via untrusted task content reaching the reasoning prompt across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Prompt injection via untrusted task content reaching the reasoning prompt across the assessed attack surface.",
+                "markdown": "Coverage of Prompt injection via untrusted task content reaching the reasoning prompt across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/shell-quoting-breakout-command-injection",
+              "name": "Shell quoting breakout / command injection",
+              "shortDescription": {
+                "text": "Coverage: Shell quoting breakout / command injection"
+              },
+              "fullDescription": {
+                "text": "Coverage of Shell quoting breakout / command injection across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Shell quoting breakout / command injection across the assessed attack surface.",
+                "markdown": "Coverage of Shell quoting breakout / command injection across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/incorrect-boto3-api-usage-body-passed-as-dict-vs-blob-bytes-and-unvalidated-runtime-response-handling",
+              "name": "Incorrect boto3 API usage (body passed as dict vs blob/bytes) and unvalidated runtime response handling",
+              "shortDescription": {
+                "text": "Coverage: Incorrect boto3 API usage (body passed as dict vs blob/bytes) and unvalidated runtime response handling"
+              },
+              "fullDescription": {
+                "text": "Coverage of Incorrect boto3 API usage (body passed as dict vs blob/bytes) and unvalidated runtime response handling across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Incorrect boto3 API usage (body passed as dict vs blob/bytes) and unvalidated runtime response handling across the assessed attack surface.",
+                "markdown": "Coverage of Incorrect boto3 API usage (body passed as dict vs blob/bytes) and unvalidated runtime response handling across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/hardcoded-credentials-secret-exposure",
+              "name": "Hardcoded credentials / secret exposure",
+              "shortDescription": {
+                "text": "Coverage: Hardcoded credentials / secret exposure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Hardcoded credentials / secret exposure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Hardcoded credentials / secret exposure across the assessed attack surface.",
+                "markdown": "Coverage of Hardcoded credentials / secret exposure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/command-construction-injection-in-fixed-demo-commands",
+              "name": "Command construction / injection in fixed demo commands",
+              "shortDescription": {
+                "text": "Coverage: Command construction / injection in fixed demo commands"
+              },
+              "fullDescription": {
+                "text": "Coverage of Command construction / injection in fixed demo commands across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Command construction / injection in fixed demo commands across the assessed attack surface.",
+                "markdown": "Coverage of Command construction / injection in fixed demo commands across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/documentation-drift-misleading-security-guidance",
+              "name": "Documentation drift / misleading security guidance",
+              "shortDescription": {
+                "text": "Coverage: Documentation drift / misleading security guidance"
+              },
+              "fullDescription": {
+                "text": "Coverage of Documentation drift / misleading security guidance across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Documentation drift / misleading security guidance across the assessed attack surface.",
+                "markdown": "Coverage of Documentation drift / misleading security guidance across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/known-vulnerable-dependency-pins-supply-chain",
+              "name": "Known-vulnerable dependency pins / supply chain",
+              "shortDescription": {
+                "text": "Coverage: Known-vulnerable dependency pins / supply chain"
+              },
+              "fullDescription": {
+                "text": "Coverage of Known-vulnerable dependency pins / supply chain across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Known-vulnerable dependency pins / supply chain across the assessed attack surface.",
+                "markdown": "Coverage of Known-vulnerable dependency pins / supply chain across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.1"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "vuln-0001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Shell command injection via unescaped `task` interpolation in coding_workflow.py\n\nThe `task` parameter of `coding_workflow()` is interpolated unescaped into four `/bin/bash -c \"...\"` command strings (branch name, `git checkout -b`, `git commit -m`, `git push`). A task string containing a double quote breaks out of the quoted command, allowing arbitrary shell command execution on the AgentCore runtime with the session's privileges. In the repository as committed, `task` comes only from the operator's `sys.argv[1]`; the vulnerability is realized when `task` is supplied by an untrusted source (ticket title, webhook payload, LLM-derived task string), which the function's design (a JIRA-style ticket identifier) makes the plausible integration."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/AgentcoreShell (commit 3b4cc2689a1ed1d98383b0b7efdbe99fa8ea3845)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "35761d8d3ee3dab785cf9540e0e90ae6b794a2a421d268b9bc6b2ed4cb9f10d0"
+          },
+          "properties": {
+            "security-severity": "7.8",
+            "strix_vuln_class_hash": "5863e2f923f39f0d3377aa693c4fc96fa1ac1401333f4beeb10fbbcd1b5ee401",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "high",
+              "cvss": 7.8,
+              "timestamp": "2026-11-20 05:59:29 UTC",
+              "target": "/workspace/AgentcoreShell (commit 3b4cc2689a1ed1d98383b0b7efdbe99fa8ea3845)",
+              "impact": "Arbitrary command execution on the AgentCore runtime container (full read/write/execute within that session's privileges, including the `/workspace` checkout it operates on and any credentials available to the runtime session) whenever a task string under attacker influence reaches the workflow. Demonstrated harmlessly with a file-creation marker; no AWS APIs or deployed targets were contacted.",
+              "technical_analysis": "`coding_workflow()` builds shell commands by f-string interpolation of `task` and its derived `branch` name into `/bin/bash -c \"...\"` strings with no escaping, quoting, or validation. Four sites: the branch-name construction, `git checkout -b`, `git commit -m 'Fix {task}'` (single-quoted context inside the double-quoted `bash -c` string — a double quote in `task` still terminates the outer quoting when the outer level is re-parsed), and `git push origin {branch}`. The commands are handed to `AgentCoreShell.run()`, which forwards them verbatim as the `command` body of `invoke_agent_runtime_command`. Because the runtime executes the string through `/bin/bash -c`, any double quote in `task` closes the quoted segment and the remainder is parsed as fresh shell syntax by the outer shell. A single-quote in `task` additionally escapes the `git commit -m '...'` argument. Line 34 also interpolates `task` into the reasoning prompt sent to `invoke_agent`, which is a prompt-injection surface if ticket content is ever passed through, though it does not reach a shell.",
+              "remediation_steps": "Treat `task` as untrusted data at the point where it crosses into command construction. Preferred: stop building shell strings entirely — pass commands as argument lists (or have the runtime accept `argv`) so no shell metacharacter interpretation occurs, and derive the branch name and commit message from a validated identifier rather than the raw string. At minimum: validate `task` against a strict allowlist (for example `^[A-Z][A-Z0-9]*-[0-9]+$` for ticket-style identifiers) and reject anything else before it is interpolated; apply `shlex.quote()` to every interpolated value if free-form text must be supported. Both the allowlist and the quoting were verified in a mocked reproduction to block the payload while leaving benign task identifiers working. If ticket content is ever forwarded to `shell.invoke_agent` as well, sanitize or bound it there too to avoid pairing this with prompt injection.",
+              "counterevidence": "Strongest case against: in the shipped code the only caller is `main()` reading `sys.argv[1]`, i.e. the operator's own CLI argument — per the engagement's rules, commands an authorized shell user intentionally supplies are not vulnerabilities, so there is no untrusted input path in this commit. Also, the `bash -c` execution itself is the feature's purpose, and no network listener or unauthenticated surface exists. These facts cap the severity: it is not unauthenticated RCE, and the finding is contingent on a future untrusted wiring of `task`. However, no validation, quoting, or allowlist exists anywhere on the `task` path (verified by reading all call sites), so the latent injection is real and the function signature actively invites external task identifiers.",
+              "confidence": "high",
+              "severity_change_conditions": "Confirmation that `task` is (or will be) wired to an untrusted source — e.g. a ticketing integration, webhook handler, or LLM output — would raise this to high; conversely, if the workflow is guaranteed to remain operator-CLI-only, it stays a hardening/defense-in-depth item.",
+              "poc": {
+                "description": "1. Stub `boto3` so `AgentCoreShell` never contacts AWS: monkeypatch `shell_client.boto3.client` with a fake whose `invoke_agent_runtime_command` records `body[\"command\"]` and executes it locally via `subprocess` in a temp directory with a fake `PATH` (stub `git`/`npm`/`npx` scripts that exit 0).\n2. Call `coding_workflow(shell, 'JIRA-1234\" ; : > /tmp/<sandbox>/pwned_marker #')`.\n3. Observe that the three git-operation command strings break out of their double quotes and the marker file is created by the injected `: >` builtin.\n4. Re-run with a benign task (`JIRA-1234`) as the negative control: no marker, well-formed commands.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/prompt-injection-via-untrusted-task-content-reaching-the-reasoning-prompt",
+          "ruleIndex": 1,
+          "kind": "notApplicable",
+          "level": "none",
+          "message": {
+            "text": "Prompt injection via untrusted task content reaching the reasoning prompt — Not applicable: coding_workflow.py line 34 (invoke_agent prompt)\n\nNo untrusted source reaches `task` in this commit (only sys.argv[1]); prompt injection requires ticket content to be forwarded, which the repo does not do. Noted in vuln-0001 remediation as a forward-looking hardening item, not a present defect."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "coding_workflow.py line 34 (invoke_agent prompt)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "not_applicable",
+              "risk_area": "Prompt injection via untrusted task content reaching the reasoning prompt",
+              "surface": "coding_workflow.py line 34 (invoke_agent prompt)",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/shell-quoting-breakout-command-injection",
+          "ruleIndex": 2,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Shell quoting breakout / command injection — Ruled out: interactive.py (shell.run(f'/bin/bash -c \"{cmd}\"'))\n\nThe only input source is the operator typing at the `agentcore$` prompt; per engagement rules, intended execution of commands supplied by an authorized shell user is not a vulnerability. The double-quote-framing is a reliability bug (commands containing `\"` are misparsed), not a trust-boundary violation — no untrusted party can reach this input path in the shipped code."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "interactive.py (shell.run(f'/bin/bash -c \"{cmd}\"'))"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "Shell quoting breakout / command injection",
+              "surface": "interactive.py (shell.run(f'/bin/bash -c \"{cmd}\"'))",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/incorrect-boto3-api-usage-body-passed-as-dict-vs-blob-bytes-and-unvalidated-runtime-response-handling",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Incorrect boto3 API usage (body passed as dict vs blob/bytes) and unvalidated runtime response handling — Ruled out: shell_client.py (AgentCoreShell.run / invoke_agent)\n\nVerified against the bundled botocore service model (offline, no AWS call): `InvokeAgentRuntimeCommand.body` is a structure with members {command, timeout} and is required — the dict passed in shell_client.py:49-55 is the correct shape. `InvokeAgentRuntime.payload` is a blob and is passed json.dumps().encode(), also correct. Response parsing iterates documented chunk events only; no eval/exec/format sinks on runtime data."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "shell_client.py (AgentCoreShell.run / invoke_agent)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "Incorrect boto3 API usage (body passed as dict vs blob/bytes) and unvalidated runtime response handling",
+              "surface": "shell_client.py (AgentCoreShell.run / invoke_agent)",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/hardcoded-credentials-secret-exposure",
+          "ruleIndex": 4,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Hardcoded credentials / secret exposure — Ruled out: config.py\n\nconfig.py contains only a runtime ARN, region, and a UUID session id — an identifier, not a credential (no access key, secret, or token). Per engagement rules, ARNs/account IDs are not reported as credentials. Hygiene note only: identifiers embedded in VCS should ideally come from config, which the env-var override already permits."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "config.py"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "Hardcoded credentials / secret exposure",
+              "surface": "config.py",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/command-construction-injection-in-fixed-demo-commands",
+          "ruleIndex": 5,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Command construction / injection in fixed demo commands — No issue identified: demo.py\n\nAll six commands are static string literals with no interpolation of variable data; nothing user- or network-controlled reaches shell.run(). The temporary file writes go to /tmp/demo.txt with fixed content. No trust boundary crossed."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "demo.py"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Command construction / injection in fixed demo commands",
+              "surface": "demo.py",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/documentation-drift-misleading-security-guidance",
+          "ruleIndex": 6,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Documentation drift / misleading security guidance — No issue identified: README.md\n\nDocs accurately describe behavior; one reliability note (not a security issue): README documents file_transfer.py which does not exist in the repo at this commit. No secrets or unsafe instructions in docs."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "README.md"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Documentation drift / misleading security guidance",
+              "surface": "README.md",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/known-vulnerable-dependency-pins-supply-chain",
+          "ruleIndex": 7,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Known-vulnerable dependency pins / supply chain — No issue identified: requirements.txt\n\nSingle dependency `boto3>=1.35.0` with a floor (not a pin); no lockfile present, so no exact version to assess. No known-CVE reporting possible or warranted for a floating floor on a maintained library."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "requirements.txt"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Known-vulnerable dependency pins / supply chain",
+              "surface": "requirements.txt",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 1
+      }
+    }
+  ]
+}

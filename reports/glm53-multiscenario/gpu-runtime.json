@@ -1,0 +1,22 @@
+{
+    "CommandId": "bd2f86f7-9eae-455a-ad2f-abca5859d684",
+    "InstanceId": "i-0b33a1d2ee1a2065f",
+    "Comment": "",
+    "DocumentName": "AWS-RunShellScript",
+    "DocumentVersion": "$DEFAULT",
+    "PluginName": "aws:runShellScript",
+    "ResponseCode": 0,
+    "ExecutionStartDateTime": "2026-11-20T07:17:45.934Z",
+    "ExecutionElapsedTime": "PT0.21S",
+    "ExecutionEndDateTime": "2026-11-20T07:17:45.934Z",
+    "Status": "Success",
+    "StatusDetails": "Success",
+    "StandardOutputContent": "name, driver_version, memory.total [MiB], memory.used [MiB], utilization.gpu [%], power.draw [W]\nNVIDIA B200, 595.112.07, 183359 MiB, 161597 MiB, 100 %, 430.43 W\nNVIDIA B200, 595.112.07, 183359 MiB, 161723 MiB, 100 %, 408.23 W\nNVIDIA B200, 595.112.07, 183359 MiB, 161723 MiB, 100 %, 420.41 W\nNVIDIA B200, 595.112.07, 183359 MiB, 161723 MiB, 100 %, 415.16 W\nNVIDIA B200, 595.112.07, 183359 MiB, 161723 MiB, 100 %, 428.95 W\nNVIDIA B200, 595.112.07, 183359 MiB, 161723 MiB, 100 %, 416.77 W\nNVIDIA B200, 595.112.07, 183359 MiB, 161723 MiB, 100 %, 424.77 W\nNVIDIA B200, 595.112.07, 183359 MiB, 161083 MiB, 100 %, 404.07 W\nsha256:f832b5c39559c9caa900b22ad37c76fcce66470676855c42052102c537812f1f\n{\"started_at\": \"2026-11-20T07:17:18.793812+00:00\", \"case\": \"downloads\", \"concurrency\": 1, \"iteration\": 0, \"warmup\": false, \"ttft_s\": 0.05850843000007444, \"first_visible_s\": 2.9598788630000854, \"ttot_s\": 7.803799352000169, \"e2e_s\": 7.812116378000155, \"approx_tpot_s\": 0.007418861036398558, \"usage\": {\"prompt_tokens\": 142, \"total_tokens\": 1187, \"completion_tokens\": 1045, \"prompt_tokens_details\": null, \"reasoning_tokens\": 396, \"completion_tokens_details\": {\"reasoning_tokens\": 396}}, \"finish_reasons\": [\"stop\"], \"reasoning_chars\": 1697, \"error\": null, \"max_tokens\": 8192}\n{\"started_at\": \"2026-11-20T07:17:26.605958+00:00\", \"case\": \"catalog\", \"concurrency\": 1, \"iteration\": 1, \"warmup\": false, \"ttft_s\": 0.04938814899992394, \"first_visible_s\": 0.5294774059998417, \"ttot_s\": 4.216420739999876, \"e2e_s\": 4.2245648289999735, \"approx_tpot_s\": 0.007349263828924078, \"usage\": {\"prompt_tokens\": 183, \"total_tokens\": 751, \"completion_tokens\": 568, \"prompt_tokens_details\": null, \"reasoning_tokens\": 66, \"completion_tokens_details\": {\"reasoning_tokens\": 66}}, \"finish_reasons\": [\"stop\"], \"reasoning_chars\": 296, \"error\": null, \"max_tokens\": 8192}\n{\"started_at\": \"2026-11-20T07:17:30.830552+00:00\", \"case\": \"documents\", \"concurrency\": 1, \"iteration\": 1, \"warmup\": false, \"ttft_s\": 0.05806396000002678, \"first_visible_s\": 0.6257862410000143, \"ttot_s\": 4.002746374000026, \"e2e_s\": 4.010822477999909, \"approx_tpot_s\": 0.007345777307262568, \"usage\": {\"prompt_tokens\": 169, \"total_tokens\": 707, \"completion_tokens\": 538, \"prompt_tokens_details\": null, \"reasoning_tokens\": 78, \"completion_tokens_details\": {\"reasoning_tokens\": 78}}, \"finish_reasons\": [\"stop\"], \"reasoning_chars\": 411, \"error\": null, \"max_tokens\": 8192}\n",
+    "StandardOutputUrl": "",
+    "StandardErrorContent": "",
+    "StandardErrorUrl": "",
+    "CloudWatchOutputConfig": {
+        "CloudWatchLogGroupName": "",
+        "CloudWatchOutputEnabled": false
+    }
+}

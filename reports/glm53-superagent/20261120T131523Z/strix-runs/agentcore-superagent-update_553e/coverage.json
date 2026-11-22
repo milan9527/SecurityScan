@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20 13:41:04 UTC",
+  "run_id": "agentcore-superagent-update_553e",
+  "run_name": "agentcore-superagent-update_553e",
+  "scope": {
+    "targets": [
+      {
+        "type": "local_code",
+        "details": {
+          "target_path": "/home/ec2-user/bedrock/agentcore-superagent-update",
+          "workspace_subdir": "agentcore-superagent-update"
+        },
+        "original": "/home/ec2-user/bedrock/agentcore-superagent-update"
+      }
+    ],
+    "scan_mode": "quick",
+    "scope_mode": "full",
+    "diff_scope": {
+      "active": false,
+      "mode": "full"
+    },
+    "instruction": "Perform an authorized source-code security assessment of this local repository. Test only local isolated services and mocks. Do not contact deployed endpoints, use real credentials, or change cloud resources. Trace attacker-controlled input through actual guards to a security-sensitive sink. Validate candidate findings with a minimal local regression test or reproducible local PoC. Distinguish demonstrated vulnerabilities from assumptions and incomplete validation. Record file locations, prerequisites, impact, and remediation. Prioritize a few complete end-to-end paths within the turn budget; report untested coverage honestly.\n\nScenario: Webhook and outbound-request security. Trace callback verification, replay protection, URL validation, redirect handling, and SSRF boundaries. Use loopback mock HTTP servers only; do not query cloud metadata or external targets."
+  },
+  "summary": {
+    "surfaces_reviewed": 6,
+    "outcomes": {
+      "reported": 5,
+      "not_applicable": 1
+    },
+    "findings_filed": 3,
+    "gaps": 3
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "35678bbf",
+        "agent_name": "Outbound SSRF Analyst",
+        "status": "completed",
+        "skills": [
+          "ssrf",
+          "open_redirect"
+        ],
+        "task": "White-box analysis of /workspace/agentcore-superagent-update (repo root; code in super-agent/backend). Read the shared threat model first with get_threat_model on /workspace/agentcore-superagent-update.\n\nFocus: OUTBOUND requests and SSRF boundaries.\n- Analyze backend/src/services/node-executors/action-executor.ts, a2a-client.service.ts, oauth-flow.service.ts, skill-marketplace.service.ts, mcp.service.ts, litellm.routes.ts, webhook delivery paths in webhook.service.ts, and any shared HTTP client/fetch helpers.\n- For every place the server makes an HTTP request to a URL derived from user/API input: identify URL validation (allowlist, scheme checks, IP/host restrictions), redirect handling (does the client follow redirects, and are redirects re-validated?), and whether response bodies are returned to the caller (full SSRF vs blind).\n- Trace the attacker-controlled input from its entry point (route/parameter/body field) through guards to the fetch sink. Note which routes require auth and which don't.\n- Validate confirmed findings with a minimal LOCAL PoC using loopback mock HTTP servers only (127.0.0.1 ports you open yourself) — do NOT query cloud metadata, external targets, or deployed endpoints, and use no real credentials.\n- File reports via create_vulnerability_report for confirmed vulnerabilities (with code_locations). Record coverage (record_coverage) for every surface assessed, including clean ones. Close every candidate explicitly: confirmed / ruled_out (name the exact control at file:line) / open proof gap.\nDo NOT re-analyze inbound webhook signature/replay verification — a sibling agent covers that (only cover webhook DELIVERY/egress from webhook.service.ts).",
+        "is_root": false
+      },
+      {
+        "agent_id": "06cd7003",
+        "agent_name": "Root Agent",
+        "status": "completed",
+        "skills": [],
+        "task": "\n\nLocal Codebases: - /home/ec2-user/bedrock/agentcore-superagent-update (available at: /workspace/agentcore-superagent-update; this is the user's real directory, mounted live and writable — .git/.agents/.codex are read-only)\n\nSpecial instructions: Perform an authorized source-code security assessment of this local repository. Test only local isolated services and mocks. Do not contact deployed endpoints, use real credentials, or change cloud resources. Trace attacker-controlled input through actual guards to a security-sensitive sink. Validate candidate findings with a minimal local regression test or reproducible local PoC. Distinguish demonstrated vulnerabilities from assumptions and incomplete validation. Record file locations, prerequisites, impact, and remediation. Prioritize a few complete end-to-end paths within the turn budget; report untested coverage honestly.\n\nScenario: Webhook and outbound-request security. Trace callback verification, replay protection, URL validation, redirect handling, and SSRF boundaries. Use loopback mock HTTP servers only; do not query cloud metadata or external targets.",
+        "is_root": true
+      },
+      {
+        "agent_id": "3a5a8ad2",
+        "agent_name": "Webhook Auth Validation Agent",
+        "status": "completed",
+        "skills": [
+          "authentication_jwt"
+        ],
+        "task": "White-box validation task on /workspace/agentcore-superagent-update (code in super-agent/backend). Read the shared threat model first: get_threat_model on /workspace/agentcore-superagent-update.\n\nConfirmed-by-reading candidate to validate and report: the public webhook trigger endpoint POST /api/v1/webhook/:webhookId/trigger (super-agent/backend/src/routes/webhooks.routes.ts, route around line 300, public — no authenticate preHandler) calls webhookService.triggerWebhook (src/services/webhook.service.ts:137-186), which checks only: webhook existence, isEnabled, and optional IP allowlist. It NEVER verifies the stored secretHash against any request signature/header (e.g. X-Webhook-Secret) — the secret generated at create time is dead weight. webhookId is 24 hex chars of crypto randomness (hard to guess), but anyone who obtains the URL (logs, referrer, browser history, email) can trigger the workflow unlimited times with arbitrary `variables` values (which feed workflow execution as variables), with no replay protection. Also: GET /api/v1/webhook/status/:callRecordId is public and discloses execution status/progress for any call record UUID (no org/auth check, getCallStatus at webhook.service.ts:~421).\n\nYour job:\n1. Read the code to confirm the above trace (entry → guards → sink) and check for any verification I missed (search for signature checks, HMAC, x-webhook-secret handling anywhere in the repo — routes, middleware, fastify hooks in src/index.ts or app setup).\n2. Build a minimal LOCAL PoC: the cleanest is a focused unit-level repro or a small Fastify test that registers webhooks.routes.ts with mocked prisma (or in-memory stubs) and shows that a POST to /api/v1/webhook/<id>/trigger with NO secret header succeeds (200, received:true) and that a second identical replay also succeeds. Use only loopback/local mocks — do NOT contact external endpoints or use real credentials. If standing up the route with mocks is impractical, a precise static trace with file:line citations is acceptable — but say so and set confidence accordingly.\n3. File create_vulnerability_report for the missing webhook signature verification/replay (unauthenticated workflow triggering via webhook URL knowledge). Include code_locations with exact line numbers. Run the counterevidence pass honestly (webhookId is 96 bits of entropy — unguessable; the issue is that knowing the URL is the only credential and there's no replay/signature).\n4. Separately assess whether the public status endpoint deserves its own report (information disclosure) — file only if it clears the bar; otherwise mention in coverage.\n5. record_coverage for each surface you assess (trigger route, status route, secret generation), with explicit outcome.\nNote the sibling finding vuln-0001 (SSRF in api_call action nodes) already covers the SSRF angle of webhook-triggered workflows — do not re-report SSRF; focus on the auth/replay gap.",
+        "is_root": false
+      },
+      {
+        "agent_id": "1dd57ff4",
+        "agent_name": "Webhook Verification Analyst",
+        "status": "stopped",
+        "skills": [
+          "csrf",
+          "business_logic"
+        ],
+        "task": "White-box analysis of /workspace/agentcore-superagent-update (repo root; code in super-agent/backend). Read the shared threat model first with get_threat_model on /workspace/agentcore-superagent-update.\n\nFocus: INBOUND webhook/callback verification, replay protection, and signature checks.\n- Analyze backend/src/routes/webhooks.routes.ts, im.routes.ts, checkpoint.routes.ts, and backend/src/services/webhook.service.ts, im.service.ts, im-queue.service.ts, and the IM adapters (slack, telegram, discord, feishu, dingtalk, wecom, whatsapp adapters).\n- For each inbound webhook endpoint: identify auth (signature verification, shared secrets, tokens), replay protection (timestamp/nonce), whether verification can be skipped/failed-open, and whether unauthenticated requests can trigger workflow execution or state changes.\n- Trace attacker-controlled input (headers, bodies) through the actual guards to sinks (workflow triggering, command/message dispatch, DB writes).\n- Build a minimal LOCAL PoC for confirmed issues only using a loopback mock HTTP server (node or python) — do NOT contact any external/deployed endpoint, no real platform credentials, no cloud metadata. Use fake locally-generated secrets/seeds consistent with what the code expects.\n- File reports via create_vulnerability_report for confirmed vulnerabilities (with code_locations). Record coverage (record_coverage) for every surface assessed, including clean ones. Close every candidate explicitly: confirmed / ruled_out (name the exact control at file:line) / open proof gap.\nDo NOT test SSRF/outbound URL validation — a sibling agent covers that.",
+        "is_root": false
+      }
+    ],
+    "skills_exercised": [
+      "authentication_jwt",
+      "business_logic",
+      "csrf",
+      "open_redirect",
+      "ssrf"
+    ],
+    "findings_filed": 3,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": false,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": [
+      "1 agent(s) did not finish cleanly (Webhook Verification Analyst); any surface they held is under-covered."
+    ]
+  },
+  "entries": [
+    {
+      "surface": "workflow api_call action node (action-executor.ts executeApiCall + workflow-orchestrator.ts executeActionNode)",
+      "risk_area": "SSRF",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "vuln-0001; local loopback PoC confirmed redirect-following full-response SSRF; no validation between route input and fetch sink.",
+      "recorded_by": "Outbound SSRF Analyst",
+      "recorded_at": "2026-11-20 13:36:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/im/webhook/:bindingId (generic IM webhook)",
+      "risk_area": "authentication / signature verification",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "No auth, no verifyRequest; confirmed via local PoC creating chat session (vuln-0002).",
+      "recorded_by": "Webhook Verification Analyst",
+      "recorded_at": "2026-11-20 13:38:30 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/v1/webhook/:webhookId/trigger",
+      "risk_area": "secret/signature verification + replay protection",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "secretHash generated/stored but never compared in trigger path; no signature/timestamp/nonce (vuln-0003).",
+      "recorded_by": "Webhook Verification Analyst",
+      "recorded_at": "2026-11-20 13:38:32 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/v1/webhook/:webhookId/trigger (webhooks.routes.ts:315)",
+      "risk_area": "Missing webhook signature/secret verification + replay protection (unauthenticated workflow triggering)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Static trace confirmed (no authenticate preHandler; triggerWebhook checks only existence/isEnabled/IP allowlist); executable PoC in tests/unit/webhook-trigger-authz.poc.test.ts passes 3/3 with real route and mocked prisma. Covered by existing report vuln-0003 (duplicate submission correctly rejected); my PoC evidence was attached to vuln-0003 via update_vulnerability_report.",
+      "recorded_by": "Webhook Auth Validation Agent",
+      "recorded_at": "2026-11-20 13:40:33 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/v1/webhook/status/:callRecordId (webhooks.routes.ts:380)",
+      "risk_area": "Unauthenticated information disclosure of call/execution status",
+      "outcome": "not_applicable",
+      "outcome_label": "Not applicable",
+      "evidence": "Assessed as separate report candidate and it does not clear the bar: unauthenticated disclosure is limited to execution status/progress/error message and node timing for a random UUID (callRecordId, ~122 bits) — no restricted data content, no logs, and the parent vuln-0003 impact field already mentions this endpoint. Enumeration-infeasible and no cross-tenant object data returned, so it is folded into vuln-0003's narrative rather than filed standalone.",
+      "recorded_by": "Webhook Auth Validation Agent",
+      "recorded_at": "2026-11-20 13:40:35 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Webhook secret generation/storage (webhook.service.ts:50-53, :83, :93, :524)",
+      "risk_area": "Secret generated but never used for request verification",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Repo-wide search for secretHash/secret_hash/hmac/signature/x-webhook confirms the stored hash is only set at creation and mapped into WebhookConfig — never compared on any trigger path. Part of vuln-0003's root cause.",
+      "recorded_by": "Webhook Auth Validation Agent",
+      "recorded_at": "2026-11-20 13:40:37 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "business logic",
+      "detail": "Agent(s) Webhook Verification Analyst were assigned the 'business_logic' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    },
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "csrf",
+      "detail": "Agent(s) Webhook Verification Analyst were assigned the 'csrf' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    },
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "open redirect",
+      "detail": "Agent(s) Outbound SSRF Analyst were assigned the 'open_redirect' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    }
+  ]
+}

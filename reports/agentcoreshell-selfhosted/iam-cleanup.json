@@ -1,0 +1,29 @@
+{
+  "time": "2026-11-20T06:02:04.577487+00:00",
+  "operations": [
+    {
+      "operation": "remove-role-from-instance-profile",
+      "returncode": 0,
+      "output": "",
+      "error": ""
+    },
+    {
+      "operation": "delete-instance-profile",
+      "returncode": 0,
+      "output": "",
+      "error": ""
+    },
+    {
+      "operation": "detach-role-policy",
+      "returncode": 0,
+      "output": "",
+      "error": ""
+    },
+    {
+      "operation": "delete-role",
+      "returncode": 0,
+      "output": "",
+      "error": ""
+    }
+  ]
+}

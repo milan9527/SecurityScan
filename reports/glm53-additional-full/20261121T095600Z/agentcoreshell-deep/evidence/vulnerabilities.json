@@ -1,0 +1,50 @@
+[
+  {
+    "id": "vuln-0001",
+    "title": "Shell command injection via JIRA task ID in coding_workflow.py git/commit/push commands",
+    "severity": "high",
+    "timestamp": "2026-11-21 09:56:12 UTC",
+    "description": "The JIRA task ID passed as `sys.argv[1]` to `coding_workflow.py` is interpolated unquoted into several `/bin/bash -c` command strings (`git checkout -b`, `git commit -m`, `git push origin`) that are executed on the AWS Bedrock AgentCore Runtime host via `InvokeAgentRuntimeCommand`. A task ID containing shell metacharacters (spaces, `;`, `$`, quotes) escapes the intended git command and executes arbitrary shell commands on the remote runtime host under the runtime's privileges. The same value is used unquoted as a git branch name and commit message, so option-prefixed values are also interpreted as git options.",
+    "impact": "Arbitrary shell command execution on the AgentCore Runtime host under the runtime's privileges, demonstrated locally by creating a marker file via a task ID payload. The injected commands inherit the `cd /workspace` working directory and ambient IAM credentials of the runtime. The git-push sink is demonstrably attacker-steerable: a locally verified task ID `--receive-pack=touch /tmp/poc/pwned2` makes git spawn the attacker-named program as the remote helper. An attacker who can influence the task ID (a ticket field in an automated trigger, a shared automation queue, or a value copied into the command line) can execute any command on the remote host.",
+    "target": "/workspace/AgentcoreShell",
+    "technical_analysis": "`coding_workflow.py:103` takes `task` from `sys.argv[1]`. At line 81 it builds `branch = f\"fix/{task.lower()}\"`, then at lines 83, 85-87, and 88-90 interpolates `branch`/`task` raw into `/bin/bash -c \"...\"` command strings passed to `shell.run()`, which sends them to the AgentCore Runtime for execution (`shell_client.py` `run()` → `invoke_agent_runtime_command`). Because the values are placed inside a double-quoted (or single-quoted, for the commit message) bash string with no escaping:\n\n- `;`, `&&`, newlines etc. terminate the git command and start a new one — the classic command-injection primitive, verified locally.\n- `'` in the task ID closes the single-quoted commit message at line 86 and injects shell syntax there too, also verified locally.\n- `$VAR`, backticks and `${IFS}` expand inside the double quotes, useful when spaces are awkward.\n- Since `branch` is `fix/{task}`, a task starting with `-` cannot be a git option for `git checkout -b` (it is prefixed by `fix/`), but git's own refspec/option parsing in `git push origin {branch}` still accepts an embedded `--receive-pack=` style payload after `fix/` because git treats the whole token as `<repository>` and passes it to the remote-helper mechanism — demonstrated locally where git attempted to use the attacker-controlled path as the remote, i.e. it spawns the named program (`--receive-pack=touch /tmp/poc/pwned2` executed `touch`).\n\nNo validation, allowlist, or quoting exists anywhere on the path from `argv` to the shell string.",
+    "poc_description": "1. Stub `boto3` (no AWS contact) and substitute `AgentCoreShell` with a local mock whose `run()` executes the exact command string via `subprocess` in a scratch git repo, simulating the runtime host.\n2. Call `coding_workflow(mock_shell, \"x; touch /tmp/poc/pwned #\")` — the same code path `main()` drives with `sys.argv[1]`.\n3. Observe the interpolated command `/bin/bash -c \"cd /workspace && git checkout -b fix/x; touch /tmp/poc/pwned #\"` and that the marker file is created on the executing host.\n4. Separately, run the step-5 command with a task ID of `'; touch /tmp/poc/pwned3; x='` to show the commit-message sink also escapes quoting, and with `--receive-pack=touch /tmp/poc/pwned2` to show git option injection in `git push origin {branch}`.",
+    "poc_script_code": "```python\nimport sys, subprocess, os\nsys.path.insert(0, \"/tmp/poc\")\nsys.modules[\"boto3\"] = __import__(\"stub_boto3\")   # stub: def client(*a, **k): raise RuntimeError(...)\nsys.path.insert(1, \"/workspace/AgentcoreShell\")\nfrom coding_workflow import coding_workflow\n\nclass Result:\n    def __init__(self, p): self.p = p\n    @property\n    def success(self): return self.p.returncode == 0\n\nclass LocalRuntimeShell:\n    \"\"\"Stands in for AgentCoreShell: executes locally the exact command\n    string the real client would send via InvokeAgentRuntimeCommand.\"\"\"\n    def run(self, command, timeout=60, stream_output=True):\n        print(f\"[RUNTIME EXEC] {command}\")\n        p = subprocess.run([\"/bin/bash\", \"-c\", command], capture_output=True, text=True)\n        return Result(p)\n\n# (scratch git repo with a passing npm test setup at /workspace, see PoC script)\ncoding_workflow(LocalRuntimeShell(), \"x; touch /tmp/poc/pwned #\")\nprint(\"marker exists:\", os.path.exists(\"/tmp/poc/pwned\"))   # -> True\n```\n\nGit option injection (executed verbatim as the line-90 command string, scratch repo with an `origin` remote):\n\n```bash\ncmd='cd /tmp/poc/repo && git push origin fix/--receive-pack=touch${IFS}/tmp/poc/pwned2'\n# git parses \"fix/--receive-pack=touch/tmp/poc/pwned2\" as <repository> (the receive-pack target)\nbash -c \"$cmd\"   # -> \"error: failed to push some refs to '/tmp/poc/pwned2'\" — git runs the attacker-named program as remote helper\n```",
+    "remediation_steps": "Do not interpolate the task ID into shell strings. Validate it against a strict allowlist (e.g. `^[A-Z]+-\\d+$`) before use, and pass the branch name to git as a discrete argument rather than embedding it in a `bash -c` string — e.g. run `git checkout -b -- <branch>` (with `--` to prevent option interpretation), or better, use a library-level git invocation where the branch name is a single argv element and cannot be tokenized by a shell. Construct the commit message with an explicit argument form as well. If the command string must be assembled, use `shlex.quote()` on every interpolated value — though note `shlex.quote` does not protect the git-option interpretation, hence the `--` separator or allowlist validation is still required.",
+    "evidence": "Local PoC executed `coding_workflow()` with task ID `x; touch /tmp/poc/pwned #` and a stubbed runtime shell. Resulting commands and outcome:\n\n```text\n[RUNTIME EXEC] /bin/bash -c \"cd /workspace && git checkout -b fix/x; touch /tmp/poc/pwned #\"\n[RUNTIME EXEC] /bin/bash -c \"cd /workspace && git add -A\"\n[RUNTIME EXEC] /bin/bash -c \"cd /workspace && git commit -m 'Fix x; touch /tmp/poc/pwned #'\"\n[RUNTIME EXEC] /bin/bash -c \"cd /workspace && git push origin fix/x; touch /tmp/poc/pwned #\"\nPOC RESULT: marker file /tmp/poc/pwned exists = True\n```\n\nThe marker file `pwned` was created on the host executing the commands, proving the `;` sequence terminated the `git checkout` command and the following segment executed as a separate command.",
+    "assumptions": "The task ID is attacker-influenced (e.g. automated trigger, ticket-field value, or a copied command line) rather than a manually trusted free-text string. Assumes the operator holds IAM permission to invoke the AgentCore runtime command API — which is the documented prerequisite for the tool.",
+    "counterevidence": "Actively looked for mitigations: no input validation, allowlist, regex, or sanitization of `task` anywhere in the file or the repository; `shell.run` passes the string verbatim to the runtime with no filtering; no allowlist of git subcommand arguments and no `--` end-of-options guard before the interpolated branch name. The only mitigating factor is that the operator launches the script — if every invocation is a human typing a fully trusted task ID, the injection requires a compromised or careless invocation, which lowers exposure but does not constitute a control.",
+    "confidence": "high",
+    "severity_change_conditions": "Evidence that these scripts are invoked with task IDs sourced from an untrusted or automated channel (ticketing webhook, queue consumer, CI parameter) would raise this to critical; conversely, if the tool is confirmed to be used only interactively by a single trusted operator who always types task IDs by hand, severity could be argued down to medium.",
+    "fix_effort": "low",
+    "cvss": 8.8,
+    "cvss_breakdown": {
+      "attack_complexity": "L",
+      "attack_vector": "L",
+      "availability": "H",
+      "confidentiality": "H",
+      "integrity": "H",
+      "privileges_required": "L",
+      "scope": "C",
+      "user_interaction": "N"
+    },
+    "method": "POST",
+    "cwe": "CWE-78",
+    "finding_class": "dynamic",
+    "agent_id": "55b682f4",
+    "agent_name": "Command Injection Validator",
+    "update_history": [
+      {
+        "timestamp": "2026-11-21 09:56:24 UTC",
+        "fields": [
+          "cvss_breakdown",
+          "severity_change_conditions"
+        ],
+        "reason": "Fix inconsistent severity-change wording (finding is already high; the untrusted-source scenario would raise it to critical).",
+        "agent_id": "a3fece51",
+        "agent_name": "Root Agent"
+      }
+    ],
+    "updated_at": "2026-11-21 09:56:24 UTC"
+  }
+]

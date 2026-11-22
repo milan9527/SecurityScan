@@ -1,0 +1,19 @@
+{
+  "test": "untrusted task interpolation into bash command",
+  "cloud_calls": 0,
+  "real_git_calls": 0,
+  "results": [
+    {
+      "case": "control",
+      "exit_code": 0,
+      "marker_created": false,
+      "marker_content": null
+    },
+    {
+      "case": "injection",
+      "exit_code": 0,
+      "marker_created": true,
+      "marker_content": "verified"
+    }
+  ]
+}

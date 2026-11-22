@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20 07:28:07 UTC",
+  "run_id": "catalog_982f",
+  "run_name": "catalog_982f",
+  "scope": {
+    "targets": [
+      {
+        "type": "local_code",
+        "details": {
+          "target_path": "/home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/catalog",
+          "workspace_subdir": "catalog"
+        },
+        "original": "/home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/catalog"
+      }
+    ],
+    "scan_mode": "quick",
+    "scope_mode": "full",
+    "diff_scope": {
+      "active": false,
+      "mode": "full"
+    },
+    "instruction": "This is an authorized isolated synthetic code security test. Audit the supplied local project and demonstrate findings by invoking its functions in a local Python process with synthetic data only. Do not contact external hosts or AWS. Treat documented trust boundaries as part of the application contract. Review every function, including versioned alternatives; report only demonstrated security defects. Provide a minimal reproducible proof and a remediation. Do not modify application code. Finish within 20 turns, leaving time to write the final report. Use a single agent; do not delegate."
+  },
+  "summary": {
+    "surfaces_reviewed": 2,
+    "outcomes": {
+      "reported": 1,
+      "no_issue_found": 1
+    },
+    "findings_filed": 1,
+    "gaps": 0
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "7a4d92b7",
+        "agent_name": "Root Agent",
+        "status": "completed",
+        "skills": [],
+        "task": "\n\nLocal Codebases: - /home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/catalog (available at: /workspace/catalog; this is the user's real directory, mounted live and writable — .git/.agents/.codex are read-only)\n\nSpecial instructions: This is an authorized isolated synthetic code security test. Audit the supplied local project and demonstrate findings by invoking its functions in a local Python process with synthetic data only. Do not contact external hosts or AWS. Treat documented trust boundaries as part of the application contract. Review every function, including versioned alternatives; report only demonstrated security defects. Provide a minimal reproducible proof and a remediation. Do not modify application code. Finish within 20 turns, leaving time to write the final report. Use a single agent; do not delegate.",
+        "is_root": true
+      }
+    ],
+    "skills_exercised": [],
+    "findings_filed": 1,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": true,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": []
+  },
+  "entries": [
+    {
+      "surface": "app.py search(db, query)",
+      "risk_area": "SQL injection / auth-bypass of published filter",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "User-controlled query is concatenated into the LIKE clause; PoC in local Python with synthetic data returned the unpublished row and dumped sqlite_master via UNION. search_v2 is the parameterized control and returns [] for the same payloads.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 07:27:35 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "app.py search_v2(db, query)",
+      "risk_area": "SQL injection",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Parameterized query using ? placeholder; the same attack payloads that exploit search() return no rows here (control confirmed in local run).",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 07:27:36 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": []
+}

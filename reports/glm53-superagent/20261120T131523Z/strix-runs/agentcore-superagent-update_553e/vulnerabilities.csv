@@ -1,0 +1,4 @@
+id,title,severity,timestamp,file
+vuln-0001,"Full-response SSRF in workflow api_call action node (no URL validation, redirects followed)",HIGH,2026-11-20 13:36:44 UTC,vulnerabilities/vuln-0001.md
+vuln-0002,Unauthenticated generic IM webhook allows arbitrary agent message injection and workflow triggering,HIGH,2026-11-20 13:38:19 UTC,vulnerabilities/vuln-0002.md
+vuln-0003,Workflow webhook trigger ignores generated secret — unauthenticated workflow execution,HIGH,2026-11-20 13:38:28 UTC,vulnerabilities/vuln-0003.md

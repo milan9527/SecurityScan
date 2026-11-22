@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GLM-5.3 · H200 与 B200 对照测试</title><style>
+body{font:16px/1.8 system-ui,sans-serif;color:#172d43;background:#edf2f6;margin:0}
+main{max-width:1100px;margin:24px auto;padding:32px;background:white;border-radius:12px}
+h1{color:#132f46}h2{border-bottom:1px solid #dbe5ed}
+table{display:block;overflow:auto;border-collapse:collapse;font-size:14px}
+th,td{padding:10px;border:1px solid #dbe5ed;white-space:nowrap}
+th{background:#eaf2f6}code{overflow-wrap:anywhere}a{color:#096770}
+@media(max-width:650px){main{margin:8px;padding:18px}}
+</style><main><h1>GLM-5.3：H200 与 B200 对照测试</h1>
+<p>状态：2026-11-22 10:55:51 UTC 测试完成，退出码 0。模型身份及真实工具调用往返验证通过；24 个正式请求均正常完成，无错误或截断。</p>
+<h2>测试结论</h2>
+<p>在本轮配置下，H200 并发 1 / 2 的聚合输出吞吐为 203.9 / 342.0 tokens/s，比 B200 分别低 22.5% / 23.6%；平均 E2E 为 13.740 / 15.407 秒，分别长 34.4% / 38.7%。估算 TPOT 分别长 32.1% / 30.2%。这些结果支持本轮 B200 配置的生成速度更快，但不代表两种 GPU 的最佳性能或同网络条件下的硬件性能差距。</p>
+<p>H200 的 TTFT 更短，但首次可见正文更晚；TTFT 包含思考增量，不能用它代替用户等待正文的时间。两侧客户端网络路径和输出长度不同，具体限制见下文。</p>
+<h2>H200 环境</h2>
+<ul>
+<li>东京 <code>ap-northeast-1a</code>，持久 Spot <code>p5en.48xlarge</code>，8 × NVIDIA H200。</li>
+<li>实例 <code>i-09c41bc239b10b001</code>，驱动 <code>595.112.07</code>；每卡 <code>143771 MiB</code>（nvidia-smi）。</li>
+<li>独立 2 TiB 加密 gp3 模型盘，6000 IOPS、1000 MB/s。</li>
+<li>200 GiB gp3 系统盘已提升至 6000 IOPS、1000 MB/s，以减少镜像解包等待。</li>
+<li>GLM-5.3 revision：<code>ba32f8c19c8738e2c57c71798c601d477a7bf844</code>。</li>
+<li>SGLang 镜像 digest：<code>sha256:f832b5c39559c9caa900b22ad37c76fcce66470676855c42052102c537812f1f</code>，应用同步权重加载补丁。</li>
+<li>TP=8，MTP/EAGLE 3 steps、top-k=1、4 draft tokens，FP8 KV cache。</li>
+<li>上下文 262144，最多同时处理 2 个请求，显存静态比例 0.85。</li>
+<li>完成或失败后 10 分钟关机，另有启动后 3 小时上限。关机为 stop，保留实例和 EBS。</li>
+</ul>
+<h2>测试范围和口径</h2>
+<p>先验证模型身份及一次真实工具调用往返，再使用已有 auth、path、webhook、tools 四组离线源代码审计样例。每组预热一次，然后分别以并发 1、2 各重复三次，每种并发 12 个计入统计的请求。温度 0、reasoning effort=low、输出上限 8192 tokens，与 B200 对照使用相同提示词。</p>
+<p>本轮是独立流式推理与工具调用验证，不能替代完整 Strix 扫描，也不能将推理吞吐直接解释为漏洞检测能力。</p>
+<p>“正常正文完成”仅表示正文非空、以 stop 结束且没有请求错误，不表示发现已通过安全审计或漏洞复现验证。工具调用验证完成 add(19, 23) 往返，最终回答为 42。</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">B200 并发 1</th>
+<th style="text-align:right">B200 并发 2</th>
+<th style="text-align:right">H200 并发 1</th>
+<th style="text-align:right">H200 并发 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>正常正文完成请求</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">12/12</td>
+</tr>
+<tr>
+<td>错误 / 截断</td>
+<td style="text-align:right">0 / 0</td>
+<td style="text-align:right">0 / 0</td>
+<td style="text-align:right">0 / 0</td>
+<td style="text-align:right">0 / 0</td>
+</tr>
+<tr>
+<td>TTFT 均值（秒）</td>
+<td style="text-align:right">0.325</td>
+<td style="text-align:right">0.337</td>
+<td style="text-align:right">0.140</td>
+<td style="text-align:right">0.184</td>
+</tr>
+<tr>
+<td>首次可见正文均值（秒）</td>
+<td style="text-align:right">4.353</td>
+<td style="text-align:right">4.973</td>
+<td style="text-align:right">5.746</td>
+<td style="text-align:right">6.961</td>
+</tr>
+<tr>
+<td>E2E 均值（秒）</td>
+<td style="text-align:right">10.220</td>
+<td style="text-align:right">11.111</td>
+<td style="text-align:right">13.740</td>
+<td style="text-align:right">15.407</td>
+</tr>
+<tr>
+<td>E2E p95（秒）</td>
+<td style="text-align:right">18.186</td>
+<td style="text-align:right">17.318</td>
+<td style="text-align:right">20.093</td>
+<td style="text-align:right">18.931</td>
+</tr>
+<tr>
+<td>估算 TPOT 均值（毫秒）</td>
+<td style="text-align:right">3.653</td>
+<td style="text-align:right">4.209</td>
+<td style="text-align:right">4.826</td>
+<td style="text-align:right">5.478</td>
+</tr>
+<tr>
+<td>平均输出 tokens / 请求</td>
+<td style="text-align:right">2690.9</td>
+<td style="text-align:right">2549.8</td>
+<td style="text-align:right">2802.0</td>
+<td style="text-align:right">2786.2</td>
+</tr>
+<tr>
+<td>聚合输出 tokens/s</td>
+<td style="text-align:right">263.3</td>
+<td style="text-align:right">447.5</td>
+<td style="text-align:right">203.9</td>
+<td style="text-align:right">342.0</td>
+</tr>
+</tbody>
+</table>
+<p>B200 数据来自 2026-11-21 的 8×B200 MTP 测试。聚合输出吞吐为整个 8 卡服务在批次墙钟时间内的输出 token 总量，包括模型返回的 reasoning token 计数，并非单卡吞吐。估算 TPOT = (最后生成增量到达耗时 − TTFT)/(输出 tokens − 1)；流式分块可能包含多个 token，因此它不是逐 token 的直接测量。</p>
+<p>TTFT 从请求发出计至首个生成内容分块（包括 reasoning/tool calls）；E2E 从请求发出计至完整响应流结束。B200 测试客户端经过 SSM 隧道，H200 客户端位于实例本机，这会影响延迟比较，尤其是 TTFT。每种并发只有 12 个样本，p95 仅供本轮比较。</p>
+<p>运行日志提示缺少当前 Triton 3.8.0 的 H200 MoE 调优配置，回退使用 3.5.1 配置，可能影响性能。因此这里比较的是本轮部署配置，不代表两种 GPU 的最佳性能。相同提示词也不保证生成 token 数相同，应结合 TPOT 和输出长度解读 E2E。</p>
+<h2>启动记录</h2>
+<p>所有时间均为 UTC。实例于 10:13:14 启动，部署脚本于 10:16:20 开始，约 704 GiB 权重于 10:40:56 下载完成，模型于 10:50:07 就绪，工具调用验证于 10:50:29 通过。下载完成至服务就绪约 9 分 11 秒，包含后续初始化等步骤，不是独立测量的纯权重加载时间。本轮使用 EBS 模型盘，不是 NVMe 启动对照。</p>
+<h2>证据</h2>
+<p>部署脚本：<code>deploy/glm53-ec2/h200-bootstrap.sh</code>；实例记录：<code>deploy/glm53-ec2/state-h200.json</code>。</p>
+<p>已取回 <a href="stream-metrics.jsonl">流式请求记录</a>、<a href="comparison.json">汇总对照</a>、<a href="inference-verification.json">工具调用验证</a>、<a href="status.json">完成状态</a>、<a href="readiness.json">就绪记录</a> 和 <a href="gpu.txt">GPU 信息</a>。原始指标字段保留兼容性，文档统一使用 E2E 表示完整响应端到端延迟。</p>
+<p>远端 <code>/opt/h200/results/</code> 保存完整结果，<code>/var/log/glm53-bootstrap.log</code> 保存部署过程。完成后已核实系统计划于 2026-11-22 11:05:51 UTC 自动关机；实例关机行为为 stop，保留 EBS。</p>
+</main></html>

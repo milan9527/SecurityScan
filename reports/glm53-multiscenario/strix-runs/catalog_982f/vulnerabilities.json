@@ -1,0 +1,36 @@
+[
+  {
+    "id": "vuln-0001",
+    "title": "SQL injection in app.py search() via unparameterized LIKE clause",
+    "severity": "high",
+    "timestamp": "2026-11-20 07:27:59 UTC",
+    "description": "The `search` function in `app.py` builds its SQL query by concatenating the user-controlled `query` argument directly into a `LIKE` clause, allowing SQL injection. The parameterized alternative `search_v2` is not vulnerable, but `search` is independently reachable and injectable.",
+    "impact": "An unauthenticated attacker (the query originates from an HTTP query string) can read the entire database, including products where `published=0`, defeating the documented access-control filter. Demonstrated locally: the injected payload returned the hidden row `(2, 'unreleased book')` and dumped the full schema via a UNION against `sqlite_master`.",
+    "target": "/workspace/catalog (local project)",
+    "technical_analysis": "`search` executes `\"SELECT id,name FROM products WHERE published=1 AND name LIKE '%\" + query + \"%'\"`, where `query` originates from an HTTP query string and is concatenated into the SQL text without any validation or escaping. A payload containing a single quote terminates the string literal, allowing arbitrary SQL to be injected. The `published=1` predicate — the application's documented access control for hiding unpublished products — is bypassable because the injected expression (`OR 1=1`) short-circuits it, and a UNION clause allows reading any other table in the database. `search_v2` demonstrates the correct pattern (placeholder binding), confirming the vulnerability is specific to the concatenating implementation and that both functions are individually reviewable versions of the same feature.",
+    "poc_description": "1. Import `app` in a local Python process and create the in-memory database with `app.database()`.\\n2. Call `app.search(db, \"book\")` to establish the baseline: only the published product `(1, 'public book')` is returned.\\n3. Call `app.search(db, \"book' OR 1=1 --\")` and observe the unpublished product `(2, 'unreleased book')` is also returned, proving the `published=1` filter is bypassed via injection.\\n4. Call `app.search(db, \"x' UNION SELECT 1, sql FROM sqlite_master --\")` and observe the injected UNION extracts the full schema from `sqlite_master`.\\n5. Run the same payloads against `app.search_v2(db, ...)` and observe they return no rows, confirming the parameterized variant is not injectable and isolating the defect to `search`.",
+    "poc_script_code": "import sqlite3\nimport app\n\ndb = app.database()\n\n# Baseline: normal query — only the published product is returned\nprint(\"normal   :\", app.search(db, \"book\"))\n\n# Payload 1: injection bypasses the published=1 access-control filter\nprint(\"payload1 :\", app.search(db, \"book' OR 1=1 --\"))\n\n# Payload 2: UNION-based extraction of the full schema from sqlite_master\nprint(\"payload2 :\", app.search(db, \"x' UNION SELECT 1, sql FROM sqlite_master --\"))\n\n# Control: the same payloads against the parameterized search_v2 return no rows\nprint(\"v2 normal :\", app.search_v2(db, \"book\"))\nprint(\"v2 attack :\", app.search_v2(db, \"book' OR 1=1 --\"))",
+    "remediation_steps": "Replace the string-concatenated query in `search` with the parameterized form already implemented in `search_v2`: pass the user-supplied value as a bound parameter (`db.execute('SELECT id,name FROM products WHERE published=1 AND name LIKE ?', ('%' + query + '%',))`) instead of interpolating it into the SQL string. If `search_v2` is intended as its replacement, remove or gate the legacy `search` function so no reachable code path builds SQL by concatenation; the demonstrated impact is bypass of the `published` access-control filter plus arbitrary read of the database (schema and data disclosure).",
+    "evidence": "Observed outputs from the local reproduction (see `poc_script_code`):\n\n- `normal   : [(1, 'public book')]` — baseline honors `published=1`.\n- `payload1 : [(1, 'public book'), (2, 'unreleased book')]` — attacker-supplied string returns the row the `published=1` filter is supposed to hide.\n- `payload2 : [(1, 'CREATE TABLE products(id INTEGER, name TEXT, published INTEGER)')]` — `sqlite_master` dumped via `UNION SELECT`.\n- `v2 attack: []` — the same payloads against `search_v2` return nothing, isolating the concatenation as the root cause.",
+    "assumptions": "The docstring states the query argument originates from an HTTP query string, so attacker control of the input is part of the application contract. The proof was executed locally with synthetic data per engagement rules, which is representative of the same code path executing in production.",
+    "counterevidence": "Actively looked for mitigations: no input validation, sanitization, escaping, or allowlisting is applied to `query` anywhere between the caller and `db.execute`; the query is used verbatim in string concatenation. The only control in the file is the parameterization in `search_v2`, which is a separate function and does not run on the `search` path. Both normal and attack inputs were executed locally to confirm the differential.",
+    "confidence": "high",
+    "severity_change_conditions": "Confirmation that `search` is exposed on a deployed, internet-reachable endpoint (rather than only invoked internally as in this local synthetic test) would raise exploitability confidence from demonstrated-local to full remote; nothing would lower it short of removing the concatenation.",
+    "fix_effort": "trivial",
+    "cvss": 7.5,
+    "cvss_breakdown": {
+      "attack_complexity": "L",
+      "attack_vector": "N",
+      "availability": "N",
+      "confidentiality": "H",
+      "integrity": "N",
+      "privileges_required": "N",
+      "scope": "U",
+      "user_interaction": "N"
+    },
+    "cwe": "CWE-89",
+    "finding_class": "dynamic",
+    "agent_id": "7a4d92b7",
+    "agent_name": "Root Agent"
+  }
+]

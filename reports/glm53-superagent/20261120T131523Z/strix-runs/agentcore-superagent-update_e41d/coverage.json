@@ -1,0 +1,308 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20 13:21:35 UTC",
+  "run_id": "agentcore-superagent-update_e41d",
+  "run_name": "agentcore-superagent-update_e41d",
+  "scope": {
+    "targets": [
+      {
+        "type": "local_code",
+        "details": {
+          "target_path": "/home/ec2-user/bedrock/agentcore-superagent-update",
+          "workspace_subdir": "agentcore-superagent-update"
+        },
+        "original": "/home/ec2-user/bedrock/agentcore-superagent-update"
+      }
+    ],
+    "scan_mode": "quick",
+    "scope_mode": "full",
+    "diff_scope": {
+      "active": false,
+      "mode": "full"
+    },
+    "instruction": "Perform an authorized source-code security assessment of this local repository. Test only local isolated services and mocks. Do not contact deployed endpoints, use real credentials, or change cloud resources. Trace attacker-controlled input through actual guards to a security-sensitive sink. Validate candidate findings with a minimal local regression test or reproducible local PoC. Distinguish demonstrated vulnerabilities from assumptions and incomplete validation. Record file locations, prerequisites, impact, and remediation. Prioritize a few complete end-to-end paths within the turn budget; report untested coverage honestly.\n\nScenario: Authentication and tenant isolation. Trace public, internal, and session routes through middleware; inspect JWT validation, internal request signatures, secret derivation, ownership checks, and cross-user object access. Validate bypasses using local mocks only."
+  },
+  "summary": {
+    "surfaces_reviewed": 16,
+    "outcomes": {
+      "reported": 11,
+      "no_issue_found": 5
+    },
+    "findings_filed": 13,
+    "gaps": 1
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "0ebf5537",
+        "agent_name": "Auth flow tracer",
+        "status": "completed",
+        "skills": [
+          "authentication_jwt"
+        ],
+        "task": "get_threat_model target=/workspace/agentcore-superagent-update first. White-box audit of authentication in /workspace/agentcore-superagent-update/super-agent/backend (TypeScript Fastify, do NOT run the server against any network; local-only testing with vitest/mocks). Focus: src/middleware/auth.ts (verifyToken, verifyLocalToken, verifyInternalToken, authenticate), src/services/widget-auth.service.ts, src/config/index.ts, routes/auth.routes.ts and src/routes/index.ts (which routes are public vs authenticated). Questions to answer with source: (1) In local auth mode, can an attacker forge a JWT with the hardcoded default JWT_SECRET when env unset — is there any startup guard rejecting the default? (2) The internal token in cognito mode uses userPoolId as HMAC secret (public value) — is that path reachable? (3) verifyLocalToken trusts role claim from token; does the membership lookup fully override? Can a forged/legit token escalate role? (4) ?token= query param acceptance — which routes use it, leakage risk. (5) Any public routes that mutate state. Validate the strongest 1-2 candidates with a minimal local repro (node script importing the functions with mocked prisma/config, or a vitest test). File real findings with create_vulnerability_report (confidence high only with executed PoC; medium for static-only). Record coverage for every surface assessed. Report file:line evidence.",
+        "is_root": false
+      },
+      {
+        "agent_id": "b2577edd",
+        "agent_name": "IM/WebSocket auth validator",
+        "status": "completed",
+        "skills": [
+          "business_logic",
+          "broken_function_level_authorization"
+        ],
+        "task": "get_threat_model target=/workspace/agentcore-superagent-update first. Two focused follow-ups in /workspace/agentcore-superagent-update/super-agent/backend (local-only validation, mocks/vitest, no network, no real credentials): (1) Unauthenticated POST /api/im/webhook/:bindingId in src/routes/im.routes.ts (~line 726-767): trace the full path — how the binding is fetched (prisma by id, no auth), what imService.handleMessage does with attacker-controlled text (src/services/im.service.ts, im-queue.service.ts), whether any signature/secret check exists, and what state an unauthenticated attacker can reach (create sessions? trigger agent execution? message channels?). Determine real impact. (2) src/websocket/ execution gateway: confirm whether connections/subscriptions require auth and org checks — can an unauthenticated client subscribe to other users'/orgs' execution events or data? Validate at least one of the two with a local repro (mock prisma, fastify inject() in a vitest test is ideal). File findings via create_vulnerability_report (confidence honest: high only with executed PoC, otherwise medium with named gap). record_coverage for both surfaces either way.",
+        "is_root": false
+      },
+      {
+        "agent_id": "0ba641ab",
+        "agent_name": "Root Agent",
+        "status": "completed",
+        "skills": [],
+        "task": "\n\nLocal Codebases: - /home/ec2-user/bedrock/agentcore-superagent-update (available at: /workspace/agentcore-superagent-update; this is the user's real directory, mounted live and writable — .git/.agents/.codex are read-only)\n\nSpecial instructions: Perform an authorized source-code security assessment of this local repository. Test only local isolated services and mocks. Do not contact deployed endpoints, use real credentials, or change cloud resources. Trace attacker-controlled input through actual guards to a security-sensitive sink. Validate candidate findings with a minimal local regression test or reproducible local PoC. Distinguish demonstrated vulnerabilities from assumptions and incomplete validation. Record file locations, prerequisites, impact, and remediation. Prioritize a few complete end-to-end paths within the turn budget; report untested coverage honestly.\n\nScenario: Authentication and tenant isolation. Trace public, internal, and session routes through middleware; inspect JWT validation, internal request signatures, secret derivation, ownership checks, and cross-user object access. Validate bypasses using local mocks only.",
+        "is_root": true
+      },
+      {
+        "agent_id": "f131b268",
+        "agent_name": "Secrets & SCA scanner",
+        "status": "completed",
+        "skills": [
+          "source_aware_sast",
+          "dependency_cve_scanning"
+        ],
+        "task": "get_threat_model target=/workspace/agentcore-superagent-update first. Static supply-chain/secrets pass on /workspace/agentcore-superagent-update (skip node_modules, .git). Run from repo root: opengrep scan --config /opt/opengrep-rules --taint-intrafile --json --output /workspace/.source-aware/opengrep.json . ; gitleaks detect --source . --report-format json --report-path /workspace/.source-aware/gitleaks.json ; trufflehog filesystem --no-update --json . > /workspace/.source-aware/trufflehog.json ; trivy fs --scanners vuln,misconfig --timeout 30m --offline-scan --format json --output /workspace/.source-aware/trivy-fs.json . Also a bounded ast-grep pass on backend/src. Focus reporting on: hardcoded secrets that gate auth (JWT_SECRET default, INSFORGE_JWT_SECRET 'spike-test-secret-key-must-be-32-chars-long', any AWS keys), and dependency CVEs in backend/package-lock.json that are reachable. For known-CVE dependencies use create_dependency_report with honest reachability analysis (inspect imports in backend/src). Triage — do not dump raw scanner output. Keep disk bounded: delete nothing, but only extract summaries.",
+        "is_root": false
+      },
+      {
+        "agent_id": "b8d61399",
+        "agent_name": "Tenant isolation auditor",
+        "status": "completed",
+        "skills": [
+          "idor",
+          "broken_function_level_authorization"
+        ],
+        "task": "get_threat_model target=/workspace/agentcore-superagent-update first. White-box audit of authorization/tenant isolation in /workspace/agentcore-superagent-update/super-agent/backend (Fastify + Prisma; local-only validation, vitest/mocks, no network). Focus: (1) requireScopeAccess in src/middleware/scopeAccess.ts fails open when no scopeId in params/body/query — find concrete routes where an attacker passes an object id without scope id and reaches cross-scope data; (2) src/middleware/agentAccess.ts and src/authorization/* — do ownership checks compare the object's owner/org to request.user? Find route handlers in src/routes/*.ts that fetch by id (prisma findUnique/findFirst with only id) without org/owner filter and return or mutate the object — cross-user IDOR. Prioritize sensitive data: documents, chat sessions, apiKeys, files, users, workflows. Trace at least 3 complete source→guard(→sink)→impact chains. Validate the strongest with a local test (mock prisma, exercise the handler or the middleware logic). File confirmed findings via create_vulnerability_report with file:line code_locations; record_coverage for everything assessed including clean sweeps. Be honest about what you did not test.",
+        "is_root": false
+      }
+    ],
+    "skills_exercised": [
+      "authentication_jwt",
+      "broken_function_level_authorization",
+      "business_logic",
+      "dependency_cve_scanning",
+      "idor",
+      "source_aware_sast"
+    ],
+    "findings_filed": 13,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": true,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": []
+  },
+  "entries": [
+    {
+      "surface": "backend/src/middleware/auth.ts (verifyToken, verifyLocalToken, verifyInternalToken, authenticate, requireRole)",
+      "risk_area": "authentication / token forgery / role escalation",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Vitest PoC (tests/unit/auth-forgery.poc.test.ts, 4/4 passing) against real auth.ts with mocked prisma: default-secret JWT forgery (vuln-0001), userPoolId-keyed internal token forgery (vuln-0003), ?token= acceptance (vuln-0005). Role escalation via claim: confirmed membership lookup falls back to token claims when no membership row exists (auth.ts:230-236) — real primitive included in vuln-0001.",
+      "recorded_by": "Auth flow tracer",
+      "recorded_at": "2026-11-20 13:18:14 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend/src/services/widget-auth.service.ts + widget.routes.ts preHandler",
+      "risk_area": "API-key auth (hash matching, expiry, scope check)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "SHA-256 hash lookup on api_keys with is_active and expiry checks plus widget:connect scope check before any org-scoped data access (widget-auth.service.ts:24-58; widget.routes.ts:29-37). No timing-safe compare (hash lookup) but SHA-256 preimage resistance makes that inert. No query-param auth on widget routes.",
+      "recorded_by": "Auth flow tracer",
+      "recorded_at": "2026-11-20 13:18:17 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend/src/config/index.ts (JWT_SECRET default, auth mode, secret validation)",
+      "risk_area": "hardcoded default credentials / missing startup guard",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "config/index.ts:30 defaults JWT_SECRET to public literal with no refine/guard anywhere (checked src/config/index.ts, src/app.ts, src/index.ts). Filed as root cause of vuln-0001.",
+      "recorded_by": "Auth flow tracer",
+      "recorded_at": "2026-11-20 13:18:18 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend/src/routes/auth.routes.ts (public /api/auth/* routes)",
+      "risk_area": "public state-changing endpoints / information disclosure",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "GET /api/auth/config discloses userPoolId (secret for internal-token HMAC in cognito mode — vuln-0003). POST /api/auth/register is public and state-changing by design (self-registration, member role in default org; owner only when memberCount==0 — a race could mint a second owner but no auth bypass). /auth/me validates token but does not run the membership-migration path. Token-in-URL covered in vuln-0005.",
+      "recorded_by": "Auth flow tracer",
+      "recorded_at": "2026-11-20 13:18:20 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "scopeMemberships.routes.ts PATCH/DELETE /:id/members/:membershipId",
+      "risk_area": "scope membership authorization / cross-scope IDOR",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Guard authorizes path :id scope; mutation targets membershipId with no scope/org binding (validated-vs-consumed mismatch). vuln-0002; local vitest confirms middleware fail-open.",
+      "recorded_by": "Tenant isolation auditor",
+      "recorded_at": "2026-11-20 13:18:22 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend/src/routes/index.ts route registration (public vs authenticated surfaces)",
+      "risk_area": "unauthenticated mutation surface / missing auth on state-changing routes",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Public registrations: /health, /api/auth, im webhook routes (/api/im, signature-verified), /api/v1/webhook/:id/trigger + /status (state-changing but by design, with IP allowlist/disabled checks in webhookService.triggerWebhook), widget routes (API-key preHandler), llm-proxy/a2a/openapi (API-key auth per code comments verified in route files). No route registered without an auth preHandler that mutates state without its own credential check.",
+      "recorded_by": "Auth flow tracer",
+      "recorded_at": "2026-11-20 13:18:23 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agentAccess.service.ts checkAccess/getEffectiveLevel + agentPermissions.routes.ts :permId handlers",
+      "risk_area": "cross-org agent authorization via org-unbound agent_permissions",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Permission lookup keyed only on (agent_id,user_id), no organization_id; validated by local vitest returning true cross-org. vuln-0004.",
+      "recorded_by": "Tenant isolation auditor",
+      "recorded_at": "2026-11-20 13:18:24 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend/src/middleware/auth.ts cognito-mode login migration (auth.ts:185-215)",
+      "risk_area": "account takeover via email-binding / ID-migration raw SQL",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Migration path (rebinding profiles by email to a Cognito sub) only runs in cognito mode after aws-jwt-verify validates the id_token against the real pool (verifyToken -> CognitoJwtVerifier), so email claim is trusted from a signature-verified token. Raw SQL uses parameterized $executeRawUnsafe with placeholders (no injection). Tables missing are swallowed silently but that is a robustness issue, not auth.",
+      "recorded_by": "Auth flow tracer",
+      "recorded_at": "2026-11-20 13:18:25 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "chat.routes.ts GET /sessions/:id and /history/:sessionId",
+      "risk_area": "user-level ownership check on chat sessions (IDOR)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "findById filters org only, no user_id; validated by local vitest. vuln-0006.",
+      "recorded_by": "Tenant isolation auditor",
+      "recorded_at": "2026-11-20 13:18:26 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "im.routes.ts POST /api/im/webhook/:bindingId (unauthenticated)",
+      "risk_area": "unauthenticated webhook reaching cross-org IM channel binding and agent chat",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Follow-up agent (IM/WebSocket auth validator) executed local PoC (tests/unit/im-webhook-auth.poc.test.ts, Fastify inject, mocked prisma/agent): unauthenticated POST returns 200 with agent-processed reply + session_id in victim org; 404-vs-200 enumeration oracle. Filed as vuln-0007.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 13:18:28 UTC",
+      "updated_at": "2026-11-20 13:21:06 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "documents/apiKeys/files/users/workflows route families + base.repository org scoping",
+      "risk_area": "cross-tenant IDOR on sensitive entities",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All reviewed routes pass request.user.orgId into services/repos; base.repository findById/update/delete filter on organization_id; file.service validateFileAccess enforces org prefix. Clean sweep (agentPermissions/im/chat/checkpoint exceptions reported separately).",
+      "recorded_by": "Tenant isolation auditor",
+      "recorded_at": "2026-11-20 13:18:30 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/im/webhook/:bindingId (src/routes/im.routes.ts ~726-772)",
+      "risk_area": "Missing authentication/authorization on webhook → unauthenticated agent execution and session creation",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Executed vitest PoC (tests/unit/im-webhook-auth.poc.test.ts) against real route on Fastify inject(): unauthenticated POST returns 200 with agent-processed text and session_id; 404 oracle for unknown binding IDs. Full trace im.routes.ts:736 → findBindingById (prisma findUnique, no org check, no signature) → imService.handleMessage → chatService.processMessage as binding.created_by in victim org. Filed as vuln-0007.",
+      "recorded_by": "IM/WebSocket auth validator",
+      "recorded_at": "2026-11-20 13:19:55 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /ws/executions WebSocket gateway (src/websocket/execution.gateway.ts, registered in src/app.ts:208)",
+      "risk_area": "Unauthenticated WebSocket subscribe to any org's/user's workflow execution events",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Static trace: gateway.register (execution.gateway.ts:125-142) registers fastify.get('/ws/executions', {websocket:true}, (socket) => this.handleConnection(socket)) with NO preHandler authenticate, no token check in the handler signature (request discarded as _request), and no org/user validation in handleSubscribe (~line 232) — any executionId string is accepted into the subscription map. No global auth hook exists in app.ts (only onResponse audit). broadcastToExecution delivers workflow events (node status, logs, output data) to all subscribers regardless of identity.",
+      "recorded_by": "IM/WebSocket auth validator",
+      "recorded_at": "2026-11-20 13:19:57 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent repo (secrets scan: gitleaks + trufflehog)",
+      "risk_area": "Hardcoded credentials / secrets exposure",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All hits are PoC/docs/example credentials (app-hosting poc k8s + docker-compose creds, docker-compose postgres:postgres, .env.example placeholders) or node_modules fixtures. No production AWS keys or live secrets found.",
+      "recorded_by": "Secrets & SCA scanner",
+      "recorded_at": "2026-11-20 13:20:44 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent/backend (SCA: trivy fs + import/reachability triage)",
+      "risk_area": "Known-CVE dependency vulnerabilities",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "402 CVEs total across manifests; triaged backend direct deps by import analysis. Filed: js-yaml CVE-2026-53550 (reachable, user YAML), nodemailer CVE-2026-82662 (reachable, SMTP), fastify CVE-2026-84504 (reachable, framework), ws CVE-2026-48779 (not_applicable, type-only import). fast-xml-parser/axios/protobufjs/mysql2/hono etc: no imports in backend/src (transitive/dev only).",
+      "recorded_by": "Secrets & SCA scanner",
+      "recorded_at": "2026-11-20 13:20:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent/backend/src/config/index.ts + apps.routes.ts (INSFORGE_JWT_SECRET, JWT_SECRET defaults)",
+      "risk_area": "Hardcoded secrets gating authentication",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "JWT_SECRET default 'super-agent-local-dev-secret-change-in-production' at config/index.ts:30 (already filed by another agent as vuln-0001, deduplicated). INSFORGE_JWT_SECRET default 'spike-test-secret-key-must-be-32-chars-long' at config/index.ts:145 used in apps.routes.ts:453 HMAC token minting — filed as vuln-0008.",
+      "recorded_by": "Secrets & SCA scanner",
+      "recorded_at": "2026-11-20 13:20:48 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "business logic",
+      "detail": "Agent(s) IM/WebSocket auth validator were assigned the 'business_logic' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    }
+  ]
+}

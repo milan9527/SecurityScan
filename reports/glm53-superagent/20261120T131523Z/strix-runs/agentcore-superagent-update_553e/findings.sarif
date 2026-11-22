@@ -1,0 +1,290 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Strix",
+          "informationUri": "https://strix.ai",
+          "rules": [
+            {
+              "id": "vuln-0001",
+              "name": "Full-response SSRF in workflow api_call action node (no URL validation, redirects followed)",
+              "shortDescription": {
+                "text": "Full-response SSRF in workflow api_call action node (no URL validation, redirects followed)"
+              },
+              "fullDescription": {
+                "text": "The workflow engine's api_call action node fetches an arbitrary attacker-supplied URL with no scheme, host, or IP validation, and returns the full response body to the caller. The fetch client follows redirects, allowing allowlist-free pivoting to loopback/link-internal targets. A related sink exists in the MCP server \"test connection\" endpoint, which HEADs an attacker-registered host_address with no validation (blind)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The workflow engine's api_call action node fetches an arbitrary attacker-supplied URL with no scheme, host, or IP validation, and returns the full response body to the caller. The fetch client follows redirects, allowing allowlist-free pivoting to loopback/link-internal targets. A related sink exists in the MCP server \"test connection\" endpoint, which HEADs an attacker-registered host_address with no validation (blind).\n\nAn authenticated low-privilege user who can create/edit a workflow (api_call node) makes the backend issue requests to arbitrary internal addresses (loopback, RFC1918, link-local/cloud metadata) and reads the full response body back through workflow execution results/logs — full (non-blind) SSRF. Redirect-following defeats any future allowlist unless re-validated per hop.\n\nIntroduce a shared SSRF guard for all outbound URL fetches driven by user input: validate scheme (https/http only), resolve DNS and reject loopback, RFC1918, link-local (169.254/16, metadata ranges), and IPv6-mapped variants; use `redirect: 'manual'` and re-validate each hop before following (or disable redirects entirely); cap response size. Apply the guard in the workflow api_call executors, the MCP test-connection path, and any future outbound fetch of user-supplied URLs.",
+                "markdown": "The workflow engine's api_call action node fetches an arbitrary attacker-supplied URL with no scheme, host, or IP validation, and returns the full response body to the caller. The fetch client follows redirects, allowing allowlist-free pivoting to loopback/link-internal targets. A related sink exists in the MCP server \"test connection\" endpoint, which HEADs an attacker-registered host_address with no validation (blind).\n\nAn authenticated low-privilege user who can create/edit a workflow (api_call node) makes the backend issue requests to arbitrary internal addresses (loopback, RFC1918, link-local/cloud metadata) and reads the full response body back through workflow execution results/logs — full (non-blind) SSRF. Redirect-following defeats any future allowlist unless re-validated per hop.\n\nIntroduce a shared SSRF guard for all outbound URL fetches driven by user input: validate scheme (https/http only), resolve DNS and reject loopback, RFC1918, link-local (169.254/16, metadata ranges), and IPv6-mapped variants; use `redirect: 'manual'` and re-validate each hop before following (or disable redirects entirely); cap response size. Apply the guard in the workflow api_call executors, the MCP test-connection path, and any future outbound fetch of user-supplied URLs."
+              },
+              "properties": {
+                "security-severity": "7.7",
+                "tags": [
+                  "security",
+                  "stride:T",
+                  "stride:I"
+                ]
+              }
+            },
+            {
+              "id": "CWE-306",
+              "name": "Unauthenticated generic IM webhook allows arbitrary agent message injection and workflow triggering",
+              "shortDescription": {
+                "text": "Unauthenticated generic IM webhook allows arbitrary agent message injection and workflow triggering"
+              },
+              "fullDescription": {
+                "text": "The generic IM webhook endpoint `POST /api/im/webhook/:bindingId` performs no authentication, signature verification, or replay protection. Any network caller who knows a binding UUID can inject arbitrary text into the agent chat pipeline, trigger agent execution, and create chat sessions."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The generic IM webhook endpoint `POST /api/im/webhook/:bindingId` performs no authentication, signature verification, or replay protection. Any network caller who knows a binding UUID can inject arbitrary text into the agent chat pipeline, trigger agent execution, and create chat sessions.\n\nUnauthenticated remote attacker can drive the platform's AI agents with arbitrary prompts under a tenant's identity: create chat sessions (confirmed), inject persistent user messages, trigger agent/LLM execution and downstream agent actions, and consume tenant quota.\n\nRequire a per-binding authentication secret on the generic webhook endpoint (shared-secret header compared timing-safely, or HMAC over the raw body), validated before imService.handleMessage is invoked. Never allow a binding lookup path that bypasses adapter verifyRequest.",
+                "markdown": "The generic IM webhook endpoint `POST /api/im/webhook/:bindingId` performs no authentication, signature verification, or replay protection. Any network caller who knows a binding UUID can inject arbitrary text into the agent chat pipeline, trigger agent execution, and create chat sessions.\n\nUnauthenticated remote attacker can drive the platform's AI agents with arbitrary prompts under a tenant's identity: create chat sessions (confirmed), inject persistent user messages, trigger agent/LLM execution and downstream agent actions, and consume tenant quota.\n\nRequire a per-binding authentication secret on the generic webhook endpoint (shared-secret header compared timing-safely, or HMAC over the raw body), validated before imService.handleMessage is invoked. Never allow a binding lookup path that bypasses adapter verifyRequest."
+              },
+              "properties": {
+                "security-severity": "7.0",
+                "tags": [
+                  "security",
+                  "CWE-306",
+                  "stride:S",
+                  "stride:E"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html"
+            },
+            {
+              "id": "strix-coverage/unauthenticated-information-disclosure-of-call-execution-status",
+              "name": "Unauthenticated information disclosure of call/execution status",
+              "shortDescription": {
+                "text": "Coverage: Unauthenticated information disclosure of call/execution status"
+              },
+              "fullDescription": {
+                "text": "Coverage of Unauthenticated information disclosure of call/execution status across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Unauthenticated information disclosure of call/execution status across the assessed attack surface.",
+                "markdown": "Coverage of Unauthenticated information disclosure of call/execution status across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.1"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "vuln-0001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Full-response SSRF in workflow api_call action node (no URL validation, redirects followed)\n\nThe workflow engine's api_call action node fetches an arbitrary attacker-supplied URL with no scheme, host, or IP validation, and returns the full response body to the caller. The fetch client follows redirects, allowing allowlist-free pivoting to loopback/link-internal targets. A related sink exists in the MCP server \"test connection\" endpoint, which HEADs an attacker-registered host_address with no validation (blind)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/agentcore-superagent-update (super-agent/backend)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "91799483372e94a68f269e85fb57e561cabc9ca7952eec00262f97b9dca5120d"
+          },
+          "properties": {
+            "security-severity": "7.7",
+            "strix_vuln_class_hash": "afeb4494398953755b29a9b3f4a817a1e2390fd040d005b942d11f6ae634120e",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "high",
+              "cvss": 7.7,
+              "timestamp": "2026-11-20 13:36:44 UTC",
+              "target": "/workspace/agentcore-superagent-update (super-agent/backend)",
+              "impact": "An authenticated low-privilege user who can create/edit a workflow (api_call node) makes the backend issue requests to arbitrary internal addresses (loopback, RFC1918, link-local/cloud metadata) and reads the full response body back through workflow execution results/logs — full (non-blind) SSRF. Redirect-following defeats any future allowlist unless re-validated per hop.",
+              "technical_analysis": "Root cause: `ActionNodeExecutor.executeApiCall` (super-agent/backend/src/services/node-executors/action-executor.ts:114-162) takes `apiConfig.url` from the workflow node's `data.metadata` (line 117-118: `metadata?.apiConfig`), substitutes variables, and passes it directly to `fetch()` (line 137) with no URL validation whatsoever. The parsed response body is placed into the success result (`response: parsedResponse`, line 157), which flows into workflow execution records/logs visible to the caller. Node's global `fetch` follows redirects by default, so an attacker-controlled external URL can 302 to `http://169.254.169.254/...` or any internal host. Reachability: workflow nodes (including `metadata` with `apiConfig`) are supplied via `POST /api/workflows` (routes/workflows.routes.ts:275, `authenticate + requireModifyAccess`, `nodes: {type:'array'}` with no per-node schema) and executed via `POST /api/workflows/:id/execute-v2` (line 967, `authenticate`), via the public unauthenticated webhook trigger path (webhook.service.ts executeWebhookAsync builds the same plan and runs workflowExecutorV2), and via workflow-execution.service.ts:1027 (nodeExecutorRegistry.execute). A duplicate sink exists in `WorkflowOrchestrator.executeActionNode` (services/workflow-orchestrator.ts:536-565) with the same unvalidated `fetch(url, ...)` at line 554 and response returned at line 567. Additional sink: `McpServerService.testMcpServerConnection` (services/mcp.service.ts:245-248) fetches `config.url || server.host_address` (user-registered via POST /api/mcp/servers, authenticated) with attacker-controlled headers — blind SSRF (only status/latency/error returned).",
+              "remediation_steps": "Introduce a shared SSRF guard for all outbound URL fetches driven by user input: validate scheme (https/http only), resolve DNS and reject loopback, RFC1918, link-local (169.254/16, metadata ranges), and IPv6-mapped variants; use `redirect: 'manual'` and re-validate each hop before following (or disable redirects entirely); cap response size. Apply the guard in the workflow api_call executors, the MCP test-connection path, and any future outbound fetch of user-supplied URLs.",
+              "counterevidence": "Checked: no URL validation, allowlist, scheme check, IP/host restriction, or redirect handling exists in either executor path (action-executor.ts executeApiCall, workflow-orchestrator.ts executeActionNode). Node `nodes`/`metadata` accepted without schema validation in workflow create/execute routes. The only nearby control is org-scoped workflow lookup (workflowRepository.findById with organizationId), which gates who may run the workflow but never inspects the URL. Impact limited to internal network read (response is returned to caller); no write primitive demonstrated.",
+              "confidence": "high",
+              "severity_change_conditions": "Confirmation that the deployed backend can reach cloud metadata or internal admin services from the fetch sink would confirm network-level impact; conversely an egress-blocking network policy at deployment would reduce severity.",
+              "poc": {
+                "description": "1. Start a mock \"internal\" HTTP server on 127.0.0.1:47777 returning a secret, and a redirector on 127.0.0.1:46666 that 302s to it. 2. Instantiate ActionNodeExecutor and execute a node with data.metadata.actionType='api_call' and apiConfig.url='http://127.0.0.1:46666/'. 3. Observe the node result's output contains the internal server's body, proving redirect-following SSRF with full response disclosure. Repeat with the internal URL directly.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-306",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Unauthenticated generic IM webhook allows arbitrary agent message injection and workflow triggering\n\nThe generic IM webhook endpoint `POST /api/im/webhook/:bindingId` performs no authentication, signature verification, or replay protection. Any network caller who knows a binding UUID can inject arbitrary text into the agent chat pipeline, trigger agent execution, and create chat sessions."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/agentcore-superagent-update (super-agent/backend)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "e326730806bc28348b5ea3c0c11f11e88ca775d13a35b662b318ec2df9cb9b9b"
+          },
+          "properties": {
+            "security-severity": "7.0",
+            "strix_vuln_class_hash": "27cee7c6fd83f5d3aaf67ec6a7f811a1111aeb03df3b6ae441553738f0402b3f",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0002",
+              "severity": "high",
+              "cvss": 7.0,
+              "timestamp": "2026-11-20 13:38:19 UTC",
+              "target": "/workspace/agentcore-superagent-update (super-agent/backend)",
+              "cwe": "CWE-306",
+              "impact": "Unauthenticated remote attacker can drive the platform's AI agents with arbitrary prompts under a tenant's identity: create chat sessions (confirmed), inject persistent user messages, trigger agent/LLM execution and downstream agent actions, and consume tenant quota.",
+              "technical_analysis": "src/routes/im.routes.ts:733-764 registers POST /webhook/:bindingId with no authenticate preHandler and never calls verifyAndLookupBinding or any adapter verifyRequest. It looks the binding up by ID alone (findBindingById, im.routes.ts:767-771, explicitly \"without org context\") and builds a NormalizedIMMessage from attacker-supplied text/user_id/thread_id, flowing into imService.handleMessage (im.service.ts:171) → session creation, message persistence, and chatService.processMessage — the same code path as authenticated web chat. Dedicated per-platform endpoints route through verifyAndLookupBinding (im.routes.ts:229); the generic endpoint has no equivalent control.",
+              "remediation_steps": "Require a per-binding authentication secret on the generic webhook endpoint (shared-secret header compared timing-safely, or HMAC over the raw body), validated before imService.handleMessage is invoked. Never allow a binding lookup path that bypasses adapter verifyRequest.",
+              "counterevidence": "Requires knowing the bindingId UUID; route checks is_enabled; generic 500 hides detail. No signature header is expected, so no control exists to bypass — verification is simply absent.",
+              "confidence": "high",
+              "confidence_rationale": "Confirmed dynamically against a local instance of the real backend: unauthenticated request accepted and chat session row created in database.",
+              "severity_change_conditions": "A cheap way to enumerate bindingIds (ID leakage) would lower attack complexity and raise severity to critical.",
+              "poc": {
+                "description": "1. Seed a Slack IM binding with a signing secret. 2. Send an unauthenticated POST to /api/im/webhook/<bindingId> with arbitrary text. 3. Observe the backend accept the request, create a chat session, and route the text into chatService.processMessage.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-306",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Workflow webhook trigger ignores generated secret — unauthenticated workflow execution\n\nThe public webhook trigger endpoint `POST /v1/webhook/:webhookId/trigger` never verifies the per-webhook secret. A secret is generated and its hash stored on creation, but the trigger path ignores it entirely, so any caller who knows a webhook ID can execute the workflow with attacker-chosen variables, without any signature or shared secret."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/agentcore-superagent-update (super-agent/backend)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3b4becfb6dfee62b537b48559bb230f1f0b5fff25a47ccc715c02e19aade42e7"
+          },
+          "properties": {
+            "security-severity": "7.0",
+            "strix_vuln_class_hash": "6655f0c9a09f047abab2d2b2fd1041f19d1ab54d084c9f0ebc54d6947c205828",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0003",
+              "severity": "high",
+              "cvss": 7.0,
+              "timestamp": "2026-11-20 13:38:28 UTC",
+              "target": "/workspace/agentcore-superagent-update (super-agent/backend)",
+              "cwe": "CWE-306",
+              "impact": "Unauthenticated triggering of tenant workflows with attacker-controlled variables (which become workflow variable values in the V2 plan), including agent and action node execution. Also public status endpoint /v1/webhook/status/:callRecordId leaks execution status and logs without auth.",
+              "technical_analysis": "src/routes/webhooks.routes.ts:278-320 registers the trigger route with no authenticate preHandler; src/services/webhook.service.ts triggerWebhook (lines ~140-192) validates only existence, isEnabled, and optional IP allowlist. The secretHash generated in createWebhook (webhook.service.ts:75-84) is never read or compared anywhere in the trigger path — grep shows secretHash only set and mapped. No signature, timestamp, or nonce checks exist, so replay is also unrestricted.",
+              "remediation_steps": "When a webhook has a secret_hash, require a signature (e.g. HMAC-SHA256 of the raw body with the secret, compared timing-safely) or a shared-secret header before creating the call record; add timestamp freshness checking.",
+              "counterevidence": "Webhook ID is 24 random hex chars (96 bits) — unguessable without leak. IP allowlist applies when configured. Secret verification may be a deliberately deferred feature (secretHash only stored, never read).",
+              "confidence": "high",
+              "confidence_rationale": "Executable local PoC: vitest suite registering the real webhooks.routes.ts under the production /api prefix (mocked prisma/redis/executor) shows POST with no secret header returns 200 received:true, wrong secret header is ignored, and identical replays succeed without limit. Only deployment exposure of the URL is inferred.",
+              "severity_change_conditions": "WebhookId leakage (e.g. via history responses or URLs) would lower complexity and raise severity.",
+              "poc": {
+                "description": "1. Run `npx vitest run tests/unit/webhook-trigger-authz.poc.test.ts` in super-agent/backend — it registers the real route plugin under the production /api prefix with mocked prisma/redis/executor and a webhook record carrying a non-null secret_hash. 2. The suite proves: a POST with no secret header returns 200 received:true; a wrong x-webhook-secret header is ignored; identical replays succeed without limit (3 replays = 3 call records created). Equivalently on a live deployment: POST /api/v1/webhook/<id>/trigger with arbitrary variables and no signature headers executes the workflow.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/unauthenticated-information-disclosure-of-call-execution-status",
+          "ruleIndex": 2,
+          "kind": "notApplicable",
+          "level": "none",
+          "message": {
+            "text": "Unauthenticated information disclosure of call/execution status — Not applicable: GET /api/v1/webhook/status/:callRecordId (webhooks.routes.ts:380)\n\nAssessed as separate report candidate and it does not clear the bar: unauthenticated disclosure is limited to execution status/progress/error message and node timing for a random UUID (callRecordId, ~122 bits) — no restricted data content, no logs, and the parent vuln-0003 impact field already mentions this endpoint. Enumeration-infeasible and no cross-tenant object data returned, so it is folded into vuln-0003's narrative rather than filed standalone."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "GET /api/v1/webhook/status/:callRecordId (webhooks.routes.ts:380)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "not_applicable",
+              "risk_area": "Unauthenticated information disclosure of call/execution status",
+              "surface": "GET /api/v1/webhook/status/:callRecordId (webhooks.routes.ts:380)",
+              "recorded_by": "Webhook Auth Validation Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": false,
+          "toolExecutionNotifications": [
+            {
+              "level": "warning",
+              "message": {
+                "text": "1 agent(s) did not finish cleanly (Webhook Verification Analyst); any surface they held is under-covered."
+              }
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 3
+      }
+    }
+  ]
+}

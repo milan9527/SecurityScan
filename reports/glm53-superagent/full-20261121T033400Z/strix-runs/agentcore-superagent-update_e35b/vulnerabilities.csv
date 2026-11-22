@@ -1,0 +1,30 @@
+id,title,severity,timestamp,file
+vuln-0001,Internal service tokens signed with public Cognito user pool ID allow full authentication bypass,CRITICAL,2026-11-21 04:05:53 UTC,vulnerabilities/vuln-0001.md
+vuln-0002,Hardcoded default JWT secret enables unauthenticated token forgery in local auth mode,CRITICAL,2026-11-21 04:06:05 UTC,vulnerabilities/vuln-0002.md
+vuln-0003,"No rate limiting or lockout on local login, plus seeded default admin credentials",CRITICAL,2026-11-21 04:06:21 UTC,vulnerabilities/vuln-0003.md
+vuln-0005,Default admin credentials (admin@example.com / Admin1234!) baked into production deploy scripts and public docs,CRITICAL,2026-11-21 04:06:35 UTC,vulnerabilities/vuln-0005.md
+vuln-0015,Member-configurable stdio MCP servers allow arbitrary command execution on the backend host,CRITICAL,2026-11-21 04:10:40 UTC,vulnerabilities/vuln-0015.md
+vuln-0017,Agent runtime shell guard is a bypassable denylist under permissionMode bypassPermissions (prompt-injection path to command execution),CRITICAL,2026-11-21 04:10:51 UTC,vulnerabilities/vuln-0017.md
+vuln-0013,Path traversal to arbitrary file write via unvalidated skill name in workspace provisioning,HIGH,2026-11-21 04:09:18 UTC,vulnerabilities/vuln-0013.md
+vuln-0014,Shell command injection via unvalidated skill name in AgentCore container provisioning,HIGH,2026-11-21 04:09:32 UTC,vulnerabilities/vuln-0014.md
+vuln-0016,Cross-tenant IDOR in knowledge-base service: all operations keyed by primary key without organization scoping,HIGH,2026-11-21 04:10:49 UTC,vulnerabilities/vuln-0016.md
+vuln-0018,"Cross-tenant access-control gaps in scope memberships, scope plugin/MCP listings, and scope connector bindings",HIGH,2026-11-21 04:10:58 UTC,vulnerabilities/vuln-0018.md
+vuln-0020,"Unauthenticated, unscoped WebSocket gateway leaks any tenant's workflow execution events",HIGH,2026-11-21 04:11:20 UTC,vulnerabilities/vuln-0020.md
+vuln-0029,Archive symlink members dereferenced by fs.cp enable out-of-bounds file read into skill storage (zip/tar upload),HIGH,2026-11-21 04:14:33 UTC,vulnerabilities/vuln-0029.md
+vuln-0006,Cognito first-login email binding enables account takeover via unverified email claim,MEDIUM,2026-11-21 04:06:48 UTC,vulnerabilities/vuln-0006.md
+vuln-0007,CORS wildcard origin combined with credentials:true,MEDIUM,2026-11-21 04:06:57 UTC,vulnerabilities/vuln-0007.md
+vuln-0009,Unrestricted SSRF in workflow api_call action node (ActionExecutor and workflow-orchestrator),MEDIUM,2026-11-21 04:07:13 UTC,vulnerabilities/vuln-0009.md
+vuln-0010,Unrestricted SSRF via MCP server connection test endpoint,MEDIUM,2026-11-21 04:07:28 UTC,vulnerabilities/vuln-0010.md
+vuln-0011,Webhook trigger ignores stored secret — unauthenticated workflow execution and public execution-state disclosure,MEDIUM,2026-11-21 04:07:41 UTC,vulnerabilities/vuln-0011.md
+vuln-0019,Cross-tenant BOLA: checkpoint resolve/resume and execution detail routes skip organization scoping,MEDIUM,2026-11-21 04:11:01 UTC,vulnerabilities/vuln-0019.md
+vuln-0021,Fastify 5.6.2 framework-level validation/auth bypass CVEs (CVE-2026-84469 and related 2026 Fastify advisories),MEDIUM,2026-11-21 04:11:25 UTC,vulnerabilities/vuln-0021.md
+vuln-0022,"axios 1.13.6 (transitive via IM SDKs) — prototype pollution, proxy-credential disclosure, and redirect-handling CVEs (CVE-2026-42264 et al.)",MEDIUM,2026-11-21 04:11:30 UTC,vulnerabilities/vuln-0022.md
+vuln-0023,js-yaml 4.1.1 DoS via crafted YAML in user-uploaded API specs (CVE-2026-59869 et al.),MEDIUM,2026-11-21 04:11:34 UTC,vulnerabilities/vuln-0023.md
+vuln-0025,Cross-tenant leader manipulation in PUT /api/chat/rooms/:roomId/members/:agentId/leader (missing org scoping on raw updateMany),MEDIUM,2026-11-21 04:13:05 UTC,vulnerabilities/vuln-0025.md
+vuln-0026,IM webhook signature verification fails open — unauthenticated message injection into agent sessions,MEDIUM,2026-11-21 04:13:15 UTC,vulnerabilities/vuln-0026.md
+vuln-0027,Plaintext IM signing secrets exposed to any org member via GET /api/business-scopes/:scopeId/im-channels (config not redacted),MEDIUM,2026-11-21 04:13:23 UTC,vulnerabilities/vuln-0027.md
+vuln-0004,JWT accepted via ?token= query parameter leaks session tokens into logs and referrers,LOW,2026-11-21 04:06:32 UTC,vulnerabilities/vuln-0004.md
+vuln-0012,OAuth client secrets encrypted with hardcoded default key; provider upsert accepts arbitrary provider names,LOW,2026-11-21 04:07:52 UTC,vulnerabilities/vuln-0012.md
+vuln-0024,"Output sanitizer redaction gaps: Bearer tokens, connection strings, generic API keys and Windows paths pass through to clients",LOW,2026-11-21 04:11:42 UTC,vulnerabilities/vuln-0024.md
+vuln-0028,Non-atomic duplicate-trigger guard in workflow scheduler causes double execution of scheduled workflows,LOW,2026-11-21 04:14:23 UTC,vulnerabilities/vuln-0028.md
+vuln-0008,A2A routes compare raw API key against stored SHA-256 hash — feature always rejects valid keys (reliability defect),INFO,2026-11-21 04:07:10 UTC,vulnerabilities/vuln-0008.md

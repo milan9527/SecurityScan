@@ -42,6 +42,6 @@
 <text x="535" y="430" class="detail">18000 → 8000</text>
 <rect x="32" y="590" width="1333" height="100" fill="none" stroke="#3f8624" stroke-width="1.5" />
 <text x="48" y="615" class="label">测量口径与运行边界</text>
-<text x="50" y="645" class="detail">独立流式基准：TTFT / TTOT / E2E / 吞吐。完整 Strix 扫描：非流式延迟与总耗时，无 TTFT。</text>
+<text x="50" y="645" class="detail">独立流式基准：TTFT / E2E / 吞吐。完整 Strix 扫描：非流式延迟与总耗时，无 TTFT。</text>
 <text x="50" y="671" class="detail">历史测试自动停止禁用；模型端口不直接暴露公网。本图对应测试证据，应用演示的自动停止策略见另一张架构图。</text>
 </svg>

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20 07:29:23 UTC",
+  "run_id": "downloads_8b3a",
+  "run_name": "downloads_8b3a",
+  "scope": {
+    "targets": [
+      {
+        "type": "local_code",
+        "details": {
+          "target_path": "/home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/downloads",
+          "workspace_subdir": "downloads"
+        },
+        "original": "/home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/downloads"
+      }
+    ],
+    "scan_mode": "quick",
+    "scope_mode": "full",
+    "diff_scope": {
+      "active": false,
+      "mode": "full"
+    },
+    "instruction": "This is an authorized isolated synthetic code security test. Audit the supplied local project and demonstrate findings by invoking its functions in a local Python process with synthetic data only. Do not contact external hosts or AWS. Treat documented trust boundaries as part of the application contract. Review every function, including versioned alternatives; report only demonstrated security defects. Provide a minimal reproducible proof and a remediation. Do not modify application code. Finish within 20 turns, leaving time to write the final report. Use a single agent; do not delegate."
+  },
+  "summary": {
+    "surfaces_reviewed": 2,
+    "outcomes": {
+      "reported": 1,
+      "no_issue_found": 1
+    },
+    "findings_filed": 1,
+    "gaps": 0
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "31cf5f83",
+        "agent_name": "Root Agent",
+        "status": "completed",
+        "skills": [],
+        "task": "\n\nLocal Codebases: - /home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/downloads (available at: /workspace/downloads; this is the user's real directory, mounted live and writable — .git/.agents/.codex are read-only)\n\nSpecial instructions: This is an authorized isolated synthetic code security test. Audit the supplied local project and demonstrate findings by invoking its functions in a local Python process with synthetic data only. Do not contact external hosts or AWS. Treat documented trust boundaries as part of the application contract. Review every function, including versioned alternatives; report only demonstrated security defects. Provide a minimal reproducible proof and a remediation. Do not modify application code. Finish within 20 turns, leaving time to write the final report. Use a single agent; do not delegate.",
+        "is_root": true
+      }
+    ],
+    "skills_exercised": [],
+    "findings_filed": 1,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": true,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": []
+  },
+  "entries": [
+    {
+      "surface": "downloads/app.py download_v2",
+      "risk_area": "Path traversal / arbitrary file read",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Resolve-then-containment-check with is_relative_to rejects both relative traversal (../../secret/flag.txt) and absolute path injection; verified with negative-control payloads in a local Python process.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 07:29:00 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "downloads/app.py download",
+      "risk_area": "Path traversal / arbitrary file read",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Confirmed in local process: (Path(root)/filename).read_bytes() with user-supplied filename accepts ../../secret/flag.txt (relative traversal) and /tmp/... (absolute path), returning file contents outside the admin-configured root.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 07:29:02 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": []
+}

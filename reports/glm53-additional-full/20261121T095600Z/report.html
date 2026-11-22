@@ -1,0 +1,65 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Additional Strix scans</title><style>body{max-width:1100px;margin:40px auto;padding:20px;font:16px/1.6 system-ui}pre{white-space:pre-wrap}</style><body><pre># GLM-5.3 additional full Strix scans
+
+Self-hosted GLM-5.3 / SGLang / TP8 / MTP / p6-b200.48xlarge.
+
+Deep mode; full scope; sequential scans to avoid cross-scan contention.
+
+Non-streaming request latency is E2E latency; TTFT is unavailable. Findings require independent verification. EC2 remains running.
+
+## agentcoreshell-deep
+
+```json
+{
+  &quot;case&quot;: &quot;agentcoreshell-deep&quot;,
+  &quot;target&quot;: &quot;/home/ec2-user/bedrock/AgentcoreShell&quot;,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;elapsed_s&quot;: 120,
+  &quot;runner_pid&quot;: 2042326,
+  &quot;run_id&quot;: &quot;agentcoreshell_529c&quot;,
+  &quot;requests&quot;: 66,
+  &quot;outcomes&quot;: {
+    &quot;success&quot;: 66
+  },
+  &quot;tool_calls&quot;: 66,
+  &quot;unverified_findings&quot;: 1,
+  &quot;severity&quot;: {
+    &quot;high&quot;: 1
+  },
+  &quot;request_mean_ms&quot;: 1829.2575757575758,
+  &quot;request_p95_ms&quot;: 4511,
+  &quot;exit_code&quot;: 2,
+  &quot;runner_finished&quot;: true
+}
+```
+
+## superagent-frontend-deployment
+
+```json
+{
+  &quot;case&quot;: &quot;superagent-frontend-deployment&quot;,
+  &quot;target&quot;: &quot;/home/ec2-user/bedrock/agentcore-superagent-update&quot;,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;elapsed_s&quot;: 781,
+  &quot;runner_pid&quot;: 2053539,
+  &quot;run_id&quot;: &quot;agentcore-superagent-update_9497&quot;,
+  &quot;requests&quot;: 575,
+  &quot;outcomes&quot;: {
+    &quot;success&quot;: 575
+  },
+  &quot;tool_calls&quot;: 559,
+  &quot;unverified_findings&quot;: 28,
+  &quot;severity&quot;: {
+    &quot;medium&quot;: 9,
+    &quot;low&quot;: 3,
+    &quot;high&quot;: 6,
+    &quot;critical&quot;: 3,
+    &quot;info&quot;: 7
+  },
+  &quot;request_mean_ms&quot;: 2846.817391304348,
+  &quot;request_p95_ms&quot;: 8985,
+  &quot;exit_code&quot;: 2,
+  &quot;runner_finished&quot;: true
+}
+```
+
+</pre></body></html>

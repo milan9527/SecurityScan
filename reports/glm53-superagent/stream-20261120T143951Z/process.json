@@ -1,0 +1,20 @@
+{
+  "pid": 2242497,
+  "args": [
+    "python3",
+    "-u",
+    "deploy/glm53-ec2/benchmarks/stream-benchmark.py",
+    "--base",
+    "http://127.0.0.1:18000/v1",
+    "--out",
+    "reports/glm53-superagent/stream-20261120T143951Z/metrics.jsonl",
+    "--cases-json",
+    "reports/glm53-superagent/source-cases.json",
+    "--max-tokens",
+    "32768",
+    "--reasoning-effort",
+    "low",
+    "--repeats",
+    "5"
+  ]
+}

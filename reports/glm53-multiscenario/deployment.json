@@ -1,0 +1,38 @@
+{
+    "InstanceId": "i-0b33a1d2ee1a2065f",
+    "State": {
+        "Code": 16,
+        "Name": "running"
+    },
+    "InstanceType": "p6-b200.48xlarge",
+    "LaunchTime": "2026-11-20T06:47:06+00:00",
+    "Placement": {
+        "AvailabilityZoneId": "aps1-az1",
+        "GroupName": "",
+        "Tenancy": "default",
+        "AvailabilityZone": "ap-south-1a"
+    },
+    "SpotInstanceRequestId": "sir-ki5zqhrh",
+    "BlockDeviceMappings": [
+        {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+                "AttachTime": "2026-11-20T06:47:07+00:00",
+                "DeleteOnTermination": false,
+                "Status": "attached",
+                "VolumeId": "vol-09d277beb55d0fab2",
+                "EbsCardIndex": 0
+            }
+        },
+        {
+            "DeviceName": "/dev/sdf",
+            "Ebs": {
+                "AttachTime": "2026-11-20T06:47:06.562000+00:00",
+                "DeleteOnTermination": false,
+                "Status": "attached",
+                "VolumeId": "vol-07b75c0c17b347762",
+                "EbsCardIndex": 0
+            }
+        }
+    ]
+}

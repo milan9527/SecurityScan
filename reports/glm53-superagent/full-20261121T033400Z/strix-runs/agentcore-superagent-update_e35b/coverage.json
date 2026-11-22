@@ -1,0 +1,1033 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-21 04:15:02 UTC",
+  "run_id": "agentcore-superagent-update_e35b",
+  "run_name": "agentcore-superagent-update_e35b",
+  "scope": {
+    "targets": [
+      {
+        "type": "local_code",
+        "details": {
+          "target_path": "/home/ec2-user/bedrock/agentcore-superagent-update",
+          "workspace_subdir": "agentcore-superagent-update"
+        },
+        "original": "/home/ec2-user/bedrock/agentcore-superagent-update"
+      }
+    ],
+    "scan_mode": "deep",
+    "scope_mode": "full",
+    "diff_scope": {
+      "active": false,
+      "mode": "full"
+    },
+    "instruction": "Perform an authorized comprehensive source-code security assessment of the supplied local repository. Use only isolated local services, synthetic data, and mocks. Do not contact deployed endpoints, use real credentials, modify cloud resources, or push changes. Preserve the target source files; place validation artifacts in temporary directories.\n\nMap entry points and trust boundaries before prioritizing end-to-end attack paths. Cover authentication, JWT and internal signatures, tenant ownership and authorization, WebSockets, filesystem and archive paths, command execution, tool dispatch, webhooks, URL fetching and SSRF, uploads, secret handling, and deployment configuration. Trace attacker-controlled inputs through actual guards to sensitive sinks. Intended operations explicitly requested by an authorized user are not vulnerabilities by themselves.\n\nValidate each candidate with a harmless local PoC or regression test where feasible. Record file and line references, attacker prerequisites, observed result, impact, and remediation. Clearly separate demonstrated vulnerabilities, unverified candidates, and reliability problems. Deduplicate common root causes. Report coverage and remaining gaps honestly; do not imply that a local reproduction proves production exploitability. Use concise intermediate output to preserve context for validation."
+  },
+  "summary": {
+    "surfaces_reviewed": 68,
+    "outcomes": {
+      "reported": 31,
+      "no_issue_found": 34,
+      "ruled_out": 2,
+      "not_applicable": 1
+    },
+    "findings_filed": 29,
+    "gaps": 3
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "59aa7633",
+        "agent_name": "Auth & Token Analysis",
+        "status": "completed",
+        "skills": [
+          "authentication_jwt",
+          "information_disclosure",
+          "weak_password_detection"
+        ],
+        "task": "Source-code security assessment (white-box, no network — isolated local analysis only) of /workspace/agentcore-superagent-update/super-agent/backend. Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour scope: AUTHENTICATION, JWT, INTERNAL SIGNATURES, API KEYS, WIDGET AUTH.\nFiles of interest: src/middleware/auth.ts, src/middleware/token-quota.ts, src/routes/auth.routes.ts, src/routes/apiKeys.routes.ts, src/services/apiKey.service.ts, src/services/widget-auth.service.ts, src/services/cognito-admin.service.ts, src/config/index.ts, prisma seeds (seed-local-auth.ts).\n\nSpecific things to verify (trace actual code, cite file:line):\n1. Local JWT: default JWT_SECRET hardcoded value ('super-agent-local-dev-secret-change-in-production') — can an attacker forge tokens in default deployments? Is there any guard forcing a strong secret in production?\n2. Internal token: INTERNAL_TOKEN_SECRET = Cognito userPoolId in cognito mode — userPoolId is public/non-secret. Can anyone knowing the pool ID forge `internal.` tokens and impersonate any user/org/role? Also non-constant-time `!==` HMAC comparison.\n3. `?token=` query param auth — token leakage via logs/referrer.\n4. verifyToken role/orgId handling — can JWT claims (custom:role, custom:orgId) be attacker-controlled or is a DB profile authoritative? Check the Cognito email-binding flow (findUnique by email then reassign rows — account takeover via unverified email?).\n5. API key service: hashing? timing-safe compare? enumeration?\n6. Widget auth: what tokens it issues, to whom, with what scope.\n7. CORS config (config/index.ts, app.ts): origin '*' + credentials:true — real credential leakage?\n8. Any unauthenticated routes that should be protected.\n\nFor each candidate: state input, path, missing control, effect, and a file:line. Validate with harmless local PoC where feasible (e.g. forge an internal token with a guessed secret offline in /tmp; sign a local JWT with the default secret and verify your verifyLocalToken accepts it — unit-level, no network). Record coverage for each surface with record_coverage. File confirmed findings with create_vulnerability_report (include code_locations, PoC script, honest counterevidence and confidence). Report file/line references, prerequisites, observed results. Do not contact deployed endpoints or use real credentials.",
+        "is_root": false
+      },
+      {
+        "agent_id": "f5512b96",
+        "agent_name": "FS & Command Injection",
+        "status": "completed",
+        "skills": [
+          "path_traversal_lfi_rfi",
+          "rce",
+          "insecure_file_uploads"
+        ],
+        "task": "Source-code security assessment (white-box, isolated local analysis only) of /workspace/agentcore-superagent-update/super-agent/backend. Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour scope: FILESYSTEM & ARCHIVE PATHS, UPLOADS, COMMAND EXECUTION, WORKSPACE MANAGEMENT, DEV SERVER MANAGER, PACK DEPLOY.\nFiles: src/services/workspace-manager.ts, dev-server-manager.ts, pack-deploy.service.ts, file.service.ts, document.service.ts, knowledge-base.service.ts (and rag/*), workflow-workspace.ts, skill-scanning.service.ts, skill-marketplace.service.ts, agentcore-command.service.ts, claude-agent.service.ts, claude-config.ts, claude-hooks.ts, avatarService.ts, routes: files.routes.ts, documents.routes.ts, document-groups.routes.ts, avatarRoutes.ts, pack-deploy.routes.ts, skill-scanning.routes.ts. Also check use of archiver/unzip libs (package.json deps) and any tar extraction.\n\nCheck:\n1. Path traversal: any place user input (file names, document group names, skill IDs, workspace/agent IDs, checkpoint names) is joined into a filesystem path without containment check before read/write. DOC_GROUPS_BASE_PATH, AGENT_WORKSPACE_BASE_DIR handling. Symlink handling during extraction/copy.\n2. Archive handling: zip-slip on extraction (pack deploy, imports), archive creation including files outside intended dir.\n3. Command execution: how claude SDK subprocess is spawned (spawn with array args vs shell string?), CLAUDE_CODE_EXECUTABLE config, dev-server-manager spawning processes (ports, commands from user input?), agentcore-command.service, workflow node executors (src/services/node-executors/*) — any exec/shell with interpolated user data, any `eval`/`new Function`/vm.\n4. Uploads: file type/extension validation, content sniffing, where files are stored and served (path traversal in download/serve, content-type confusion leading to stored XSS).\n5. Workflow/skill code execution: do workflows run user-supplied code/skills, and with what isolation?\n\nFor each candidate: input, path, missing control, effect, file:line. Validate with a harmless local PoC in /tmp (create a fake workspace dir, show traversal write outside bounds with the actual code path via unit test or small harness — do not modify the repo itself; put artifacts in /tmp). Record coverage; file confirmed findings with create_vulnerability_report (code_locations, PoC, counterevidence, honest confidence). Separate demonstrated vs unverified vs reliability problems.",
+        "is_root": false
+      },
+      {
+        "agent_id": "de119248",
+        "agent_name": "Follow-up Closure",
+        "status": "completed",
+        "skills": [
+          "path_traversal_lfi_rfi",
+          "race_conditions"
+        ],
+        "task": "Source-code security assessment follow-up (white-box, isolated, local-only, no network/DB) of /workspace/agentcore-superagent-update/super-agent/backend. Call get_threat_model on /workspace/agentcore-superagent-update first. IMPORTANT: 27 findings (vuln-0001..0027, ids 0001-0008, 0009-0027) are already filed. Do NOT re-file duplicates — resolve these 5 open coverage rows and either resolve or leave as needs_follow_up with a precise blocker statement.\n\nUse list_coverage (outcome=\"needs_follow_up\") to see the rows; close them with update_coverage (never a second record_coverage for the same surface).\n\n1. entry 4ba917 — JWT_SECRET default. Already covered by filed vuln-0002. Update this row to outcome=\"reported\", evidence: \"Superseded by filed finding vuln-0002 (hardcoded default JWT_SECRET, PoC-verified token forgery).\"\n2. entry 0adf44 — workflow api_call SSRF. Already covered by filed vuln-0009. Update to outcome=\"reported\", evidence referencing vuln-0009.\n3. entry 344472 — a2a validateApiKey raw-vs-hash compare. Already filed as vuln-0008 (info, reliability defect). Update to outcome=\"reported\", evidence: \"Filed as vuln-0008; additionally the pass-the-hash property noted — a leaked key_hash becomes a valid credential until fixed.\"\n4. entry 45522a — zip/tar symlink handling in skill upload. Investigate: read the extraction code (skill-marketplace.service.ts installFromZip and any fs.cp usage with/without verbatimSymlinks in workspace-manager.ts installSkillToWorkspace). If a symlink member in an uploaded zip survives extraction (unzip -o preserves symlinks) and is later followed by an unscoped copy into a workspace, that is a concrete out-of-bounds read/write. You may build a harmless local PoC in /tmp (craft a zip with a symlink member, run the actual extraction commands the service uses, then simulate the copy). If confirmed exploitable, file via create_vulnerability_report (it may fold into vuln-0013's root cause — unvalidated skill content; if you judge it a distinct sink, file separately with cross-reference). Otherwise close as ruled_out naming the exact control, or leave needs_follow_up with the specific gap.\n5. entry 38aaa6 — schedule double-execution race. Static analysis only: determine whether single-process PROCESS_ROLE=all dev mode serializes ticks (single setInterval → no race in that mode) and whether multi-instance deployment is a supported configuration (check infra/CDK and docs for worker/API split). If the race requires an unsupported deployment topology, close as ruled_out/not_applicable with evidence; if multi-instance is supported (PROCESS_ROLE env explicitly supports api/worker/gateway splits — check config/index.ts), leave needs_follow_up with precise blocker or file a low-severity race finding via create_vulnerability_report if impact is concrete (duplicate workflow executions, e.g. duplicate outbound actions).\n\nReport what you did per row. Keep it focused — no new exploration beyond these five items.",
+        "is_root": false
+      },
+      {
+        "agent_id": "5c4fd2c7",
+        "agent_name": "IDOR & Tenant Isolation",
+        "status": "completed",
+        "skills": [
+          "idor",
+          "broken_function_level_authorization",
+          "mass_assignment"
+        ],
+        "task": "Source-code security assessment (white-box, isolated local analysis only) of /workspace/agentcore-superagent-update/super-agent/backend. Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour scope: TENANT OWNERSHIP & AUTHORIZATION (IDOR/BOLA), horizontal and vertical access control, mass assignment.\nFiles: src/middleware/agentAccess.ts, scopeAccess.ts, src/authorization/* (auth.middleware.ts, authorization.ts, permissions.ts), src/routes/*.routes.ts (focus: chat, chatRooms, documents, document-groups, agents, apps, workflows, tasks, projects, knowledge-base, connector, credential vault, organizations, businessScopes, scopeMemberships, mcp, skills), plus matching repositories in src/repositories/.\n\nMethod:\n1. Map the auth guard pattern: which routes apply authenticate/authz middleware, which don't. List any route registered without the auth hook.\n2. For each org-scoped route, check whether queries filter by request.user.orgId / membership before returning or mutating. Flag endpoints that take an id (agentId, sessionId, documentId, workflowId, taskId, etc.) and fetch by primary key without an org/owner predicate.\n3. Check middleware/agentAccess.ts + scopeAccess.ts for bypasses (e.g. checks skipped on error, admin fallback that any user passes, query-param controlled scoping).\n4. Check mass assignment on update routes (role, orgId, userId, membership fields bind from body).\n5. Cross-tenant sharing of chat rooms / scope memberships / connectors / credential vault entries.\n\nFor each candidate: input, path (route→middleware→repository), missing control, effect, file:line. Where feasible validate with a harmless local PoC or a vitest-style unit test in /tmp using mocks (no network, no real DB writes). Deduplicate by root cause (e.g. \"repository method lacks orgId predicate\" = one finding with all affected call sites). Record coverage via record_coverage. File confirmed findings with create_vulnerability_report (code_locations, PoC, counterevidence, honest confidence). Separately list unverified candidates and reliability concerns in your finish report.",
+        "is_root": false
+      },
+      {
+        "agent_id": "00ecb1dc",
+        "agent_name": "Infra & Deployment Config",
+        "status": "completed",
+        "skills": [
+          "aws",
+          "dependency_cve_scanning"
+        ],
+        "task": "Source-code security assessment (white-box, isolated local analysis only) of /workspace/agentcore-superagent-update. Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour scope: DEPLOYMENT CONFIGURATION, INFRASTRUCTURE, SECRETS, and the non-backend parts.\nAreas:\n1. super-agent/infra (AWS CDK): security groups (0.0.0.0/0 exposure?), IAM policies (wildcard actions?), secrets handling (SecretsManager vs plaintext env), S3 bucket public access, container security (privileged, root), VPC placement, load balancer TLS.\n2. super-agent/agentcore (runtime container): Dockerfile, entrypoints, what runs as root, exposed ports, embedded credentials.\n3. super-agent/app-hosting: any deployment configs.\n4. super-agent/frontend: build config, dangerouslySetInnerHTML, hardcoded endpoints/keys, .env files committed.\n5. Repo-wide: .env files, docker-compose, systemd, scripts with secrets; .gitignore coverage of secret files. Run gitleaks detect across the whole repo (source tree only, offline) and report genuine hardcoded credentials.\n6. Deployment docs in super-agent/document mentioning default credentials or insecure quick-starts that ship to production.\n7. Also check backend Dockerfile / pm2 / start scripts if present.\n\nFor each candidate: location (file:line), the misconfiguration, attack prerequisite, impact, and remediation. Assess honestly: distinguish \"hardening recommendation\" from \"exploitable misconfiguration\" — config hygiene without a reachable exploit is not a vulnerability; note such items as observations. Where a config issue creates a concrete attack path (e.g. SG open to world on the API port + default JWT secret), say so and cross-reference. Validate with local static evidence only (no network, no AWS calls). Record coverage; file confirmed findings via create_vulnerability_report (or create_dependency_report for dependency CVEs found in infra packages) with code_locations, counterevidence, honest confidence. Separate demonstrated vs unverified vs observations.",
+        "is_root": false
+      },
+      {
+        "agent_id": "4546d4f1",
+        "agent_name": "Open Items Validation",
+        "status": "completed",
+        "skills": [
+          "idor",
+          "business_logic",
+          "information_disclosure"
+        ],
+        "task": "Source-code security assessment follow-up (white-box, isolated local analysis only) of /workspace/agentcore-superagent-update/super-agent/backend. Call get_threat_model on /workspace/agentcore-superagent-update first. Do NOT re-file anything already filed (reports vuln-0001 through vuln-0024 exist; use list_reports/get_report only if needed to avoid duplicates — you are a leaf agent, so only do that when checking for duplicates before filing).\n\nThree open items to resolve:\n\n1. chatRooms leader endpoint (chatRooms.routes.ts ~line 177-206): writes chat_room_members via raw prisma updateMany by session_id with no org predicate, and no room-ownership lookup on THIS route before the updateMany. Trace precisely: can a member-role user from org A flip leader flags on org B's room given a known session UUID? Check whether any earlier middleware/handler on this specific route verifies the room. If you can name the control that protects it, mark coverage ruled_out (update the existing needs_follow_up coverage entry via update_coverage); if not, validate with a mock-based PoC in /tmp and file via create_vulnerability_report.\n\n2. IM webhook/adapter signature verification fails open (slack-adapter, telegram-adapter, dingtalk-adapter, feishu-adapter, whatsapp-adapter verifyRequest return true when no secret configured; wecom-adapter and discord-adapter verifyRequest always return true): trace the inbound route (im.routes.ts / im webhooks) end-to-end. What can an unauthenticated attacker POST (which URL path, what payload shape), and what effect does it have (agent message injection triggering credentialed agents? workflow triggers?). Where do secrets come from (DB bindings) and is fail-open the default for fresh installs? If realistically exploitable on a default deployment, file via create_vulnerability_report; state prerequisites honestly.\n\n3. GET /api/business-scopes/:scopeId/im-channels (find the route; likely businessScopes.routes.ts or im.routes.ts) returns binding.config including plaintext signing_secret to any authenticated org member. Confirm the exact code path, whether org-scoping applies, and what secrets are exposed. If confirmed, file via create_vulnerability_report with code_locations.\n\nFor each: input, path, missing control, effect, file:line; harmless local PoC/mocks in /tmp where feasible (no network, no real DB). Record/update coverage entries (there are existing needs_follow_up entries — use update_coverage on them, found via list_coverage). File confirmed findings with create_vulnerability_report (counterevidence + honest confidence). Report demonstrated vs unverified vs ruled out clearly.",
+        "is_root": false
+      },
+      {
+        "agent_id": "cd966b3b",
+        "agent_name": "Root Agent",
+        "status": "completed",
+        "skills": [],
+        "task": "\n\nLocal Codebases: - /home/ec2-user/bedrock/agentcore-superagent-update (available at: /workspace/agentcore-superagent-update; this is the user's real directory, mounted live and writable — .git/.agents/.codex are read-only)\n\nSpecial instructions: Perform an authorized comprehensive source-code security assessment of the supplied local repository. Use only isolated local services, synthetic data, and mocks. Do not contact deployed endpoints, use real credentials, modify cloud resources, or push changes. Preserve the target source files; place validation artifacts in temporary directories.\n\nMap entry points and trust boundaries before prioritizing end-to-end attack paths. Cover authentication, JWT and internal signatures, tenant ownership and authorization, WebSockets, filesystem and archive paths, command execution, tool dispatch, webhooks, URL fetching and SSRF, uploads, secret handling, and deployment configuration. Trace attacker-controlled inputs through actual guards to sensitive sinks. Intended operations explicitly requested by an authorized user are not vulnerabilities by themselves.\n\nValidate each candidate with a harmless local PoC or regression test where feasible. Record file and line references, attacker prerequisites, observed result, impact, and remediation. Clearly separate demonstrated vulnerabilities, unverified candidates, and reliability problems. Deduplicate common root causes. Report coverage and remaining gaps honestly; do not imply that a local reproduction proves production exploitability. Use concise intermediate output to preserve context for validation.",
+        "is_root": true
+      },
+      {
+        "agent_id": "ad448eaa",
+        "agent_name": "SSRF & Webhook Analysis",
+        "status": "completed",
+        "skills": [
+          "ssrf",
+          "csrf",
+          "open_redirect"
+        ],
+        "task": "Source-code security assessment (white-box, isolated local analysis only) of /workspace/agentcore-superagent-update/super-agent/backend. Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour scope: SSRF, URL FETCHING, WEBHOOKS, INTEGRATIONS, CONNECTORS, PROXIES.\nFiles: src/routes/webhooks.routes.ts, connectors.routes.ts, integrations.routes.ts, llm-proxy.routes.ts, litellm.routes.ts, a2a.routes.ts, appBackend.routes.ts, appData.routes.ts, avatarRoutes.ts, rag routes, and services: webhook.service.ts, data-connector.service.ts, oauth-flow.service.ts, oauth-provider-config.service.ts, a2a-client.service.ts, a2a-orchestrator.service.ts, api-spec-parser.service.ts, llm-proxy/*, connector-registry.service.ts, browser-live-view.service.ts, mcp.service.ts, feishu/dingtalk/slack/telegram/whatsapp/discord/wecom adapters (im callbacks: signature verification on every adapter?).\n\nCheck:\n1. Every place a user-supplied URL is fetched (connectors, webhooks outbound, OAuth discovery, a2a client, llm-proxy upstream, api-spec-parser fetching OpenAPI specs, avatar URL fetch). Is there any allowlist/denylist (127.0.0.1, 169.254.169.254 metadata, internal ranges, redirects)? DNS rebinding considerations? Is redirect following enabled?\n2. Inbound webhook verification: which IM/webhook callbacks verify signatures/HMAC correctly (timing-safe, right secret, replay protection)? Which accept unauthenticated POSTs and what state can they change (injecting messages, triggering workflows)?\n3. llm-proxy: can a user set an arbitrary upstream base URL and thereby proxy requests to internal services?\n4. OAuth flows: redirect_uri validation, code interception, state parameter.\n\nFor each candidate: input, path to sink, missing control, effect, file:line. Validate with harmless local PoC in /tmp where feasible (e.g. spin up a local mock HTTP server and show the service fetches http://127.0.0.1:<port> from user input — no external calls). Record coverage; file confirmed findings via create_vulnerability_report with code_locations, PoC, counterevidence, honest confidence. Separate demonstrated vs unverified.",
+        "is_root": false
+      },
+      {
+        "agent_id": "4d74602f",
+        "agent_name": "Tool Dispatch & Workflow Logic",
+        "status": "completed",
+        "skills": [
+          "business_logic",
+          "race_conditions",
+          "agentic_system_security"
+        ],
+        "task": "Source-code security assessment (white-box, isolated local analysis only) of /workspace/agentcore-superagent-update/super-agent/backend. Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour scope: TOOL DISPATCH, MCP, AGENT RUNTIME TRUST, WORKFLOW & BUSINESS LOGIC, A2A ORCHESTRATION, PROMPT INJECTION-DRIVEN AUTHORITY.\nFiles: src/services/agent-runtime*.ts, mcp.service.ts, workflow-orchestrator.ts, workflow-executor-v2.ts, workflow-execution.service.ts, node-executors/*, a2a-orchestrator.service.ts, message-router.service.ts, claude-agent.service.ts + claude-hooks.ts + conversation-hooks.ts, agent.service.ts, agent-scope.service.ts, scope-generator.service.ts, workshop.service.ts, project-squad.service.ts, checkpoint.service.ts, carry-forward.service.ts, schedule.service.ts + schedulers, task.service.ts, support-workflow-executor.service.ts, im-queue.service.ts, insforge-orchestrator.ts, routes: mcp.routes.ts, workflows.routes.ts, execution.routes.ts, a2a.routes.ts, workshop.routes.ts, rehearsal.routes.ts, schedules.routes.ts, checkpoint.routes.ts.\n\nCheck:\n1. Which tools/MCP servers an agent can invoke — is the tool allowlist user-configurable per agent, and can a low-priv user configure dangerous tools (filesystem write, shell, network)? Does any execution path forward untrusted chat/IM input into shell/file/HTTP operations without an allowlist?\n2. Workflow executors: node types that execute code/commands/HTTP requests with parameters from workflow definitions; who may create/edit workflow definitions vs run them; IDOR on execution records.\n3. A2A: cross-agent invocation trust — does the orchestrator authenticate remote agents, can a user point an agent at an arbitrary endpoint (overlaps SSRF team — focus on the trust/authority side)?\n4. Prompt-injection-to-sensitive-action paths: IM messages (Slack/Telegram/etc.) driving agents that hold tool credentials — is there a human-confirmation gate for destructive actions? (Judge as authority escalation, not user-requested operation.)\n5. Schedulers: who can schedule workflows, scope of execution identity.\n6. Business logic: race conditions on quota/token-usage (token-quota middleware/service), double-execution, state machine bypass on workflow status transitions.\n\nFor each candidate: input, path, missing control, effect, file:line. Where feasible, harmless local PoC/unit test in /tmp with mocks (no network, no real subprocess spawning of Claude — you may simulate the spawn layer). Record coverage; file confirmed findings with create_vulnerability_report (code_locations, PoC, counterevidence, honest confidence). Separate demonstrated vs unverified vs reliability problems.",
+        "is_root": false
+      },
+      {
+        "agent_id": "6c46b723",
+        "agent_name": "WebSockets & XSS/Injection",
+        "status": "completed",
+        "skills": [
+          "xss",
+          "sql_injection",
+          "information_disclosure"
+        ],
+        "task": "Source-code security assessment (white-box, isolated local analysis only) of /workspace/agentcore-superagent-update/super-agent/backend. Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour scope: WEBSOCKETS, SSE, STORED/REFLECTED INJECTION (XSS, SQL, NoSQL, template), SECRET HANDLING, INFO DISCLOSURE, DEPENDENCIES/CONFIG.\nFiles: src/websocket/execution.gateway.ts + src/utils/sse.ts, src/middleware/requestLogger.ts + auditLog.ts (token/secret logging), output-sanitizer.ts, stream-registry.ts, errorHandler.ts, chat routes/services (user/agent message rendering paths), im adapters (message content handling), credential-vault.service.ts + routes (how credentials are stored/returned — encrypted? masked?), src/setup/*, plus a repo-wide dependency & secret scan: run gitleaks and trivy fs on the backend (offline), and check package.json versions.\n\nCheck:\n1. WebSocket gateway: auth on connection (does it validate JWT? via query param?), subscription scoping (can user subscribe to another user's/agent's execution stream?), message-origin validation.\n2. SSE endpoints: auth and tenant scoping of event streams.\n3. Stored XSS: user messages / agent names / document names / IM messages rendered in frontend (super-agent/frontend) — check dangerouslySetInnerHTML usage, markdown rendering without sanitization (search frontend/src too), output-sanitizer.ts coverage.\n4. SQL injection: any $queryRaw/$executeRawUnsafe with string interpolation (grep for them; the auth.ts email-migration uses parameterized $1 — fine). Prisma raw queries anywhere with template literals.\n5. Secrets: hardcoded credentials, keys in repo (gitleaks), credential vault return values (are secrets ever returned to clients?), logs redaction gaps.\n6. Dependencies: trivy fs on super-agent/backend (vuln,misconfig) — report known-CVE dependency findings with create_dependency_report, with reachability analysis.\n7. Swagger /docs exposure in production, error handler verbosity leaking stack traces.\n\nFor each candidate: input, path, missing control, effect, file:line. Validate harmless local PoCs where feasible (all in /tmp, mocks only). Record coverage; file confirmed findings via create_vulnerability_report / create_dependency_report. Separate demonstrated vs unverified vs reliability problems.",
+        "is_root": false
+      }
+    ],
+    "skills_exercised": [
+      "agentic_system_security",
+      "authentication_jwt",
+      "aws",
+      "broken_function_level_authorization",
+      "business_logic",
+      "csrf",
+      "dependency_cve_scanning",
+      "idor",
+      "information_disclosure",
+      "insecure_file_uploads",
+      "mass_assignment",
+      "open_redirect",
+      "path_traversal_lfi_rfi",
+      "race_conditions",
+      "rce",
+      "sql_injection",
+      "ssrf",
+      "weak_password_detection",
+      "xss"
+    ],
+    "findings_filed": 29,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": true,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": []
+  },
+  "entries": [
+    {
+      "surface": "super-agent/infra CDK stack (super-agent-stack.ts)",
+      "risk_area": "Infrastructure security: SG exposure, IAM wildcards, S3 public access, TLS, VPC placement",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "SG ingress limited to 80/443 via AllowedCidr param (default 0.0.0.0/0 — noted as combined risk factor in vuln-0005); DB/Redis SGs allow only from EC2 SG; RDS storage encrypted, not public, SecretsManager-generated creds; all 4 S3 buckets BLOCK_ALL public access + encryption; EBS encrypted. Weaknesses (wildcard bedrock-agentcore actions `resources:['*']`, `bedrock:InvokeModel` on `*`) are least-privilege hygiene for an AI app that legitimately invokes any model/runtime, not exploitable misconfigurations — observation only.",
+      "recorded_by": "Infra & Deployment Config",
+      "recorded_at": "2026-11-21 04:06:42 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent/agentcore runtime container (Dockerfile)",
+      "risk_area": "Container security: root user, privileged, exposed ports, embedded credentials",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Multi-stage build, USER node (non-root), no privileged, no embedded secrets (only non-secret ENV: model name, region, CLAUDE_CODE_USE_BEDROCK flag), EXPOSE 8080 as required by AgentCore protocol. HOME set to /workspace by design. No issues.",
+      "recorded_by": "Infra & Deployment Config",
+      "recorded_at": "2026-11-21 04:06:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent/backend Dockerfile + systemd service (user-data.sh)",
+      "risk_area": "Container/process security: root execution, embedded secrets",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Backend Dockerfile: multi-stage, non-root USER backend, no secrets baked in. systemd service runs as ubuntu user, .env chmod 600, JWT_SECRET generated at deploy time via openssl rand (deploy.sh:239) — good. Hardcoded local Redis password `super-agent-redis-password` in user-data.sh is a hygiene issue (localhost-bound fallback, ElastiCache path has no password set on the cluster — noted as observation, low impact since Redis SG is EC2-only and there is a redis AUTH gap only if SG were bypassed).",
+      "recorded_by": "Infra & Deployment Config",
+      "recorded_at": "2026-11-21 04:06:50 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent/frontend (build config, dangerouslySetInnerHTML, env files, hardcoded keys)",
+      "risk_area": "XSS via dangerouslySetInnerHTML, secret exposure, committed .env",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Only one dangerouslySetInnerHTML (Chat.tsx:470) and it renders hljs.highlight output — highlight.js HTML-escapes input before highlighting, standard safe pattern; catch branch also escapes manually. .env.example contains only placeholders; no committed secrets; .gitignore covers .env files (backend/.env exists locally but is git-ignored, dev-only values). No hardcoded API keys.",
+      "recorded_by": "Infra & Deployment Config",
+      "recorded_at": "2026-11-21 04:06:52 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Repo-wide secrets (gitleaks + .env + deploy scripts)",
+      "risk_area": "Hardcoded credentials / secret handling",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "gitleaks repo scan: 1 hit only — generic-api-key in an industry-pack SKILL.md, which is a sample JSON token format in documentation (VT-MFA-...uuid), not a real credential — false positive. Backend .env committed? No — git-ignored, contains only dev values (sa:sa local). JWT_SECRET generated randomly at deploy (deploy.sh:239). Real finding: hardcoded default admin credential Admin1234! in deploy scripts + public docs — filed as vuln-0005. Observation: hardcoded local Redis password super-agent-redis-password in user-data.sh; ElastiCache cluster created with no auth token (stack line ~150) — mitigated by Redis SG restricting ingress to EC2 SG only.",
+      "recorded_by": "Infra & Deployment Config",
+      "recorded_at": "2026-11-21 04:06:57 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent/app-hosting (poc docker-compose, k8s, docs)",
+      "risk_area": "Deployment config: exposed dashboards, docker.sock, default creds",
+      "outcome": "not_applicable",
+      "outcome_label": "Not applicable",
+      "evidence": "app-hosting/ contains only design docs (MD files) and a PoC docker-compose for a local simulator (floci = localstack-like, test AWS keys `test/test`, traefik insecure dashboard, postgres `apphost:apphost123`). It is an explicit local PoC not shipped in the production CDK stack; per instructions config hygiene in non-production dev tooling is an observation, not a vulnerability.",
+      "recorded_by": "Infra & Deployment Config",
+      "recorded_at": "2026-11-21 04:06:59 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Deployment docs (infra/README.md, document/fork-deploy-guide.md, deploy scripts)",
+      "risk_area": "Insecure quick-start defaults that ship to production",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Default admin credential documented publicly (part of vuln-0005). Other observations: self-signed TLS cert on 443 in user-data.sh (users trained to click through warnings, no HSTS); CloudFront /api origin uses HTTP_ONLY to EC2 port 80; AllowedCidr default 0.0.0.0/0; Cognito callback URL localhost:5173 fixed in stack. All hygiene-level except the admin credential which is filed.",
+      "recorded_by": "Infra & Deployment Config",
+      "recorded_at": "2026-11-21 04:07:02 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent backend config defaults (config/index.ts JWT_SECRET, CORS, InsForge JWT)",
+      "risk_area": "Insecure default secrets enabling token forgery",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Superseded by filed finding vuln-0002 (hardcoded default JWT_SECRET, PoC-verified token forgery).",
+      "recorded_by": "Follow-up Closure",
+      "recorded_at": "2026-11-21 04:07:12 UTC",
+      "updated_at": "2026-11-21 04:13:44 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/middleware/auth.ts — internal token verification (verifyInternalToken)",
+      "risk_area": "Internal signature secret / token forgery",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "INTERNAL_TOKEN_SECRET = Cognito userPoolId (public) in cognito mode, default JWT secret in local mode; forged token accepted by offline PoC replicating auth.ts:115-129. Filed as vuln-0001 (critical). Also non-constant-time !== compare at auth.ts:121 noted in report.",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:13 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/config/index.ts:30 + src/middleware/auth.ts:49-74 — local JWT secret handling",
+      "risk_area": "Hardcoded default JWT secret / token forgery",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Default 'super-agent-local-dev-secret-change-in-production' with no production guard anywhere in startup path; offline PoC (repo's jsonwebtoken) forged+verified owner-role token. Bootstrap user-data.sh writes CHANGE_ME placeholder. Filed as vuln-0002 (critical). INSFORGE_JWT_SECRET has same pattern (config/index.ts:145), noted in remediation.",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:18 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/routes/auth.routes.ts — POST /auth/login, /register",
+      "risk_area": "Brute force / default credentials / password policy",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "No rate limiting, lockout, or password policy on login/register; seed-local-auth.ts plants admin@example.com/admin123 owner account. Filed as vuln-0003 (critical).",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:27 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/middleware/auth.ts:141-166 — ?token= query param auth",
+      "risk_area": "Token leakage via URL/logs/referrer",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Query token accepted app-wide; requestLogger.ts:57 logs full URL with token; app.ts:54 redact list omits query string. Filed as vuln-0004 (low).",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:29 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/services/apiKey.service.ts — API key generation and validation",
+      "risk_area": "Key hashing / enumeration / timing-safe comparison",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Keys are 32 random bytes with sk_ prefix, stored as SHA-256 hash, lookup by unique index on hash (no enumeration oracle — uniform 401), expiry and revocation enforced, rate limit per key via Redis. Hash lookup is not a timing-compare of secrets (hash is not secret material in the timing-attack sense; 256-bit preimage). No weakness found.",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:33 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/services/widget-auth.service.ts + src/routes/widget.routes.ts",
+      "risk_area": "Widget authentication scope and issuance",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Widget issues no tokens of its own: it authenticates existing api_keys by SHA-256 hash, requires widget:connect scope and active+unexpired key, scopes all queries to the key's organization (org-scoped findFirst on sessions/messages). Runs as WIDGET_SYSTEM_USER_ID. No over-issuance or unauthenticated widget route found. Note: uses raw sha256 lookup like apiKeyService (consistent) — fine.",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:36 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/app.ts CORS registration + config/index.ts:64 CORS_ORIGIN default",
+      "risk_area": "CORS wildcard with credentials",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "origin:true (reflects any origin) + credentials:true, default '*'. No cookie auth exists, so impact currently limited — filed as vuln-0007 (medium).",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:40 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/middleware/auth.ts:190-255 — verifyToken claims handling + Cognito email binding",
+      "risk_area": "Claim trust / account takeover via email binding",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Email-based first-login binding reassigns all profile rows without checking email_verified (verifier config auth.ts:17-21 doesn't enforce it); custom:role/custom:orgId trusted as fallbacks. Conditional on pool configuration — filed as vuln-0006 (medium, confidence medium).",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:42 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/routes/a2a.routes.ts — A2A API key validation",
+      "risk_area": "API key verification correctness",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Raw bearer token compared against key_hash column which stores sha256(key) — all valid keys rejected; reliability defect, no security impact. Filed as vuln-0008 (info).",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/routes/* — unauthenticated route inventory (health, im webhooks, widget, openapi, a2a, app backends)",
+      "risk_area": "Unauthenticated access to protected functionality",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Swept all 50 route files: health (intended public), auth (login/register/invite by design, invite tokens validated + expiry enforced), im webhook routes verify per-adapter signatures (other agent's scope), widget routes require api key with widget:connect, openapi routes use apiKeyAuth (correct sha256 path), a2a requires API key (broken but rejects everything). No missing-auth route found.",
+      "recorded_by": "Auth & Token Analysis",
+      "recorded_at": "2026-11-21 04:07:51 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "a2a-client.service.ts remote invocation (invokeRemote/getTask/getAgentCard)",
+      "risk_area": "SSRF / URL fetching",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "fetch sites take an `endpoint` param, but all current callers construct endpoints as `local://${agentId}` only (chatRooms.routes.ts:292 is the sole producer of AgentEndpoint lists, plus orchestrator passing them through). No user-supplied remote https:// endpoint exists in any route or DB field today; remote path is dead code for attacker input. Would become SSRF if external agent endpoints are added.",
+      "recorded_by": "SSRF & Webhook Analysis",
+      "recorded_at": "2026-11-21 04:08:17 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "llm-proxy routes/service (llm-proxy.routes.ts, llm-proxy/*)",
+      "risk_area": "SSRF / arbitrary upstream base URL",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "llm-proxy proxies to Bedrock only (BedrockRuntimeClient), no user-controllable upstream URL; litellm.routes.ts fetches config.litellm.baseUrl (server-side env), not user input. No arbitrary-upstream proxy primitive found.",
+      "recorded_by": "SSRF & Webhook Analysis",
+      "recorded_at": "2026-11-21 04:08:22 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Inbound IM webhook verification (im.routes.ts + slack/telegram/feishu/dingtalk/whatsapp/wecom/discord adapters)",
+      "risk_area": "Missing/forged signature verification on state-changing callbacks",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Confirmed end-to-end: adapters (slack:39, telegram:31, dingtalk:80, whatsapp:66, feishu:104) return true when no secret configured; discord:23 and wecom:177 always return true. Route chain verifyAndLookupBinding (im.routes.ts:226-271) does global binding lookup (no org) then adapter.verifyRequest → imService.handleMessage → chatService.processMessage with binding org/scope/created_by. Executed the project's own adapters in isolated sandbox: verifyRequest({}, body) → true for all four; control with secret + forged signature → false. Generic POST /api/im/webhook/:bindingId has no verification at all. Filed as vuln-0026. Prerequisites: at least one enabled binding without a stored secret (or Discord/WeCom binding, or known generic-webhook binding UUID).",
+      "recorded_by": "Open Items Validation",
+      "recorded_at": "2026-11-21 04:08:25 UTC",
+      "updated_at": "2026-11-21 04:13:28 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "api-spec-parser + integrations.routes.ts + avatarRoutes + browser-live-view + connectors.routes",
+      "risk_area": "SSRF / URL fetching",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "api-spec-parser parses content only — no fetch of remote spec URLs; integrations route accepts specContent string. avatarRoutes uploads file buffers to S3 (sharp), no URL fetch. connectors.routes CRUD only (testConnection checks credential status, no network fetch). browser-live-view has no fetch of user URLs. No outbound URL sink in these files.",
+      "recorded_by": "SSRF & Webhook Analysis",
+      "recorded_at": "2026-11-21 04:08:28 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "OAuth flows (oauth-flow.service.ts, oauth-provider-config.service.ts)",
+      "risk_area": "redirect_uri validation, state, secret handling",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed vuln-0012: client secrets encrypted with hardcoded default key + static salt; upsert accepts arbitrary provider names. OAuth flow itself: state is 32-byte random, in-memory, 10-min expiry, provider matched — adequate; redirect_uri is server-constructed; token URLs hardcoded to google/salesforce so no attacker-directed token exchange today.",
+      "recorded_by": "SSRF & Webhook Analysis",
+      "recorded_at": "2026-11-21 04:08:31 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Workflow api_call action node (action-executor.ts, workflow-orchestrator.ts) + MCP server test (mcp.service.ts)",
+      "risk_area": "SSRF / unrestricted outbound fetch of user-controlled URL",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed vuln-0009 (api_call SSRF, includes unauthenticated webhook-variable chain) and vuln-0010 (MCP test endpoint SSRF). Both demonstrated with local vitest PoCs against local mock HTTP servers.",
+      "recorded_by": "SSRF & Webhook Analysis",
+      "recorded_at": "2026-11-21 04:08:34 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Webhook trigger + public status endpoints (webhooks.routes.ts, webhook.service.ts)",
+      "risk_area": "Unauthenticated state change / missing signature verification",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed vuln-0011: secret_hash generated but never verified anywhere in the codebase; trigger is unauthenticated by design with no HMAC; IP allowlist optional and skipped when unset; GET /v1/webhook/status/:callRecordId publicly exposes execution node detail.",
+      "recorded_by": "SSRF & Webhook Analysis",
+      "recorded_at": "2026-11-21 04:08:36 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "WorkspaceManager (workspace-manager.ts) — session workspace read/write/upload/delete paths",
+      "risk_area": "Path traversal",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "readWorkspaceFile/writeWorkspaceFile/writeWorkspaceFileRaw/resolveWorkspaceFilePath all apply `resolved.startsWith(workspacePath)` after join (lines 1476, 1555, 1569, 1605); `..` segments are resolved by join and fail the prefix check. Sibling-prefix bypass (startsWith without trailing separator) is only exploitable if another org/scope/session ID is a strict string prefix of the victim's — all components are random UUIDs, so not practically reachable; recorded as a reliability note. Symlink-following during writes is inherent to the workspace model (the agent runtime owns the workspace).",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:09:34 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "WorkspaceManager.installSkillToWorkspace / downloadSkill (workspace-manager.ts:969, 1360)",
+      "risk_area": "Path traversal via skill name",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "join(skillsDir, skillName) + cp with no containment check; skill name attacker-controlled via zip upload/installRef. Demonstrated arbitrary write outside workspace base with the real module (vuln-0013).",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:09:38 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "AgentCoreCommandService (agentcore-command.service.ts) — container command execution",
+      "risk_area": "Command injection",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "runCommand wraps in /bin/bash -c with shellEscape that only escapes quotes/backslashes; skill names interpolated at skill-marketplace.routes.ts:158 and enterprise-skill.service.ts:338 without sanitizePath (vuln-0014, demonstrated locally). readFile/writeFile/deleteFile/deleteDirectory/syncFileFromS3 are guarded by sanitizePath which blocks .., /, and shell metacharacters — those wrappers are safe.",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:09:40 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Document groups upload/delete (document-groups.routes.ts) + document.service.ts",
+      "risk_area": "Path traversal / unsafe upload",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Upload sanitizes filename (replaces /\\\\:*?\"<>| with '-'), storage_path built from server-generated randomUUID at group creation; delete uses DB-stored stored_filename scoped by org. RAG indexer joins storagePath+storedFilename from DB records under org-scoped group. No traversal vector found. DOC_GROUPS_BASE_PATH itself is not user-influenced.",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:09:45 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Files routes / file.service.ts (S3 presigned flows)",
+      "risk_area": "IDOR / key traversal in object storage",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All key operations validate key.startsWith(`${orgId}/`) (file.service.ts validateFileAccess); filenames sanitized to [a-zA-Z0-9.-]. S3 keys are not filesystem paths, so traversal is limited to prefix escaping — blocked by the org-prefix check.",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:09:47 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Skill marketplace upload-zip / import / install (skill-marketplace.service.ts, routes)",
+      "risk_area": "Archive extraction (zip-slip) and unsafe skill install",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Confirmed by local PoC (vuln-0029): unix symlink members survive `unzip -o -q` (skill-marketplace.service.ts:800) and `fs.cp(..., {recursive:true})` without verbatimSymlinks (line 843; workspace-manager.ts:1361, :976) dereferences them — out-of-archive file content copied into attacker-readable skill storage. Classic `..` zip-slip is blocked by unzip/tar defaults; the symlink path is the exploitable variant.",
+      "recorded_by": "Follow-up Closure",
+      "recorded_at": "2026-11-21 04:09:51 UTC",
+      "updated_at": "2026-11-21 04:14:35 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "DevServerManager (dev-server-manager.ts) + plugin installation (workspace-manager installPlugins)",
+      "risk_area": "Command execution",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All spawns use argv arrays with no shell: `spawn('npx', ['vite','--port',...])`, `npm install`, `git clone` via execFile with literal args — no interpolation of user data into argv. Ports are randomly selected and only the session that owns the workspace can trigger a server. Running npm install/npx vite over agent-generated package.json in the session's own workspace is intended agent functionality, not a guard failure. Plugin gitUrl/ref come from DB (operator-configured plugins), executed via execFile with array args — no injection.",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:09:53 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Pack deploy service + routes (pack-deploy.service.ts, pack-deploy.routes.ts)",
+      "risk_area": "Path traversal via packId/scopeDirName",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "packId and scopeDirName are joined into paths under the server-side industry-packs directory, but all reads are gated by `existsSync(packDir)` / `existsSync(resolvedDir)` and only directory reads (readdir of agents/skills subdirs) occur — a traversal name resolves to a non-existent directory and returns 404 before any file is parsed; no write or delete uses these inputs. Content read is limited to files inside the resolved dir via fixed names (scope.json, SKILL.md, workflow-plan.json). No containment escape is reachable because traversal requires an existing directory at the escaped path and everything is read-only.",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:09:56 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Avatar upload/serve (avatarService.ts, avatarRoutes.ts)",
+      "risk_area": "Upload validation / unauthenticated access / content-type confusion",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Upload validates mimetype allowlist, re-encodes everything through sharp to 128x128 WebP (destroys any embedded payload), server-generated S3 key. GET /avatars/* has no authenticate preHandler (minor unauthenticated read of avatar objects, keys timestamp+random — low, noted) but content-type is forced to image/png|webp and the bucket is avatar-only; no stored-XSS or traversal (S3 keys, not FS paths). GET /avatars/presign/:key is authenticated; it can presign any key in the avatars bucket but that bucket holds only generated/re-encoded images.",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:10:02 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Claude runtime subprocess + workflow node executors (agent-runtime-claude.ts, claude-agent.service.ts, claude-config.ts, claude-hooks.ts, node-executors/*)",
+      "risk_area": "Command execution / eval",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Claude runs via the official SDK with options object (pathToClaudeCodeExecutable from server config only, claude-agent.service.ts:421) — no shell string, no user data in argv. No exec/spawn/eval/new Function/vm found in node-executors/* (action/agent/document/code-artifact executors dispatch to LLM and API calls, not shell). claude-hooks.ts is a regex denylist for agent output content (prompt guardrail), not a command path.",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:10:05 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "S3 workspace sync paths (skill-marketplace.routes.ts:197, enterprise-skill.service.ts:298, workspace-manager ensureS3SyncedToLocal)",
+      "risk_area": "S3 key prefix escape via skill name",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "destKey built as `${s3Prefix}.claude/skills/${result.name}` with unsanitized skill name — `../` in the name escapes the per-session prefix, enabling cross-session/cross-object overwrite in the workspace bucket; folded into vuln-0013 impact. ensureS3SyncedToLocal derives local paths from S3 keys (server/container-written) — not directly attacker-controlled.",
+      "recorded_by": "FS & Command Injection",
+      "recorded_at": "2026-11-21 04:10:09 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "tasks.routes.ts + task.service/repository",
+      "risk_area": "IDOR / tenant isolation",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All task CRUD passes orgId into taskService and BaseRepository enforces organization_id predicates on findById/update/delete (base.repository.ts:163-260). Routes all apply authenticate (+ requireModifyAccess on writes).",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:10:14 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "chat.routes.ts + chat.repository",
+      "risk_area": "IDOR / tenant isolation",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Every /sessions/:id handler calls chatService.getSessionById(id, request.user.orgId) before touching workspace/files; BaseRepository enforces org predicate. Star endpoints also scoped. (Note: session sharing within org is by design; user_id not checked but org-scoped — horizontal access inside one org is the documented model.)",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:10:18 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "chatRooms.routes.ts + chat-room.service",
+      "risk_area": "IDOR / tenant isolation",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Leader endpoint (chatRooms.routes.ts:177-206) confirmed NOT protected: raw prisma.chat_room_members.updateMany filters only on session_id/agent_id with no organization_id predicate and no room-ownership lookup on this route (preHandlers are authenticate + role-only requireModifyAccess). Filed as vuln-0025. Other room handlers on the file do scope via orgId (e.g. removeMember line 159).",
+      "recorded_by": "Open Items Validation",
+      "recorded_at": "2026-11-21 04:10:21 UTC",
+      "updated_at": "2026-11-21 04:13:26 UTC",
+      "previous_outcomes": [
+        "no_issue_found"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agents.routes.ts + agentAccess middleware/service",
+      "risk_area": "IDOR / vertical access control",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All id-based agent routes apply authenticate + requireAgentAccess(view/admin/owner); agentAccessService.checkAccess enforces org via prisma.agents.findFirst({id, organization_id}) (agentAccess.service.ts:62-67). agentPermissions.routes not in depth but middleware itself is sound. Mass assignment: updateAgentSchema has no organization_id/created_by fields (agent.schema.ts:48-73).",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:10:23 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "MCP server management (mcp.routes.ts, mcp.service.ts, transformMCPServers/parseMCPServerConfig)",
+      "risk_area": "Member-configurable stdio MCP server command execution / tool dispatch trust",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Any org member (requireModifyAccess includes 'member') can create an MCP server with arbitrary stdio command/args/env (POST /api/mcp/servers); config flows unvalidated through parseMCPServerConfig into the Claude SDK spawn config and workspace settings.json; PoC script in /tmp/tdpoc/mcp-config-poc.mts shows node -e payload passes through verbatim.",
+      "recorded_by": "Tool Dispatch & Workflow Logic",
+      "recorded_at": "2026-11-21 04:10:24 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "documents.routes.ts + document.service/repository",
+      "risk_area": "IDOR / tenant isolation",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "getDocumentById/updateDocument/deleteDocument all call documentRepository.findById(id, organizationId); BaseRepository org-scoped. Update schema lacks organization_id binding (no mass assignment).",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:10:25 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "claude-hooks.ts dangerousCommandBlocker + claude-agent.service.ts buildOptions",
+      "risk_area": "Prompt-injection-to-sensitive-action: bypassable Bash denylist under permissionMode bypassPermissions",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "PoC (/tmp/tdpoc/hooks-bypass.poc.mts) shows curl exfiltration, base64|sh, sh -c $(curl), variable-indirected rm -rf, node -e code exec all pass the hook; buildOptions sets permissionMode 'bypassPermissions', allowDangerouslySkipPermissions, allowedTools Bash/Write/Edit/WebFetch.",
+      "recorded_by": "Tool Dispatch & Workflow Logic",
+      "recorded_at": "2026-11-21 04:10:27 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "connectors.routes.ts (credentials, connectors)",
+      "risk_area": "IDOR / tenant isolation / credential vault",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "credentialVaultRepository.findById and dataConnectorService methods all take orgId and use findFirst with organization_id. Credential read strips encrypted material. OAuth callback unauthenticated but state-validated (out of my scope).",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:10:28 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "checkpoint.routes.ts + checkpoint.service.ts resolve/getById + workflow-executor-v2 resume",
+      "risk_area": "Cross-tenant BOLA on checkpoint resolve/resume and execution read",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "resolve() uses findUnique by checkpoint id with no organization filter; GET /api/workflows/executions/:executionId (checkpoint.routes) uses findUnique without org_id; workflowExecutorV2.resume loads execution by findUnique without org filter and route passes user-supplied scopeId. All routes preHandler authenticate only.",
+      "recorded_by": "Tool Dispatch & Workflow Logic",
+      "recorded_at": "2026-11-21 04:10:29 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "organizations.routes.ts membership management",
+      "risk_area": "IDOR / vertical access control / mass assignment",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "updateMembership/removeMember require owner|admin and membershipRepository.findById(id, orgId) is org-scoped; owner-role promotion is blocked (organization.service.ts:358-365). Provision endpoint restricted to owner|admin and binds to caller org. No body-bindable orgId/role escalation found (role changes validated against enum and admin gate).",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:10:31 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "mcp.routes.ts + skills.routes.ts + projects.routes.ts + workshop.routes.ts + document-groups.routes.ts (main group CRUD)",
+      "risk_area": "IDOR / tenant isolation",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "MCP, skills, projects, workshop and document-group primary CRUD all funnel orgId through BaseRepository or explicit organization_id predicates (verified service/repository calls). appData/appBackend also org-scoped on every query.",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:10:33 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "knowledge-base.routes.ts + knowledge-base.service.ts",
+      "risk_area": "IDOR / tenant isolation",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "All KB operations keyed by primary key with no organization_id predicate — verified by vitest PoC capturing Prisma where-clauses. Filed as vuln-0016.",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:11:00 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "scopeMemberships.routes.ts + businessScopes raw-SQL endpoints + connector scope bindings",
+      "risk_area": "IDOR / tenant isolation / scope membership escalation",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Membership update/delete by primary key with no org predicate (verified by vitest PoC); plugins/mcp-servers raw SQL and getScopeConnectors lack organization predicate. Filed as vuln-0018.",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:11:02 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workflow-orchestrator.ts / node-executors action-executor api_call",
+      "risk_area": "Arbitrary-URL fetch from workflow action nodes (SSRF surface, member-authority)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Covered by filed finding vuln-0009 (workflow api_call SSRF — member-authority arbitrary-URL fetch with attacker-controlled method/headers/body).",
+      "recorded_by": "Follow-up Closure",
+      "recorded_at": "2026-11-21 04:11:04 UTC",
+      "updated_at": "2026-11-21 04:13:45 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "middleware/agentAccess.ts + scopeAccess.ts",
+      "risk_area": "middleware bypass",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "requireAgentAccess and requireScopeAccess both verify request.user before checks; agentAccessService.checkAccess enforces org via findFirst({id, organization_id}); scopeAccessService.getAccessLevel filters business_scopes by organization_id. No fail-open catch, no query-param scoping. Skip-on-missing-id behavior exists but is only reachable when the route genuinely has no object id.",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:11:05 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "a2a.routes.ts validateApiKey",
+      "risk_area": "A2A API-key validation compares raw bearer token to sha256 hash column",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed as vuln-0008 (info/reliability defect); additionally the pass-the-hash property noted — a leaked key_hash becomes a valid credential until fixed.",
+      "recorded_by": "Follow-up Closure",
+      "recorded_at": "2026-11-21 04:11:08 UTC",
+      "updated_at": "2026-11-21 04:13:46 UTC",
+      "previous_outcomes": [
+        "no_issue_found",
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend src/routes/* update endpoints (agents, tasks, workflows, documents, organizations)",
+      "risk_area": "mass assignment",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All update bodies pass through Zod schemas with explicit field allowlists; none of createTaskSchema/updateTaskSchema/updateAgentSchema/updateDocumentSchema/updateMembershipSchema/connector schemas bind organization_id, user_id-owner, or role escalation fields (organization membership role changes are admin-gated and block owner promotion; agent schema has no organization_id/created_by at all).",
+      "recorded_by": "IDOR & Tenant Isolation",
+      "recorded_at": "2026-11-21 04:11:08 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "schedule.service.ts executeSchedule / scheduler tick",
+      "risk_area": "Double-execution race on scheduled workflow triggers",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed as vuln-0028 (low, CWE-367): duplicate-trigger guard in processDueSchedules (schedule.service.ts:465-485) is non-atomic (findMany → non-atomic running check → execute); no lock/transaction/unique constraint. Overlap possible via async setInterval re-entry past 15s tick or the documented PROCESS_ROLE worker split (config/index.ts:108). Provided infra deploys a single instance/process, which constrains exploitability — severity low, confidence medium (static-only, no DB to run concurrent PoC).",
+      "recorded_by": "Follow-up Closure",
+      "recorded_at": "2026-11-21 04:11:18 UTC",
+      "updated_at": "2026-11-21 04:14:36 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "token-quota middleware/service (checkTokenQuota, enforceTokenQuota)",
+      "risk_area": "Quota bypass via concurrency (pre-flight check + 60s Redis cache)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Quota enforcement is explicitly best-effort by design (code comment at token-quota.service.ts: top): pre-flight check with 60s-cached usage and asynchronous consumption, so parallel requests can exceed quota. This is a documented design tradeoff (cost-control, not a security boundary), with plan defaults of 10M tokens/$100; not a security vulnerability — noted as an accepted business-logic limitation.",
+      "recorded_by": "Tool Dispatch & Workflow Logic",
+      "recorded_at": "2026-11-21 04:11:20 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "a2a-orchestrator.service.ts + a2a-client.service.ts + chatRooms.routes.ts orchestration",
+      "risk_area": "A2A cross-agent invocation trust / authentication of remote agents",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Room orchestration only ever constructs local:// endpoints from room members (chatRooms.routes.ts:295-303); no route or service passes a user-controlled https:// endpoint into a2aClient.sendTask, so the remote path is currently unreachable from user input. The remote-path auth weakness (buildRemoteHeaders sends Bearer <organizationId> placeholder, a2a-client.service.ts:159-165) is latent code with a TODO — no exploitable path found. Flagged as hardening debt, not a finding.",
+      "recorded_by": "Tool Dispatch & Workflow Logic",
+      "recorded_at": "2026-11-21 04:11:23 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "im.service.ts handleMessage + im-queue.service.ts + workspace file write path",
+      "risk_area": "IM-driven agent authority (prompt injection into credentialed agents)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "IM messages flow into chatService.processMessage with the binding creator's userId; attached files are written into the agent workspace (writeWorkspaceFileRaw has a containment check) and referenced in the prompt. The agent runtime then holds Bash/Write/WebFetch under bypassPermissions (vuln-0017) with a member JWT — no human-confirmation gate exists for chat/IM-triggered destructive actions. The authority-escalation root cause is reported in vuln-0017.",
+      "recorded_by": "Tool Dispatch & Workflow Logic",
+      "recorded_at": "2026-11-21 04:11:25 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workflow-executor-v2.ts + workflows.routes.ts + execution.routes.ts (create/run/read lifecycle)",
+      "risk_area": "Workflow definition vs execution authorization; execution-record IDOR; humanApproval gating",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Create/update/import require requireModifyAccess, run requires authenticate+requireModifyAccess+enforceTokenQuota (execution.routes.ts:154); execution read/abort/logs/workspace routes all filter organization_id and GET /executions/:id additionally enforces per-user ownership for non-admins. humanApproval nodes genuinely pause execution via checkpoints. Remaining gap (checkpoint routes BOLA) is reported separately as vuln-0019.",
+      "recorded_by": "Tool Dispatch & Workflow Logic",
+      "recorded_at": "2026-11-21 04:11:27 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workshop.service.ts, project-squad.service.ts, carry-forward.service.ts, rehearsal routes, support-workflow-executor, task.service.ts, agent-scope/scope-generator services",
+      "risk_area": "Workflow/business-logic authorization and tenant scoping",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Reviewed route/service wiring: all workshop/rehearsal/task/scope routes use authenticate (+requireModifyAccess for writes) and repository calls take organizationId; support-workflow-executor only dispatches to node-executor registry (faq/intent) without shell/network sinks; carry-forward copies scope config within org. No org-scoping gap or destructive sink found in these files; hooks and conversation-hooks are metrics-only (fire-and-forget, no side effects beyond status flags).",
+      "recorded_by": "Tool Dispatch & Workflow Logic",
+      "recorded_at": "2026-11-21 04:11:29 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/websocket/execution.gateway.ts (/ws/executions)",
+      "risk_area": "WebSocket auth + subscription scoping",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "No auth on WS route (no preHandler, no global auth hook) and no ownership check on subscribe; PoC-confirmed unauthenticated receipt of arbitrary execution events. Filed vuln-0020.",
+      "recorded_by": "WebSockets & XSS/Injection",
+      "recorded_at": "2026-11-21 04:11:44 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "SSE endpoints (workflows.routes.ts, chat.routes.ts /sessions/:id/stream, chatRooms.routes.ts, widget.routes.ts, scope-generator.routes.ts, llm-proxy.routes.ts)",
+      "risk_area": "SSE auth and tenant scoping",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All SSE routes carry preHandler [authenticate] or [apiKeyAuth/widgetAuth]; chat stream verifies session ownership via chatService.getSessionById(id, orgId); widget stream scoped by org; workflows execute-v2 resolves workflow by orgId. CORS `Access-Control-Allow-Origin: *` on SSE writeHead is a hygiene note only (no credentials in headers on that path).",
+      "recorded_by": "WebSockets & XSS/Injection",
+      "recorded_at": "2026-11-21 04:11:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent/frontend message rendering (react-markdown usage, Chat.tsx, ChatRoom.tsx, TextContentBlock.tsx, hljs code preview)",
+      "risk_area": "Stored/reflected XSS",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Markdown rendered via react-markdown without rehype-raw (no raw HTML pass-through); only dangerouslySetInnerHTML is hljs output on attacker-uncontrolled code content (hljs escapes input); HtmlPreview iframe uses sandbox=\"allow-scripts\" (no allow-same-origin, opaque origin). IM/user message content flows into JSON APIs and React text nodes, not innerHTML. No DOMPurify needed given no raw HTML sink found.",
+      "recorded_by": "WebSockets & XSS/Injection",
+      "recorded_at": "2026-11-21 04:11:48 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend raw SQL usage (appData.routes.ts, scope-memory.repository.ts, knowledge-base.service.ts, rag/document-indexer.service.ts, middleware/auth.ts)",
+      "risk_area": "SQL injection",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All $queryRawUnsafe/$executeRawUnsafe calls use positional $n placeholders for user-controlled values. appData.routes.ts interpolates JSONB keys but runs them through sanitizeKey() which strips to [a-zA-Z0-9_] — injection blocked. auth.ts email migration SQL is fully static with $1/$2 params.",
+      "recorded_by": "WebSockets & XSS/Injection",
+      "recorded_at": "2026-11-21 04:11:49 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "credential vault + connectors + IM channel secrets (credential-vault.service.ts, connectors.routes.ts, im.routes.ts admin routes)",
+      "risk_area": "secret handling / credential exposure",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Vault list/get strip encrypted fields; decryptCredential never exposed via API. IM binding responses mask bot_token_enc with '***'. Known hardcoded CONNECTOR_ENCRYPTION_KEY default already filed as vuln-0012 by another agent — not re-filed. Raw IM webhook secrets are stored plaintext in binding.config, but responses strip only bot_token_enc; config itself is returned in list responses (operator-configured signing secrets visible to org members) — noted as minor info disclosure, acceptable to scope owners.",
+      "recorded_by": "WebSockets & XSS/Injection",
+      "recorded_at": "2026-11-21 04:11:51 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "gitleaks + trivy fs + package.json (super-agent/backend)",
+      "risk_area": "hardcoded secrets / dependency CVEs",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "gitleaks: 1 hit (demo SKILL.md MFA token marker, non-code demo content). trivy: 209 unique CVEs (2 critical, 77 high); top reported: fastify 5.6.2 validation/auth-bypass family (vuln-0021), axios 1.13.6 via IM SDKs (vuln-0022), js-yaml 4.1.1 in API-spec parser (vuln-0023). Default JWT_SECRET / connector key already covered by other agents' reports (vuln-0002, vuln-0012).",
+      "recorded_by": "WebSockets & XSS/Injection",
+      "recorded_at": "2026-11-21 04:11:53 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Swagger /docs exposure + errorHandler verbosity (src/app.ts, src/middleware/errorHandler.ts)",
+      "risk_area": "information disclosure",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "/docs and /documentation are registered unconditionally including production (no isProduction guard) — an info-level exposure of full API surface (worth noting but low). Error handler: unexpected errors return generic 'Internal server error' without stack traces; stack traces only go to server-side pino logs (which redact authorization/cookie headers in production).",
+      "recorded_by": "WebSockets & XSS/Injection",
+      "recorded_at": "2026-11-21 04:11:55 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "im.routes.ts OAuth callback postMessage + widget SSE + request/audit logging",
+      "risk_area": "token/secret logging, postMessage leakage",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "callbackHtml posts to window.opener with wildcard '*' target — only credentialId (not tokens) is posted; acceptable. requestLogger logs URL (query token leak already filed as vuln-0004 by auth agent). auditLog summarizes bodies but truncates long strings; no token-specific redaction beyond pino's header redaction.",
+      "recorded_by": "WebSockets & XSS/Injection",
+      "recorded_at": "2026-11-21 04:11:56 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/business-scopes/:scopeId/im-channels (im.routes.ts:67-82, im-channel.repository.ts findByScope)",
+      "risk_area": "Plaintext secret exposure in binding config",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "List endpoint requires only `authenticate` (any member), spreads ...b with bot_token_enc masked to '***' but leaves `config` unmodified — exposes plaintext signing_secret/app_secret/secret_token/verification_token/encoding_aes_key. Org scoping IS correctly applied (repository where organization_id + business_scope_id), so same-org only. Filed as vuln-0027.",
+      "recorded_by": "Open Items Validation",
+      "recorded_at": "2026-11-21 04:13:30 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "csrf",
+      "detail": "Agent(s) SSRF & Webhook Analysis were assigned the 'csrf' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    },
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "insecure file uploads",
+      "detail": "Agent(s) FS & Command Injection were assigned the 'insecure_file_uploads' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    },
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "race conditions",
+      "detail": "Agent(s) Follow-up Closure, Tool Dispatch & Workflow Logic were assigned the 'race_conditions' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    }
+  ]
+}

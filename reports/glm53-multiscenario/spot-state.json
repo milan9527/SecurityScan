@@ -1,0 +1,10 @@
+{
+    "State": "active",
+    "Type": "persistent",
+    "InstanceInterruptionBehavior": "stop",
+    "Status": {
+        "Code": "fulfilled",
+        "Message": "Your Spot request is fulfilled.",
+        "UpdateTime": "2026-11-20T06:53:27+00:00"
+    }
+}

@@ -1,0 +1,32 @@
+{
+  "region": "ap-northeast-1",
+  "instance_id": "i-09c41bc239b10b001",
+  "instance_type": "p5en.48xlarge",
+  "gpu": "8 x NVIDIA H200",
+  "availability_zone": "ap-northeast-1a",
+  "spot_request_id": "sir-da7r1sih",
+  "security_group_id": "sg-02287fed9ff1038d5",
+  "root_volume_id": "vol-0120717e9bedf52d4",
+  "model_volume_id": "vol-0d497a8b25fa94381",
+  "launched_at": "2026-11-22T10:13:14Z",
+  "observed_spot_usd_per_hour": 32.7312,
+  "shutdown_behavior": "stop",
+  "status": "benchmark_completed",
+  "model_ready_at": "2026-11-22T10:50:07Z",
+  "tool_verification_passed_at": "2026-11-22T10:50:29Z",
+  "benchmark_finished_at": "2026-11-22T10:55:51Z",
+  "benchmark_exit_code": 0,
+  "scheduled_stop_at": "2026-11-22T11:05:51Z",
+  "root_volume_throughput_mib_s": 1000,
+  "root_volume_iops": 6000,
+  "ssm_online": true,
+  "benchmark_unit": "glm53-h200-benchmark.service",
+  "remote_results": "/opt/h200/results",
+  "driver_version": "595.112.07",
+  "gpu_memory_mib_each": 143771,
+  "capacity_attempts": [
+    {"region": "ap-south-1", "az": "ap-south-1b", "result": "InsufficientInstanceCapacity"},
+    {"region": "ap-south-1", "az": "ap-south-1a", "result": "InsufficientInstanceCapacity"},
+    {"region": "ap-northeast-1", "az": "ap-northeast-1a", "result": "launched"}
+  ]
+}

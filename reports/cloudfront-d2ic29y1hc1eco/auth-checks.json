@@ -1,0 +1,70 @@
+[
+  {
+    "test": "public-demo-login",
+    "method": "POST",
+    "path": "/auth",
+    "status": 200,
+    "response": {
+      "success": true,
+      "tokens": "[REDACTED]",
+      "expires_in": 3600
+    }
+  },
+  {
+    "test": "authenticated-nonexistent-ticket",
+    "method": "GET",
+    "path": "/tickets/security-check-nonexistent/tiers",
+    "status": 200,
+    "response": {
+      "success": false,
+      "error": "MCP Error -32006: This runtime is not MMDSv2-enabled and can no longer be invoked. Enable MMDSv2 by calling UpdateAgentRuntime with requireMMDSV2=True in metadataConfiguration.",
+      "data": {},
+      "raw_content": []
+    }
+  },
+  {
+    "test": "unsigned-jwt",
+    "method": "GET",
+    "path": "/tickets/security-check-nonexistent/tiers",
+    "status": 401,
+    "response": {
+      "error": "Invalid token"
+    }
+  },
+  {
+    "test": "recommendations-no-auth",
+    "method": "GET",
+    "path": "/tickets/security-check-nonexistent/recommendations?customer_id=security-check",
+    "status": 401,
+    "response": {
+      "error": "Missing or invalid authorization header"
+    }
+  },
+  {
+    "test": "pricing-no-auth",
+    "method": "POST",
+    "path": "/tickets/security-check-nonexistent/pricing",
+    "status": 401,
+    "response": {
+      "error": "Missing or invalid authorization header"
+    }
+  },
+  {
+    "test": "validate-no-auth",
+    "method": "POST",
+    "path": "/tickets/security-check-nonexistent/validate",
+    "status": 401,
+    "response": {
+      "error": "Missing or invalid authorization header"
+    }
+  },
+  {
+    "test": "chat-no-auth",
+    "method": "POST",
+    "path": "/chat",
+    "status": 401,
+    "response": {
+      "error": "Missing or invalid authorization header"
+    }
+  }
+]

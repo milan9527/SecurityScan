@@ -1,0 +1,153 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Strix",
+          "informationUri": "https://strix.ai",
+          "rules": [
+            {
+              "id": "CWE-89",
+              "name": "SQL injection in app.py search() via unparameterized LIKE clause",
+              "shortDescription": {
+                "text": "SQL injection in app.py search() via unparameterized LIKE clause"
+              },
+              "fullDescription": {
+                "text": "The `search` function in `app.py` builds its SQL query by concatenating the user-controlled `query` argument directly into a `LIKE` clause, allowing SQL injection. The parameterized alternative `search_v2` is not vulnerable, but `search` is independently reachable and injectable."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The `search` function in `app.py` builds its SQL query by concatenating the user-controlled `query` argument directly into a `LIKE` clause, allowing SQL injection. The parameterized alternative `search_v2` is not vulnerable, but `search` is independently reachable and injectable.\n\nAn unauthenticated attacker (the query originates from an HTTP query string) can read the entire database, including products where `published=0`, defeating the documented access-control filter. Demonstrated locally: the injected payload returned the hidden row `(2, 'unreleased book')` and dumped the full schema via a UNION against `sqlite_master`.\n\nReplace the string-concatenated query in `search` with the parameterized form already implemented in `search_v2`: pass the user-supplied value as a bound parameter (`db.execute('SELECT id,name FROM products WHERE published=1 AND name LIKE ?', ('%' + query + '%',))`) instead of interpolating it into the SQL string. If `search_v2` is intended as its replacement, remove or gate the legacy `search` function so no reachable code path builds SQL by concatenation; the demonstrated impact is bypass of the `published` access-control filter plus arbitrary read of the database (schema and data disclosure).",
+                "markdown": "The `search` function in `app.py` builds its SQL query by concatenating the user-controlled `query` argument directly into a `LIKE` clause, allowing SQL injection. The parameterized alternative `search_v2` is not vulnerable, but `search` is independently reachable and injectable.\n\nAn unauthenticated attacker (the query originates from an HTTP query string) can read the entire database, including products where `published=0`, defeating the documented access-control filter. Demonstrated locally: the injected payload returned the hidden row `(2, 'unreleased book')` and dumped the full schema via a UNION against `sqlite_master`.\n\nReplace the string-concatenated query in `search` with the parameterized form already implemented in `search_v2`: pass the user-supplied value as a bound parameter (`db.execute('SELECT id,name FROM products WHERE published=1 AND name LIKE ?', ('%' + query + '%',))`) instead of interpolating it into the SQL string. If `search_v2` is intended as its replacement, remove or gate the legacy `search` function so no reachable code path builds SQL by concatenation; the demonstrated impact is bypass of the `published` access-control filter plus arbitrary read of the database (schema and data disclosure)."
+              },
+              "properties": {
+                "security-severity": "7.5",
+                "tags": [
+                  "security",
+                  "CWE-89",
+                  "stride:T"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html"
+            },
+            {
+              "id": "strix-coverage/sql-injection",
+              "name": "SQL injection",
+              "shortDescription": {
+                "text": "Coverage: SQL injection"
+              },
+              "fullDescription": {
+                "text": "Coverage of SQL injection across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of SQL injection across the assessed attack surface.",
+                "markdown": "Coverage of SQL injection across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.1"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-89",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQL injection in app.py search() via unparameterized LIKE clause\n\nThe `search` function in `app.py` builds its SQL query by concatenating the user-controlled `query` argument directly into a `LIKE` clause, allowing SQL injection. The parameterized alternative `search_v2` is not vulnerable, but `search` is independently reachable and injectable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/catalog (local project)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "12ee397e5a822bd0a5eb7eee600cd9c8ef896f79d043adcb419ba5f7ec65bbd2"
+          },
+          "properties": {
+            "security-severity": "7.5",
+            "strix_vuln_class_hash": "091274e2ad40f12c26f944cb00be2712c536b9e81137676e98311bc2ccf04d16",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "high",
+              "cvss": 7.5,
+              "timestamp": "2026-11-20 07:27:59 UTC",
+              "target": "/workspace/catalog (local project)",
+              "cwe": "CWE-89",
+              "impact": "An unauthenticated attacker (the query originates from an HTTP query string) can read the entire database, including products where `published=0`, defeating the documented access-control filter. Demonstrated locally: the injected payload returned the hidden row `(2, 'unreleased book')` and dumped the full schema via a UNION against `sqlite_master`.",
+              "technical_analysis": "`search` executes `\"SELECT id,name FROM products WHERE published=1 AND name LIKE '%\" + query + \"%'\"`, where `query` originates from an HTTP query string and is concatenated into the SQL text without any validation or escaping. A payload containing a single quote terminates the string literal, allowing arbitrary SQL to be injected. The `published=1` predicate — the application's documented access control for hiding unpublished products — is bypassable because the injected expression (`OR 1=1`) short-circuits it, and a UNION clause allows reading any other table in the database. `search_v2` demonstrates the correct pattern (placeholder binding), confirming the vulnerability is specific to the concatenating implementation and that both functions are individually reviewable versions of the same feature.",
+              "remediation_steps": "Replace the string-concatenated query in `search` with the parameterized form already implemented in `search_v2`: pass the user-supplied value as a bound parameter (`db.execute('SELECT id,name FROM products WHERE published=1 AND name LIKE ?', ('%' + query + '%',))`) instead of interpolating it into the SQL string. If `search_v2` is intended as its replacement, remove or gate the legacy `search` function so no reachable code path builds SQL by concatenation; the demonstrated impact is bypass of the `published` access-control filter plus arbitrary read of the database (schema and data disclosure).",
+              "counterevidence": "Actively looked for mitigations: no input validation, sanitization, escaping, or allowlisting is applied to `query` anywhere between the caller and `db.execute`; the query is used verbatim in string concatenation. The only control in the file is the parameterization in `search_v2`, which is a separate function and does not run on the `search` path. Both normal and attack inputs were executed locally to confirm the differential.",
+              "confidence": "high",
+              "severity_change_conditions": "Confirmation that `search` is exposed on a deployed, internet-reachable endpoint (rather than only invoked internally as in this local synthetic test) would raise exploitability confidence from demonstrated-local to full remote; nothing would lower it short of removing the concatenation.",
+              "poc": {
+                "description": "1. Import `app` in a local Python process and create the in-memory database with `app.database()`.\\n2. Call `app.search(db, \"book\")` to establish the baseline: only the published product `(1, 'public book')` is returned.\\n3. Call `app.search(db, \"book' OR 1=1 --\")` and observe the unpublished product `(2, 'unreleased book')` is also returned, proving the `published=1` filter is bypassed via injection.\\n4. Call `app.search(db, \"x' UNION SELECT 1, sql FROM sqlite_master --\")` and observe the injected UNION extracts the full schema from `sqlite_master`.\\n5. Run the same payloads against `app.search_v2(db, ...)` and observe they return no rows, confirming the parameterized variant is not injectable and isolating the defect to `search`.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/sql-injection",
+          "ruleIndex": 1,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "SQL injection — No issue identified: app.py search_v2(db, query)\n\nParameterized query using ? placeholder; the same attack payloads that exploit search() return no rows here (control confirmed in local run)."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "app.py search_v2(db, query)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "SQL injection",
+              "surface": "app.py search_v2(db, query)",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 1
+      }
+    }
+  ]
+}

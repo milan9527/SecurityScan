@@ -1,0 +1,1076 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-21 10:09:22 UTC",
+  "run_id": "agentcore-superagent-update_9497",
+  "run_name": "agentcore-superagent-update_9497",
+  "scope": {
+    "targets": [
+      {
+        "type": "local_code",
+        "details": {
+          "target_path": "/home/ec2-user/bedrock/agentcore-superagent-update",
+          "workspace_subdir": "agentcore-superagent-update"
+        },
+        "original": "/home/ec2-user/bedrock/agentcore-superagent-update"
+      }
+    ],
+    "scan_mode": "deep",
+    "scope_mode": "full",
+    "diff_scope": {
+      "active": false,
+      "mode": "full"
+    },
+    "instruction": "Perform an authorized deep source-code security assessment of the supplied local repository. Map the complete repository, then concentrate on frontend trust boundaries, browser storage and session handling, unsafe rendering, message/event origin validation, frontend-to-backend authorization assumptions, dependency installation scripts, lockfiles, container build/runtime configuration, CI workflows, deployment defaults, and secret exposure. Trace findings end to end into backend enforcement. Distinguish exploitable application behavior from theoretical hardening recommendations. A dependency version alone is not proof of reachability.\n\nUse only isolated local services, synthetic data, and mocks. Do not contact deployed endpoints, use real credentials, modify cloud resources, push changes, or run untrusted installation hooks. Preserve target source files and put validation artifacts in temporary directories. Intended command execution explicitly requested by an authorized user is not by itself a vulnerability.\n\nValidate candidates using harmless local tests where feasible. Record file/line, attacker prerequisites, actual guards, observed result, impact, remediation, and whether validation succeeded. Deduplicate root causes and distinguish demonstrated vulnerabilities, unverified candidates, and reliability issues. Report all inspected areas and coverage gaps, including areas with no finding. Do not imply local reproduction proves production exploitability. Keep intermediate output concise."
+  },
+  "summary": {
+    "surfaces_reviewed": 69,
+    "outcomes": {
+      "reported": 39,
+      "no_issue_found": 22,
+      "ruled_out": 6,
+      "needs_follow_up": 2
+    },
+    "findings_filed": 28,
+    "gaps": 4
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "2faac35c",
+        "agent_name": "AuthZ Reporting Agent",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/idor",
+          "vulnerabilities/broken_function_level_authorization"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (white-box, LOCAL ONLY). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nThe Backend AuthZ agent already validated (unit-PoC via existing vitest suites in backend/tests — trust its results but re-verify each claim by reading the cited code; if any doesn't hold up, downgrade/omit) these findings. FILE a create_vulnerability_report for each distinct root cause (no patches, code_locations informational):\n\n1. **Cross-org IDOR on knowledge-base + briefing routes** — knowledge-base.routes.ts:59-441 + service (findById:69, update:80, delete:91, listFiles:224, updateFile:277, deleteFile:294) and briefing.routes.ts:24-118: no organization_id filter; role-only auth. PoC: backend/tests/unit/kb-idor.poc.test.ts. Also include businessScopes.routes.ts:821,940 (/:id/plugins, /:id/mcp-servers unscoped) as same-family if verified. Severity: high (multi-tenant cross-org read/write/delete). CWE-639.\n2. **Auth forgery family** — middleware/auth.ts + config/index.ts:30: (a) default JWT secret 'super-agent-local-dev-secret-change-in-production' when JWT_SECRET unset (local mode); (b) INTERNAL_TOKEN_SECRET derived from public Cognito userPoolId disclosed at GET /api/auth/config (auth.routes.ts:30-40) — internal tokens skip profile lookup, forge any user/role/org; (c) ?token= query-param JWT acceptance (auth.ts:137/150-157). One report, three mechanisms. PoC: backend/tests/unit/auth-forgery.poc.test.ts. Severity: critical for the internal-token path (production cognito mode), note deployment-mode preconditions honestly. CWE-287.\n3. **Public webhook trigger** — webhooks.routes.ts:311 + webhook.service.ts:135: no auth, no HMAC, no replay/rate limit. PoC: webhook-trigger-authz.poc.test.ts. Severity: high. CWE-306.\n4. **IM webhook unauthenticated processing** — routes/im.routes.ts + fallthrough signature verification: no-authorization-header requests processed, agent runs in victim org. PoC: im-webhook-auth.poc.test.ts. Severity: high. CWE-346/CWE-306.\n5. **Unauthenticated avatar endpoints** — avatarRoutes.ts:46,101,191. PoC: avatar-routes.authz.poc.test.ts. Severity: medium (cost/DoS, unauth S3 writes). CWE-306.\n6. **agentAccess cross-org permission confusion** — services/agentAccess.service.ts:47-77 lookup by (agent_id,user_id) without org scoping. PoC: tenant-isolation.audit.test.ts. Severity: high. CWE-639.\n7. **Pack-deploy path traversal** — pack-deploy.routes.ts:38 + service: URL-encoded ../ in scopeDirName reads files outside industry-packs tree (authenticated). PoC: pack-deploy-traversal.poc.test.ts. Severity: medium. CWE-22.\n\nRules: cvss_breakdown from the demonstrated impact; honest confidence (these are local unit-PoC validations of production code paths — confidence high for code trace, note in assumptions that production deployment exposure is unverified); counterevidence field required per report (state what guards were checked and found absent); no http_exchange_ids (no live target). Re-verify each cited line before filing — do not file anything you cannot confirm in source. After filing, record/report the vuln ids via agent_finish.",
+        "is_root": false
+      },
+      {
+        "agent_id": "2c7bdbf7",
+        "agent_name": "Backend AuthZ Agent",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/idor",
+          "vulnerabilities/broken_function_level_authorization",
+          "vulnerabilities/sql_injection"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent/backend (white-box, LOCAL ONLY — synthetic data/mocks only, never contact deployed endpoints or cloud resources, don't run untrusted install hooks). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nMap the backend: Fastify app.ts, middleware/, authorization/, routes/ inventory (method+path+auth requirements), websocket/, services/, repositories/.\n\nThen deep-test:\n1. **Authentication**: Cognito JWT verification (aws-jwt-verify usage), token validation on routes, websocket connection auth (query-param tokens? origin checks?), any routes registered without auth.\n2. **Authorization (IDOR/BOLA)**: for each object-touching route (agents, workflows, SOPs, knowledge base, files, chat sessions, memory, tenants), trace whether ownership/tenant checks exist in the handler or authorization layer. Enumerate routes MISSING tenant/owner checks with file:line of handler and where the check should be. Check horizontal (user→user) and vertical (user→admin) paths.\n3. **Mass assignment**: update endpoints binding user-controlled fields to privileged model fields (role, tenantId, userId).\n4. **Injection**: raw SQL ($queryRaw / string-built queries), command execution (agent SDK spawns), path traversal in file upload/download (S3 key construction, sharp usage), SSRF in outbound fetches (connector packages, webhooks), unsafe deserialization.\n5. **Secrets/config**: default credentials, JWT secrets, env handling in config/.\n\nValidation: static trace only unless you can run a harmless local unit test with mocks (backend has vitest; put scratch files in /tmp or a temp dir, never modify target source; do NOT run `npm install` — node_modules may already exist, check first). For each candidate: file:line, prerequisites, actual guards, observed/verified result, impact, remediation. Classify: demonstrated / unverified / hardening. record_coverage for every surface you assess including clean ones. Do NOT file reports — return findings via agent_finish with full detail so root can spawn validation+reporting agents.",
+        "is_root": false
+      },
+      {
+        "agent_id": "6be69a71",
+        "agent_name": "Dependency CVE Reporting Agent",
+        "status": "completed",
+        "skills": [
+          "custom/dependency_cve_scanning"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (LOCAL ONLY, no network to deployed targets; web_search for advisory verification is allowed). Call get_threat_model on /workspace/agentcore-superagent-update first, and read shared note 4bac27 (static triage ranked candidates) plus /workspace/.source-aware/trivy-fs.json (trivy output) and the lockfiles.\n\nTask: per-CVE reachability analysis and create_dependency_report filing for the highest-value known-CVE dependency findings. Do NOT file all 149 — select the top ones where the advisory's vulnerable path is plausibly executed by this codebase, and complete the reachability verdict (reachable / not_reachable / not_applicable) with a source-to-sink trace per the dependency_cve_scanning skill. Priority candidates from triage:\n- backend: axios, lodash, protobufjs, undici, fastify (check installed versions in backend/package-lock.json vs advisories — note many may already be patched caret ranges; only report versions actually IN the lockfile that fall in an advisory range)\n- frontend: react-router (8.1), ws if present\n- agentcore: MCP SDK, ip-address\n- app-hosting/poc: fastify 4.29.1\n\nFor each filed report: installed_version from the lockfile, advisory_cvss from the published advisory (verify via web_search — do not guess), manifest_path, reachability + reachability_evidence with file:line of the import and the call that reaches the affected symbol, contextual_cvss_breakdown + reasoning derived from the actual usage. Only file where you verified (a) the installed version falls in the affected range and (b) the CVE id is correct. A version alone is not proof of reachability — do the usage analysis. If after analysis a candidate is not_reachable/not_applicable, you may still file with that verdict (that's the SCA workflow) but prioritize ones with real reachability. Aim for the handful that matter, not volume. Report filed ids via agent_finish.",
+        "is_root": false
+      },
+      {
+        "agent_id": "c76f1ac5",
+        "agent_name": "Frontend Reporting Agent",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/browser_security",
+          "custom/dependency_cve_scanning"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (white-box, LOCAL ONLY). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nThe Frontend Security agent validated these via code trace. Re-verify each by reading the cited code (downgrade/omit if it doesn't hold up), then FILE create_vulnerability_report for each (no patches, code_locations informational):\n\n1. **postMessage missing origin validation** — frontend/src/components/ConnectorPanel.tsx:265-272: window message listener for 'oauth-callback' never checks event.origin nor a state nonce; a window holding a reference to the SPA can forge a callback binding the victim's connector to an attacker-chosen credentialId. Severity: medium. CWE-346.\n2. **JWT in URL query string** — frontend Chat.tsx:617-634,645 (PublishedAppPreviewTab), Chat.tsx:296-304/527 (PDF/dev-server previews), ProjectBoard.tsx:190-197, WorkspaceActions.tsx:179-184, with backend middleware/auth.ts:150-157 accepting ?token=. Tokens leak via history, logs, Referer. Severity: medium (session-token exposure requires log/referrer access — be honest in cvss). CWE-598.\n3. **Sandboxed iframes with allow-scripts + allow-same-origin** — Chat.tsx:596-600, 642-647, AppRunner.tsx:160: sandbox combination nullifies sandboxing for same-origin content; framed URLs point at API origin which accepts ?token=. Severity: medium, note the deployment-topology dependency (SPA/API same-origin unconfirmed) in assumptions/severity_change_conditions. CWE-792 / sandbox escape.\n4. **xlsx 0.18.5 dependency** — use create_dependency_report (NOT create_vulnerability_report): CVE-2023-30533 (prototype pollution, fixed 0.19.3), installed 0.18.5, imported at frontend Chat.tsx:179 for parsing attacker-supplied spreadsheet files. Reachability: PP not reachable as used (sheet_to_json {header:1} array output, escaped rendering — your analysis should confirm this and set reachability accordingly, e.g. not_reachable for PP usage path); optionally also CVE-2024-22363 (ReDoS) if the advisory checks out. advisory_cvss from the published advisory (verify via web_search if needed).\n\nRules: honest confidence (code-trace validated locally, no live deployment — production exposure unverified goes in assumptions, not confidence inflation); counterevidence required per report; no http_exchange_ids. Re-verify cited lines before filing. Report the filed ids via agent_finish.",
+        "is_root": false
+      },
+      {
+        "agent_id": "1c4362cb",
+        "agent_name": "Frontend Security Agent",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/xss",
+          "vulnerabilities/prototype_pollution"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent/frontend (white-box, LOCAL ONLY — do not contact deployed endpoints; use synthetic data and local mocks only). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nMap the complete frontend: pages, services (API client layer), auth/session handling, routing/role gating.\n\nThen deep-test these risk areas, tracing each into backend enforcement where relevant (read backend routes in ../backend/src to verify):\n1. **Unsafe rendering**: all uses of dangerouslySetInnerHTML, innerHTML, rehype-raw, url transform bypasses in react-markdown, link target/rel handling, highlight.js usage, xlsx parsing (frontend uses `xlsx` 0.18.5 — check for prototype pollution paths and how parsed data is rendered), iframe usage, any eval/new Function.\n2. **Browser storage / session handling**: where Cognito/JWT tokens are stored (localStorage vs sessionStorage vs cookies), token refresh logic, logout completeness, anything sensitive persisted.\n3. **Message/event origin validation**: postMessage handlers (event.origin checks), window.opener usage, WebSocket connections (chatStreamService/chatService) — origin/URL construction, whether ws URL is user-influenced.\n4. **Frontend-to-backend authorization assumptions**: role checks done ONLY client-side (route guards) where the backend route lacks an equivalent check — enumerate concrete route pairs (frontend call → backend handler) with a missing server-side guard.\n5. **Secret exposure**: any API keys, Supabase keys, config in frontend source/public.\n\nFor each candidate: file:line, attacker prerequisites, actual guards found, and whether you could validate locally (e.g. via vitest with mocks — there are existing tests; you may add harmless local test scripts in /tmp, do NOT modify target source). Classify as demonstrated / unverified-candidate / hardening. Record coverage with record_coverage for each surface+risk (including clean ones). Do NOT file vulnerability reports — report your validated findings via agent_finish summary with full details so the root can spawn reporting agents.",
+        "is_root": false
+      },
+      {
+        "agent_id": "8578e853",
+        "agent_name": "Infra Reporting Agent",
+        "status": "completed",
+        "skills": [
+          "aws",
+          "infrastructure_lifecycle"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (white-box, LOCAL ONLY). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nThe Infra/Supply-Chain agent produced these. Re-verify each by reading cited code, then FILE reports. Be disciplined about severity calibration: several of these live in clearly-labelled dev/POC files — rate what an attacker can actually reach given deployment context, and put deployment-mode preconditions in assumptions. One report per distinct root cause:\n\n1. **Hardcoded seed admin password 'Admin1234!'** — infra/scripts/deploy.sh:418-421 and infra/scripts/ci/remote-deploy.sh (~line 40): bcrypt hash seeded for admin@example.com, plaintext echoed to deploy logs. Anyone with deploy-log access or knowledge of the public repo default gains admin on any deployment where the password wasn't changed. Severity: high if remote-deploy.sh is the production path (judge from the script's context), medium if clearly dev-only. CWE-798.\n2. **Hardcoded Redis password + weak deployment secrets** — infra/scripts/user-data.sh:99-100 ('super-agent-redis-password'), empty REDIS_PASSWORD in infra/scripts/ci/gen-base-env.py, missing JWT_SECRET in CI base env (falls back to backend default secret — cross-reference: the AuthZ agent is reporting the backend default JWT secret; report this infra side as the deployment path that leaves it unset). One report. CWE-798.\n3. **backend/docker-compose.yml hardcoded JWT_SECRET + published DB/Redis ports with default creds** — labelled local dev; rate accordingly (likely low/medium or merge into report 2 as same root cause 'weak deployment secret defaults' — decide and keep one report per root cause; if you merge, say so).\n4. **app-hosting/poc insecure patterns** — docker-compose.floci.yml: /var/run/docker.sock mounted into traefik + app-host-api containers, Traefik --api.insecure=true on 0.0.0.0:8081, hardcoded tenant JWT secrets (app-host-api/src/insforge.ts:54/64/74), runtime/src/auth.ts:4 JWT_SECRET fallback 'poc-secret-change-me', k8s/tenants/*.yaml hardcoded JWT_SECRETs. POC-labelled but shipped: rate medium and be explicit it's a PoC directory.\n5. **agentcore workspace-sync path traversal** — LEAVE THIS ALONE: another agent (RCE Validation) is validating it; do not file.\n\nRules: honest confidence (static traces, local-only — production exposure unverified goes in assumptions); counterevidence required; no http_exchange_ids; no patches. Re-verify cited lines before filing. Report filed ids via agent_finish.",
+        "is_root": false
+      },
+      {
+        "agent_id": "4ed79ea6",
+        "agent_name": "Infra/Supply-Chain Agent",
+        "status": "completed",
+        "skills": [
+          "aws",
+          "infrastructure_lifecycle"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (LOCAL ONLY — never contact deployed endpoints or cloud, do not run installation hooks, do not npm install). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nScope: everything EXCEPT frontend/src and backend/src application logic (those are covered by other agents):\n- agentcore/ (package.json, Dockerfile, src)\n- infra/ (CDK: bin, lib, lambda, scripts, cdk.json, package.json + package-lock.json)\n- app-hosting/poc/ (docker-compose files, CDK, scripts, package.json)\n- backend/Dockerfile, backend/docker-compose.yml\n- any .github workflows anywhere in the repo, husky/lint-staged/lifecycle scripts in any package.json, preinstall/postinstall scripts\n- lockfiles: compare package.json vs lockfile consistency; scripts with network fetches; suspicious postinstall\n- .env files, .env.example, config defaults, CDK context defaults — secret exposure and insecure deployment defaults (public S3 buckets, open security groups, disabled auth flags, CORS wildcard, exposed ports/credentials in docker-compose)\n- industry-packs/ content: prompt-injection-relevant content shipped to agent execution (note as observation, not vuln per se)\n\nFor each candidate: file:line, attacker prerequisites, actual guards, validation status (static trace only unless a harmless local check e.g. parsing YAML/Dockerfile is possible), impact, remediation. Distinguish demonstrated vulnerabilities vs theoretical hardening. record_coverage for every area including clean ones. Do NOT file reports — return via agent_finish with full detail.",
+        "is_root": false
+      },
+      {
+        "agent_id": "857c7725",
+        "agent_name": "RCE Validation Agent",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/rce",
+          "vulnerabilities/path_traversal_lfi_rfi"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (white-box, LOCAL ONLY — synthetic data/mocks only, no network, no deployed endpoints, no npm install, never modify target source; scratch artifacts in /tmp). Call get_threat_model on /workspace/agentcore-superagent-update first, and read shared notes (note 4bac27) for triage context.\n\nValidate (with runtime PoCs using the backend's existing vitest infra and mocks — node_modules pre-exist) the following candidates, each to `confirmed` (working PoC + reachable path) or `ruled_out` (name the specific control at file:line) or `open_proof_gap`:\n\n1. **eval() RCE candidate (HIGHEST PRIORITY)**: workflow transform executors use eval() on user-authored config — action-executor.ts:280,306,325; condition-executor.ts:230; code-artifact-executor.ts:296. Trace the full chain: which route lets a tenant user author/submit workflow nodes with transformConfig.expression, through validation (is there a zod schema restricting expressions? any allowlist?), to the executor eval. Determine: is eval on attacker-controlled expression with no sanitization? Is this an intended \"code node\" feature (if so, evaluate whether it's sandboxed at all and whether permissions/roles gate it — an unsandboxed eval in a multi-tenant server is RCE regardless of being an intended feature; check whether workflow authors are effectively arbitrary tenant users)? Write a harmless local PoC (e.g. expression that only proves code execution like capturing process.env keys or writing a marker in a temp dir — NO actual destructive action, no network).\n2. **agentcore workspace-sync.ts path traversal** (~line 78, restoreWorkspaceFromS3): confirm via local unit test with mocked S3 that a key with ../ escapes WORKSPACE_DIR; assess the sibling concern in backend workspace-manager.ts:1554 prefix containment (startsWith without separator).\n3. **WebSocket /ws/executions no-auth** (websocket/execution.gateway.ts:120-141): write a runtime PoC with a locally started mock fastify instance (or extend the existing test harness) demonstrating an unauthenticated client subscribing to an arbitrary executionId receives events. Keep it local (127.0.0.1, ephemeral port).\n4. **S3 workspace key traversal** workspace-manager.ts:1495-1530 readWorkspaceFileFromS3 unvalidated filePath — assess against the UUID-guessability constraint.\n\nRecord coverage with record_coverage for each (update existing entries via list_coverage → update_coverage where one exists). Do NOT file reports — return validated detail via agent_finish so root spawns reporting agents. Include exact file:line, PoC evidence (command + observed output), attacker prerequisites, and honest confidence.",
+        "is_root": false
+      },
+      {
+        "agent_id": "41d71501",
+        "agent_name": "Root Agent",
+        "status": "completed",
+        "skills": [],
+        "task": "\n\nLocal Codebases: - /home/ec2-user/bedrock/agentcore-superagent-update (available at: /workspace/agentcore-superagent-update; this is the user's real directory, mounted live and writable — .git/.agents/.codex are read-only)\n\nSpecial instructions: Perform an authorized deep source-code security assessment of the supplied local repository. Map the complete repository, then concentrate on frontend trust boundaries, browser storage and session handling, unsafe rendering, message/event origin validation, frontend-to-backend authorization assumptions, dependency installation scripts, lockfiles, container build/runtime configuration, CI workflows, deployment defaults, and secret exposure. Trace findings end to end into backend enforcement. Distinguish exploitable application behavior from theoretical hardening recommendations. A dependency version alone is not proof of reachability.\n\nUse only isolated local services, synthetic data, and mocks. Do not contact deployed endpoints, use real credentials, modify cloud resources, push changes, or run untrusted installation hooks. Preserve target source files and put validation artifacts in temporary directories. Intended command execution explicitly requested by an authorized user is not by itself a vulnerability.\n\nValidate candidates using harmless local tests where feasible. Record file/line, attacker prerequisites, actual guards, observed result, impact, remediation, and whether validation succeeded. Deduplicate root causes and distinguish demonstrated vulnerabilities, unverified candidates, and reliability issues. Report all inspected areas and coverage gaps, including areas with no finding. Do not imply local reproduction proves production exploitability. Keep intermediate output concise.",
+        "is_root": true
+      },
+      {
+        "agent_id": "8c603aa7",
+        "agent_name": "SSRF & Residual Validation Agent",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/ssrf",
+          "vulnerabilities/idor"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (white-box, LOCAL ONLY — no network, mocks/synthetic data only, never modify target source, scratch in /tmp). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nClose out these open candidates, each to confirmed (working local PoC or complete reachable source→sink trace) / ruled_out (name the specific control at file:line) / open_proof_gap:\n\n1. **SSRF classification (main task)** — outbound fetch surfaces: (a) skill-marketplace.service.ts fetch sites (~:184,315,605,624,647,661,683,696,731 — URLs from marketplace/skill-install input, no allowlist); (b) mcp.service.ts:283 health-check fetching user-supplied URLs; (c) action-executor.ts:123 API node fetching apiConfig.url with workflow-variable substitution. For each: who controls the URL (which route/role can set it), is there any allowlist/denylist/internal-IP guard, and does the fetch response get returned to the caller (data-exfil readback) or used server-side? Classify: intended-feature vs exploitable SSRF — an authenticated org member fetching arbitrary internal URLs (169.254.169.254 metadata, localhost services, internal network) with response readback IS exploitable SSRF even if 'workflow API node' is a product feature; judge by what's demonstrated reachable in code, not by intent labels. If any is exploitable, write a harmless local PoC with a mocked fetch (assert the URL reaches the sink unvalidated — no real network). \n2. **CORS default '*' + credentials:true** (app.ts:92-100): read the actual code; confirm the default and how CORS_ORIGIN is set in deployment paths (cross-ref infra gen-base-env.py finding — it does not set it). Determine what credentials mode actually applies (are cookies used at all, or Bearer tokens? credentialed-CORS impact depends on that). Classify honestly.\n3. **Chat session horizontal IDOR** (chat.service.ts:126 getSessionById org- but not user-scoped): decide exploitability — is session sharing within an org a documented/intended design (check code comments, frontend behavior: do other users' sessions appear in the UI list)? Classify accordingly.\n4. **agentcore AUTH_TOKEN env persistence** (backend index.ts:64-66 writes backend API key to process.env; infra agent questioned whether it persists across AgentCore container re-use): read the agentcore invocation lifecycle code and classify (likely open_proof_gap if container reuse semantics can't be determined locally — that's fine, say so).\n5. **Swagger UI unauthenticated at /docs** — verify exposure and whether it's gated by env; classify (usually low/info observation).\n\nUpdate existing coverage entries via update_coverage (list_coverage first to find ids — surfaces: 'outbound fetch surfaces...', 'skill-marketplace.service.ts outbound fetch calls', plus new entries for CORS/chat-sessions/agentcore-env as needed). If you confirm an exploitable SSRF (or any other genuinely reportable issue with a complete trace), FILE a create_vulnerability_report yourself (no patch, no http_exchange_ids, honest confidence, counterevidence required). Report outcomes + any filed ids via agent_finish.",
+        "is_root": false
+      },
+      {
+        "agent_id": "5191d419",
+        "agent_name": "Static Triage Agent",
+        "status": "completed",
+        "skills": [
+          "custom/source_aware_sast",
+          "custom/dependency_cve_scanning"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (white-box source assessment, LOCAL ONLY — never contact deployed endpoints, no network). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nRun the baseline source-aware triage stack on the repo root (skip node_modules):\n- opengrep scan --config /opt/opengrep-rules --taint-intrafile --json --output /workspace/.source-aware/opengrep.json .\n- Build sg-targets.txt from opengrep scope per the source_aware_sast skill and run one ast-grep (sg) structural pass\n- gitleaks detect --source . --report-format json --report-path /workspace/.source-aware/gitleaks.json\n- trufflehog filesystem --no-update --json --no-verification . > /workspace/.source-aware/trufflehog.json\n- trivy fs --scanners vuln,misconfig --timeout 30m --offline-scan --format json --output /workspace/.source-aware/trivy-fs.json .\n\nThen triage: produce a RANKED summary of top candidates with file:line for each: (1) injection sinks (SQL, command, path), (2) hardcoded secrets (verify against repo context — real credentials vs placeholders/test data), (3) known-CVE dependency findings with installed versions from lockfiles (frontend, backend, infra, app-hosting/poc, agentcore package-lock.json files) — note reachability is NOT proven by version alone. Write concise notes to the shared note store with your key candidates, and record coverage with record_coverage for each area you swept. Do NOT file reports — this is triage; report candidates via notes/agent_finish so the root can spawn validation agents. Keep intermediate output in files under /workspace/.source-aware/, delete huge raw outputs after extracting.",
+        "is_root": false
+      },
+      {
+        "agent_id": "3101d776",
+        "agent_name": "Validated Findings Reporting Agent",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/rce",
+          "vulnerabilities/path_traversal_lfi_rfi"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update/super-agent (white-box, LOCAL ONLY). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nThe RCE Validation Agent confirmed these with local runtime PoCs (backend vitest, node_modules pre-existing). Re-verify each cited line in source (do not file anything you cannot confirm), then FILE create_vulnerability_report for each (no patches, code_locations informational, no http_exchange_ids):\n\n1. **eval() RCE via workflow custom transform** — CRITICAL. Sink: backend/src/services/node-executors/action-executor.ts:323-325 applyCustomTransform evals `transformConfig.expression` with zero sanitization. Chain: POST /api/workflows/:workflowId/execute (execution.routes.ts:154, requireModifyAccess allows ordinary org 'member') → body.canvasData nodes validated only as z.array(z.unknown()) (workflow.schema.ts:48) → executeTransform → eval. PoC: expression using process.getBuiltinModule('fs').writeFileSync wrote a marker file and Object.keys(process.env).length returned via node output. CVSS AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H (~8.8), CWE-95 (or CWE-94). Note in technical_analysis that siblings applyFilter/applyReduce are unreachable and condition-executor's eval is neutralized by a paren-blocking regex, but code-artifact-executor.ts:296 is a second live sink of the same class currently blocked only by an incidental SyntaxError (top-level return) — fixing that functional bug re-opens it.\n2. **Unauthenticated WebSocket /ws/executions** — HIGH. Route registered with no auth preHandler (websocket/execution.gateway.ts:135-141), handleSubscribe accepts any executionId with no ownership/tenant check; runtime PoC: unauthenticated client connected and got {\"type\":\"subscribed\"} for an arbitrary executionId; cross-tenant execution-event broadcast. CVSS ~AV:N/AC:L/PR:N/UI:N, C:L (events may carry node outputs — be honest: what data events carry was verified as subscription only), CWE-306.\n3. **agentcore workspace-sync S3 path traversal** — file as MEDIUM with honest prerequisites. workspace-sync.ts:77-85: localPath = path.join(WORKSPACE_DIR, key.slice(prefix.length)), no containment check; PoC (mocked S3, real fs math) shows ../ escapes. Prerequisite: attacker-controlled S3 keys in the workspace prefix — no tenant-reachable write primitive found; requires shared/compromised bucket scenario. Include the sibling workspace-manager.ts:1554-1555 startsWith-without-separator sibling-prefix bypass (verified: '../sessionA-evil/...' passes) and the unvalidated filePath in readWorkspaceFileFromS3 (workspace-manager.ts:1495-1530) as related weaknesses in the same report (same root cause family: missing/incorrect path containment), with their individual constraints stated. CWE-22.\n\nHonest confidence: RCE and WS PoCs ran locally against the real code with mocks — confidence high for code-path validity; production deployment exposure unverified (assumptions). Counterevidence required per report. After filing, report the vuln ids via agent_finish and ensure record_coverage outcomes are updated to 'reported' for these surfaces (check list_coverage first, use update_coverage on existing entries).",
+        "is_root": false
+      }
+    ],
+    "skills_exercised": [
+      "aws",
+      "broken_function_level_authorization",
+      "browser_security",
+      "dependency_cve_scanning",
+      "idor",
+      "infrastructure_lifecycle",
+      "path_traversal_lfi_rfi",
+      "prototype_pollution",
+      "rce",
+      "source_aware_sast",
+      "sql_injection",
+      "ssrf",
+      "xss"
+    ],
+    "findings_filed": 28,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": true,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": []
+  },
+  "entries": [
+    {
+      "surface": "agentcore/src/workspace-sync.ts restoreWorkspaceFromS3",
+      "risk_area": "Path traversal via S3 object keys",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed as vuln-0025-family path traversal report vuln-0027 (medium, confidence medium). workspace-sync.ts:77-85/94: relativePath = key.slice(prefix.length) joined to WORKSPACE_DIR with no containment check; local PoC (mocked S3, real fs) shows ../../ escapes WORKSPACE_DIR. Prerequisite: attacker-controlled S3 keys in the workspace prefix (no tenant-reachable write primitive found; shared/compromised bucket scenario). Report also covers sibling resolveWorkspaceFilePath startsWith-without-separator bypass (workspace-manager.ts:1554-1555, verified) and unvalidated filePath in readWorkspaceFileFromS3 (:1495-1530).",
+      "recorded_by": "Validated Findings Reporting Agent",
+      "recorded_at": "2026-11-21 09:58:21 UTC",
+      "updated_at": "2026-11-21 10:07:18 UTC",
+      "previous_outcomes": [
+        "needs_follow_up",
+        "reported"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agentcore/src/index.ts /invocations",
+      "risk_area": "Unauthenticated invocation / secrets capture in runtime",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Bare http server, no auth on POST /invocations — but this is the AgentCore platform protocol; AgentCore service enforces invocation auth at the platform level (execution role scoped in infra). payload.backend_api_key is written into process.env.AUTH_TOKEN (index.ts:64-66) and containers are per-session in AgentCore by design; env persistence across invocations is a platform question, not repo code. No repo-level exploit validated.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:23 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "infra/lib/super-agent-stack.ts (CDK stack)",
+      "risk_area": "Insecure deployment defaults (SGs, S3, IAM, TLS)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "S3 buckets all BLOCK_ALL (lines 216/227/236/317); DB not publicly accessible, encrypted, SG restricted to EC2; Redis same. Two hardening observations, not vulns: (1) CfnParameter AllowedCidr defaults to 0.0.0.0/0 (line 58-61) — web-frontend open by default, typical for a public web app; (2) IAM statements on bedrock:InvokeModel, agentcore browser/code-interpreter actions use Resource '*' (lines 171, 207) — broad but within-account. CloudFront origin to EC2 uses HTTP_ONLY port 80 but viewer side enforces HTTPS; acceptable pattern.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:26 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "infra/scripts/deploy.sh + ci/remote-deploy.sh + user-data.sh",
+      "risk_area": "Secret exposure / weak deployment defaults",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "deploy.sh:418-422 & remote-deploy.sh (~line 40): seed admin 'admin@example.com' gets hardcoded default password 'Admin1234!' (bcrypt hash written directly to DB) and the plaintext is echoed to deploy logs. user-data.sh:99-100 hardcodes Redis password 'super-agent-redis-password' in redis.conf. gen-base-env.py writes REDIS_PASSWORD= (empty) and no JWT_SECRET in CI base env — local-auth JWT_SECRET depends on deploy.sh openssl rand path. Nginx uses self-signed cert on 443 (user-data.sh:113). All are deployment-default weaknesses shipped in the repo.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:28 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend/docker-compose.yml + app-hosting/poc/docker-compose.floci.yml",
+      "risk_area": "Container config: exposed ports, creds, docker.sock, dashboards",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "backend/docker-compose.yml: JWT_SECRET hardcoded 'local-dev-jwt-secret-change-in-production' (line ~75); postgres/redis on 0.0.0.0 host ports with default creds. floci compose: Traefik api.insecure=true dashboard exposed on 0.0.0.0:8081; docker.sock mounted into both traefik and app-host-api containers (container escape primitive); all DB/InsForge/JWT secrets hardcoded and PSQL ports (5432-5436) bound to host. Marked dev/POC by name; reported as insecure defaults with the deployment-mode caveat.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:29 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "app-hosting/poc services (app-host-api, runtime) + k8s manifests",
+      "risk_area": "Hardcoded secrets / weak JWT defaults",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "runtime/src/auth.ts:4: JWT_SECRET fallback 'poc-secret-change-me' — token forgery if env unset. app-host-api/src/insforge.ts:54/64/74 hardcoded tenant JWT secrets; k8s/tenants/*.yaml hardcode JWT_SECRET values. app-host-api mounts /var/run/docker.sock. All clearly labelled POC; reported as insecure defaults, not production vulns.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:31 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Lockfiles & install scripts (agentcore, infra, backend, frontend, app-hosting)",
+      "risk_area": "Supply chain: lockfile drift, malicious lifecycle scripts, network fetches",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All 4 main packages have lockfiles consistent with package.json root deps (verified programmatically). No husky/lint-staged/preinstall/postinstall/prepare scripts in any package.json (verified via JSON parse). No .github workflows exist in the repo (only inside node_modules). No scripts with curl|bash in install-time context (curl uses appear only in operator-run EC2 bootstrap scripts, which is intended execution). agentcore/Dockerfile & backend/Dockerfile: npm ci/install from pinned lockfile, non-root USER, no USER root at runtime. agentcore runs npm install (not ci) — minor reproducibility nit only.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:33 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Secret exposure scan (gitleaks full-tree + .env files)",
+      "risk_area": "Committed secrets",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "gitleaks full working-tree scan: 1 hit only — industry-packs/.../multi-factor-verification/SKILL.md:101 'generic-api-key' — verified by reading: it is example JSON documentation of a fake verification token (VT-MFA-...-uuid), not a credential. backend/.env is gitignored (backend/.gitignore:8) and contains only local dev values; frontend/.env.production ignored at root; .env.example files contain placeholders only. No real secrets committed.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:35 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "industry-packs/ content",
+      "risk_area": "Prompt-injection-relevant content shipped to agent execution",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "15 packs of YAML/marketing/SKILL.md content seeded into agent execution (deploy.sh seeds showcase from packs). Contents are vendor-authored templates (finance, healthcare, etc.). Observation for other agents: this content becomes agent context, so any untrusted-input rendering of it is injection surface; no malicious instructions found in spot-checks. Data-quality observation only, not a vuln.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:37 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "infra/lambda/connectors/gmail/handler.ts",
+      "risk_area": "Token handling / injection in connector lambda",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Gmail OAuth access token comes per-event from Gateway Outbound Auth, used as Bearer header, not stored. URL construction uses message/label IDs in paths (toolRead/toolReply) — IDs from tool callers; no command/exec sinks, no hardcoded secrets. Static review only (lambda not deployed).",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:39 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agentcore/src/agent-runner.ts execSync usage",
+      "risk_area": "Command injection via git subprocess",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "All execSync calls (lines 123-241) are fixed git command strings ('which git', 'git config user.email \"agent@superagent.local\"', 'git add -A', 'git commit -m \"baseline\"', 'git diff --cached --numstat HEAD') with only cwd varying — no user-controlled data interpolated into the command string. Agent code execution itself (Bash tool) is the intended product function.",
+      "recorded_by": "Infra/Supply-Chain Agent",
+      "recorded_at": "2026-11-21 09:58:41 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend authentication (src/middleware/auth.ts, config/index.ts)",
+      "risk_area": "authentication / token forgery",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Unit-PoC (tests/unit/auth-forgery.poc.test.ts, passing): default JWT_SECRET 'super-agent-local-dev-secret-change-in-production' allows forging any user/role/org; ?token= query param accepted; in cognito mode internal-token HMAC key = userPoolId which is publicly disclosed via GET /api/auth/config, and internal tokens bypass profile lookup entirely.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:01 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "knowledge-base.routes.ts + knowledge-base.service.ts (all KB endpoints)",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "All KB routes call service methods (findById/update/delete/listFiles/updateFile/deleteFile/folders) with only the object id — no organization_id filter anywhere in the service. requireModifyAccess is role-only. Unit-PoC tests/unit/kb-idor.poc.test.ts demonstrates cross-org read/update/delete of KBs, files, folders, scope bindings, and briefings (briefing.routes.ts equally unscoped).",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:03 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agents.routes.ts + middleware/agentAccess.ts + agentAccess.service.ts",
+      "risk_area": "IDOR / cross-org agent access via permission lookup",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "agentAccessService.checkAccess (src/services/agentAccess.service.ts:47-77) looks up agent_permissions by (agent_id,user_id) composite unique without any org scoping — a permission row for a user in org A grants admin on an agent in org B. Demonstrated by tests/unit/tenant-isolation.audit.test.ts. agent.routes otherwise well-guarded (requireAgentAccess on :id routes).",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:05 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "websocket/execution.gateway.ts (/ws/executions)",
+      "risk_area": "unauthenticated WebSocket + missing origin/tenant checks",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed as vuln-0026 (severity medium, CVSS 6.5, confidence high). Local runtime PoC: unauthenticated ws client connected to /ws/executions (execution.gateway.ts:135-141, no preHandler) and received {\"type\":\"subscribed\"} for an arbitrary executionId; handleSubscribe (line 232) has no ownership/tenant check. Event payload content sensitivity not exhaustively enumerated — reflected in C:L.",
+      "recorded_by": "Validated Findings Reporting Agent",
+      "recorded_at": "2026-11-21 09:59:06 UTC",
+      "updated_at": "2026-11-21 10:07:17 UTC",
+      "previous_outcomes": [
+        "reported"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /v1/webhook/:webhookId/trigger (webhooks.routes.ts + webhook.service.ts)",
+      "risk_area": "unauthenticated state-changing endpoint / missing signature",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Public trigger route: no auth, no HMAC signature, no rate limit, no replay protection. IP allowlist only checked when payload.ipAddress is present (server passes request IP — but not enforced unless configured). Triggers arbitrary workflow execution. Demonstrated in tests/unit/webhook-trigger-authz.poc.test.ts (both trigger requests return 200 received:true).",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:08 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "avatarRoutes.ts (/avatars/generate, /avatars/generate-batch, /avatars/*)",
+      "risk_area": "missing authentication on LLM/S3-backed endpoints",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "tests/unit/avatar-routes.authz.poc.test.ts (passing): POST /api/avatars/generate-batch and related routes have no authenticate preHandler — anonymous requests trigger LLM generation and S3 uploads (cost/DoS). GET /avatars/* also unauthenticated.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:10 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "im.routes.ts imWebhookRoutes (/api/im/webhook/:bindingId)",
+      "risk_area": "webhook auth bypass / org confusion",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "tests/unit/im-webhook-auth.poc.test.ts (passing): a request with NO authorization header is processed and runs the agent in the victim org (signature verification happens inside adapters but non-Slack platforms/missing secret paths fall through); unknown binding returns 404 enabling binding-id enumeration.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:11 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "pack-deploy.routes.ts + pack-deploy.service.ts",
+      "risk_area": "path traversal in onboarding file reads",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "tests/unit/pack-deploy-traversal.poc.test.ts (passing): URL-encoded ../ traversal in scopeDirName reads onboarding.json outside the industry-packs tree at both route and service level; auth IS enforced (unauthenticated rejected). Authenticated user can read arbitrary files relative to the packs base dir.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:13 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "businessScopes.routes.ts plugin/mcp-servers/briefings sections",
+      "risk_area": "IDOR on scope-scoped subresources",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "GET /:id/plugins and GET /:id/mcp-servers query by business_scope_id only — no org filter (info disclosure cross-org). POST plugins/MCP verify scope ownership first (OK). Briefing routes (briefing.routes.ts) operate on scopeId/briefing id with no org check at all — demonstrated cross-org in kb-idor PoC. DELETE /:id/plugins/:pluginId deletes by id+scopeId without verifying scope belongs to caller org (only requireModifyAccess role check).",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:15 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspaceManager.readWorkspaceFileFromS3 (services/workspace-manager.ts:1495-1530)",
+      "risk_area": "S3 key path traversal",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed as sibling weakness in vuln-0027 (path containment family). readWorkspaceFileFromS3 / readWorkspaceFileFromS3Raw (workspace-manager.ts:1495-1530) build `key = ${orgId}/${scopeId}/${sessionId}/${filePath}` with completely unvalidated filePath — ../ segments or leading / target keys outside the session prefix. No validated tenant-reachable caller chain to attacker-controlled filePath was demonstrated, so recorded as a related weakness with constraints stated in the report.",
+      "recorded_by": "Validated Findings Reporting Agent",
+      "recorded_at": "2026-11-21 09:59:17 UTC",
+      "updated_at": "2026-11-21 10:07:20 UTC",
+      "previous_outcomes": [
+        "reported",
+        "reported"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "appData.routes.ts aggregate endpoint + buildJsonFilters",
+      "risk_area": "SQL injection via JSONB filter keys",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "All user-controlled identifiers (filter keys, groupBy, sum/avg/min/max, orderBy) pass through sanitizeKey() (routes/appData.routes.ts:283) which strips everything except [a-zA-Z0-9_]; values are bound via $n placeholders into $queryRawUnsafe. GET list path uses Prisma JSONB path filters (no raw SQL). No injection channel found.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:18 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "all $queryRawUnsafe/$executeRawUnsafe call sites (services + routes)",
+      "risk_area": "SQL injection",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Audited all 19 Unsafe call sites (knowledge-base.service.ts:351, rag/document-indexer, rag/rag-retriever, vector-memory, support-metrics, support-settings, chat.service, agent.service, token-usage, appData routes, auth middleware migration SQL). All interpolate only parameterized $n placeholders with values bound as arguments — no user-controlled string interpolation into SQL text. $executeRawUnsafe in middleware/auth.ts uses fixed migration statements with bound $1/$2.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:20 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "knowledge-base.service.ts listFiles orderBy + folders createFolder path",
+      "risk_area": "injection via column/sort identifiers and path construction",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Assessed to conclusion: user-controlled sortBy passed as Prisma orderBy key is rejected by Prisma's field validation (validation error, not injection); createFolder path construction reviewed and no exploitable traversal found beyond the pack-deploy finding already reported (vuln-0015). Classified as hardening, no vulnerability.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-21 09:59:22 UTC",
+      "updated_at": "2026-11-21 10:07:37 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "files.routes.ts + file.service.ts (S3 upload/download/delete)",
+      "risk_area": "IDOR / path traversal on S3 keys",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "validateFileAccess (file.service.ts:272-281) enforces key.startsWith(`${orgId}/`) on every download/metadata/delete; upload keys are server-generated as `${orgId}/${timestamp}-${sanitizedFileName}`. Positive control: organization prefix check is a real named control on every path examined. Residual: org-scoped not user-scoped (any org member reads any org file) — design-level, same-tenant only.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:26 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "chat.routes.ts + chat.service.ts (sessions, workspace file endpoints)",
+      "risk_area": "IDOR on chat sessions (org + user level)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Org-scoped but NOT user-scoped: chatService.getSessionById filters organization_id only (chat.service.ts:126-130), so any member reads/modifies any other member's session and its workspace files within the org (confirmed by tenant-isolation audit test). Cross-org is blocked. Local workspace file read enforces traversal prefix; S3 fallback key traversal recorded separately.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:28 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workflows.routes.ts + workflow.service.ts; documents.routes.ts + document.service.ts",
+      "risk_area": "IDOR / cross-tenant object access",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Both services take organizationId on every by-id lookup (workflow.service.ts:96, document.service.ts getDocumentById(id, orgId)) and routes pass request.user.orgId; create/update/delete similarly org-scoped. No unscoped object access found on these route families.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:30 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "organizations.routes.ts (memberships, invites, role management)",
+      "risk_area": "vertical privilege escalation / cross-org membership mutation",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Role checks (requireRole owner/admin) on mutation routes; updateMembership/removeMember pass orgId to service for scoping. Local-mode /register joins the OLDEST org with 'member' role by design (dev mode only; documented as local auth). No cross-org membership mutation path found. Mass-assignment on PUT /members/:id is constrained by updateMembershipSchema enum.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:32 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "appData.routes.ts CRUD + appBackend.routes.ts + showcase.routes.ts",
+      "risk_area": "IDOR on app data / backend provisioning",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All app_data queries filter app_id + org_id + collection, with findFirst precheck before update/delete. appBackend and showcase routes scope by org on every operation. No missing-tenant-check path found.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:34 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "widget.routes.ts (widgetAuth) + llm-proxy/a2a/openapi (apiKeyAuth)",
+      "risk_area": "API-key auth strength / auth bypass",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "widgetAuth uses SHA256-hashed api_keys with scope check + expiry (widget-auth.service.ts); llm-proxy/a2a/openapi use apiKeyAuth middleware. Key material never stored in plaintext. No bypass path found in these surfaces (webhook trigger issue is recorded separately).",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:35 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "outbound fetch surfaces: mcp.service.ts health-check, node-executors/action-executor, skill-marketplace, oauth-flow, a2a-client",
+      "risk_area": "SSRF via attacker-controlled URLs",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed vuln-0028 (medium, confidence high). action-executor.ts:123 confirmed exploitable SSRF: apiConfig.url from workflow nodes (authorable by any 'member' — requireModifyAccess = owner/admin/member, execution.routes.ts:154) reaches fetch() after variable substitution with attacker-set headers, no allowlist/private-IP/scheme guard, full response readback. Local PoC with mocked fetch passed (asserted metadata URL + headers + readback). mcp.service.ts:283 health-check fetch of user-supplied config.url/host_address: admin-gated, response readback limited to success/latency/status (blind SSRF only) — noted in vuln-0028 as sibling. oauth-flow/a2a-client sites reviewed by Backend AuthZ Agent earlier: no new findings.",
+      "recorded_by": "SSRF & Residual Validation Agent",
+      "recorded_at": "2026-11-21 09:59:37 UTC",
+      "updated_at": "2026-11-21 10:08:47 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "config/index.ts + .env / .env.example + CORS + secrets",
+      "risk_area": "default credentials, secret exposure, CORS misconfiguration",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "JWT_SECRET defaults to hardcoded dev secret (exploitable in local mode, see auth coverage). CORS_ORIGIN defaults to '*' with credentials:true — when '*' is set, @fastify/cors echo-origin behavior + credentials enables credentialed cross-origin requests. INSFORGE_JWT_SECRET hardcoded default 'spike-test-secret-key-must-be-32-chars-long' and INSFORGE_PG_PASSWORD 'postgres'. .env contains only local dev DB creds (sa:sa localhost) — no cloud secrets committed.",
+      "recorded_by": "Backend AuthZ Agent",
+      "recorded_at": "2026-11-21 09:59:39 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend/src/services/node-executors/* (action/condition/code-artifact executors)",
+      "risk_area": "Code injection (eval) in workflow transform nodes",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed as vuln-0025 (severity high, CVSS 8.8, confidence high). CONFIRMED authenticated RCE with working local PoC: POST /api/workflows/:workflowId/execute (execution.routes.ts:154, any org 'member') → z.array(z.unknown()) nodes (workflow.schema.ts:48) → applyCustomTransform eval (action-executor.ts:323-325) → marker file written via process.getBuiltinModule('fs') and process.env enumerated. Sibling code-artifact-executor.ts:296 eval currently blocked only by incidental top-level-return SyntaxError.",
+      "recorded_by": "Validated Findings Reporting Agent",
+      "recorded_at": "2026-11-21 10:00:08 UTC",
+      "updated_at": "2026-11-21 10:07:15 UTC",
+      "previous_outcomes": [
+        "needs_follow_up",
+        "reported"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend/src/pages/Chat.tsx + AppRunner.tsx iframe previews",
+      "risk_area": "XSS / token leakage via sandbox escape + token-in-URL",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Resolved by vuln-0003 (iframe allow-scripts+allow-same-origin sandbox escape, medium) and vuln-0002 (token-in-URL). Frontend agent code-trace validated both; production topology dependency documented in the reports' severity_change_conditions.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-21 10:00:09 UTC",
+      "updated_at": "2026-11-21 10:07:32 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend/src raw SQL usage (queryRawUnsafe/executeRawUnsafe)",
+      "risk_area": "SQL injection",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All raw queries parameterized ($1/$2). appData.routes.ts dynamic SQL keys passed through sanitizeKey() stripping non-[a-zA-Z0-9_] (appData.routes.ts:261); values bound. No string-interpolated user input found in any $*RawUnsafe call reviewed (vector-memory, rag-*, support-*, knowledge-base, chat, token-usage, agent-metrics).",
+      "recorded_by": "Static Triage Agent",
+      "recorded_at": "2026-11-21 10:00:11 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Repository-wide secrets (gitleaks + trufflehog, 40 hits)",
+      "risk_area": "Hardcoded secrets / credential exposure",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All hits are app-hosting/poc local docker-compose/k8s tenant credentials (alpha/beta/gamma_pg_poc_123, apphost123), example.com/MDN placeholder URIs, and one placeholder API key in industry-pack marketing content. backend/.env is git-ignored dev config. No production credentials found.",
+      "recorded_by": "Static Triage Agent",
+      "recorded_at": "2026-11-21 10:00:12 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Lockfiles: backend/frontend/agentcore/infra/app-hosting-poc package-lock.json (trivy fs)",
+      "risk_area": "Known-CVE dependency findings",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Per-CVE reachability analysis completed by Dependency CVE Reporting Agent: representative high-reachability CVEs filed (vuln-0016 ws, vuln-0021 MCP SDK, vuln-0022 fastify, vuln-0008/0012 xlsx) plus not_reachable/not_applicable verdicts for axios/protobufjs/lodash/react-router/ip-address/undici (vuln-0017..0020, 0023, 0024). Remaining ~80 low/medium advisory rows share packages and verdicts with the representative filings.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-21 10:00:14 UTC",
+      "updated_at": "2026-11-21 10:07:35 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts resolveWorkspaceFilePath/writeWorkspaceFile (path containment)",
+      "risk_area": "Path traversal",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Filed as part of vuln-0027 (path containment family). CONFIRMED sibling-prefix containment bypass via local test: workspace-manager.ts:1554-1555 `join(workspacePath, filePath)` + `resolved.startsWith(workspacePath)` with no separator — `../sessionA-evil/...` passes when session IDs are prefix-related. Included as sibling weakness in the vuln-0027 report with its own constraints stated.",
+      "recorded_by": "Validated Findings Reporting Agent",
+      "recorded_at": "2026-11-21 10:00:15 UTC",
+      "updated_at": "2026-11-21 10:07:19 UTC",
+      "previous_outcomes": [
+        "needs_follow_up",
+        "reported"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Package install scripts, Dockerfiles, CI scripts (all packages)",
+      "risk_area": "Supply chain / build config",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "No preinstall/postinstall hooks in any package.json. backend/Dockerfile multi-stage, non-root. agentcore/Dockerfile installs claude-code + uv globally and runs agent code by design (intended behavior). 208 trivy misconfig findings are low-level hardening (k8s securityContext etc.), not exploitable app behavior.",
+      "recorded_by": "Static Triage Agent",
+      "recorded_at": "2026-11-21 10:00:17 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "skill-marketplace.service.ts outbound fetch calls (~10 sites)",
+      "risk_area": "SSRF via user-influenced fetch URLs",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "All ~10 fetch sites in skill-marketplace.service.ts constrained to fixed hosts: fetchSkillContentFromGitHub/strategy-3 fetch https://raw.githubusercontent.com/{repoPath}/... where repoPath comes from probeGitHubUrl's parseGitHubUrl (:552-578) which rejects any hostname !== 'github.com'; searchViaGitHub (:315) and API listings use literal https://api.github.com URLs (query is encodeURIComponent'd; subPath/dir.path come from GitHub's own API responses, not the caller). No user-supplied full URL ever reaches fetch. Only an authenticated user triggers these; no SSRF.",
+      "recorded_by": "SSRF & Residual Validation Agent",
+      "recorded_at": "2026-11-21 10:00:18 UTC",
+      "updated_at": "2026-11-21 10:08:48 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend/src/pages/Chat.tsx:470 dangerouslySetInnerHTML of highlight.js output",
+      "risk_area": "XSS via unsafe rendering",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "highlight.js 11.11.1 escapes HTML entities in both highlight() and highlightAuto() output — validated locally in /tmp/hljstest: `<img src=x onerror=alert(1)>` becomes `&lt;img ...&gt;`; the catch-fallback in useHighlightedCode (Chat.tsx:93) also manually escapes. No rehype-raw, no urlTransform override, react-markdown default escaping everywhere.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:00:42 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend xlsx 0.18.5 usage in pages/Chat.tsx:181-185 (XLSX.read + sheet_to_json)",
+      "risk_area": "prototype pollution via xlsx parsing (CVE-2023-30533 / CVE-2024-22363)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Resolved by vuln-0008 (CVE-2023-30533, revised to reachable during dependency agent's deeper analysis: pollution occurs during XLSX.read parse at Chat.tsx:181) and vuln-0012 (CVE-2024-22363 ReDoS, reachable).",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-21 10:00:44 UTC",
+      "updated_at": "2026-11-21 10:07:36 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend/src/components/ConnectorPanel.tsx:265-272 window message listener for 'oauth-callback'",
+      "risk_area": "postMessage origin validation missing",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Handler checks only event.data?.type === 'oauth-callback' with NO event.origin check. Any window holding a reference to the SPA (e.g. a malicious page that window.open()s the app, or the OAuth popup itself) can postMessage a forged {type:'oauth-callback', payload:{success:true, credentialId:<attacker-chosen>}} which sets the OAuth credential binding (oauthCredentialId state) used when saving the connector config. Attacker prerequisites: victim has the connector panel open while visiting attacker page that opened a handle to the app window. Validated by code trace; no runtime PoC (would need live OAuth template flow). Fixes: validate event.origin against expected backend/popup origin and verify state nonce.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:00:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend /ws/executions (websocket/execution.gateway.ts:135-141) consumed by frontend workflowWebSocketClient.ts:193-283",
+      "risk_area": "WebSocket authentication / cross-tenant event exposure",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Backend registers fastify.get('/ws/executions', {websocket:true}) with NO preHandler/authenticate — any network client can connect and subscribe to arbitrary executionIds, receiving workflow execution events (cross-tenant). Frontend client confirms: getWebSocketUrl() builds ws://VITE_API_BASE_URL/ws/executions and never sends a token (unlike restClient which attaches Authorization). Cross-checked the same pattern in SessionStreamManager/chatStreamService — those use authenticated SSE fetch endpoints instead, so this is WS-specific. Candidate high for backend reporting agent.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:00:47 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend token-in-URL: Chat.tsx:617-634/645, ProjectBoard.tsx:190-197, WorkspaceActions.tsx:179-184, Chat.tsx:296-304 (pdfUrl) + backend auth.ts:150 accepting ?token=",
+      "risk_area": "JWT leakage via query string (browser history, Referer, logs)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Frontend appends full JWT (local_auth_token or cognito_id_token) as ?token= query param when building iframe/src and window.open URLs for published apps, dev-server previews, PDFs and raw file downloads. Backend middleware/auth.ts:150-157 explicitly accepts query token ('or ?token query param for iframe/img src'). Tokens end up in browser history, server/proxy access logs, and Referer headers of any subresources the preview pages load. No HttpOnly cookie alternative exists. Attacker prerequisites: access to logs/history or Referer leak from preview content. Validated by code trace both sides.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:00:49 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend browser storage: services/cognito.ts (TOKEN_KEYS localStorage incl. refresh_token), services/auth.ts:50-62, services/api/restClient.ts:26-32,46-58",
+      "risk_area": "token storage in localStorage / session handling",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All tokens (local JWT, Cognito id/access/refresh tokens) are stored in localStorage, not sessionStorage or HttpOnly cookies — XSS-stealable and the refresh token persists indefinitely (no clearTokens on getIdToken expiry, only on failed refresh). Logout is reasonably complete: AuthContext.logout → cognito logout() clears all 5 keys and redirects to Cognito logout; localLogout clears local token. restClient.setAuthToken also writes 'cognito_id_token' key, mixing modes. This is a hardening/defense-in-depth finding (storage choice amplifies any future XSS; no demonstrated XSS exists — all render paths are escaped). Not a standalone vulnerability.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:00:51 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend sandboxed iframes: Chat.tsx:596-600 & 642-647 & AppRunner.tsx:160 (sandbox=\"allow-scripts allow-same-origin allow-forms allow-popups\"), Chat.tsx:122-127 srcDoc iframe",
+      "risk_area": "sandbox escape / unsafe iframe policy",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Resolved by vuln-0003 (filed by Frontend Reporting Agent) covering Chat.tsx:600,646 and AppRunner.tsx:160 sandbox policy; code-trace validated with topology precondition documented.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-21 10:00:53 UTC",
+      "updated_at": "2026-11-21 10:07:33 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend route gating: ProtectedRoute.tsx (auth-only), Dashboard.tsx:115 / Settings.tsx:36 isAdmin client checks, no role-based route guards in App.tsx",
+      "risk_area": "frontend-only authorization without backend enforcement",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Backend spot-checks found matching server-side enforcement on admin-sensitive surfaces: organizations.routes.ts uses requireRole('owner'/'admin') on all mutating routes; audit.routes.ts requires requireAdminAccess; apiKeys list is scoped to request.user.orgId (own-org keys only, keyed prefixes not secrets); support/execution/tasks routes all carry authenticate (+requireModifyAccess for writes). Client-side isAdmin checks are cosmetic (UI visibility), no missing-backend-guard pair found in sampled routes. Frontend client is generic — an authenticated member calling admin APIs directly is rejected server-side. Residual risk: 45 route files, ~6 sampled + WS gateway (covered separately) — a full per-route audit was out of my scope.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:00:55 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend secrets exposure: .env.example, src/**, public/**, vite.config.ts, dcv-sdk bundle",
+      "risk_area": "hardcoded API keys / Supabase keys / secrets in frontend source",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": ".env.example contains only placeholders (your-anon-key-here). No createClient/supabase usage found in src despite @supabase/supabase-js dependency (unused dependency — dead weight, no exposure). No hardcoded keys, tokens or secrets in src/ or public/ (public contains only the vendored NICE DCV SDK bundle and assets). Cognito config comes from backend /api/auth/config or VITE_ env at build time.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:00:57 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend SSE/chatStreamService.ts (fetch POST /api/chat/stream with Authorization header), SessionStreamManager.ts:294",
+      "risk_area": "stream endpoint auth and URL construction",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "SSE clients use authenticated fetch (Bearer header via getAuthToken) against fixed VITE_API_BASE_URL endpoints — no user-influenced URL, no WebSocket, no query-token. Origin validation N/A for fetch-based SSE.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:00:58 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend react-markdown renderers: TextContentBlock.tsx:62-134, Chat.tsx:115 MarkdownPreview, ChatRoom.tsx:553, ProjectBoard.tsx:760, WorkflowCopilot.tsx",
+      "risk_area": "markdown rendering of agent output (raw HTML, link safety)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All ReactMarkdown usages are default-escaping (no rehype-raw, no skipHtml, no urlTransform override — raw HTML in markdown is rendered as inert text). Custom link renderer in TextContentBlock.tsx:104-107 uses target=\"_blank\" rel=\"noopener noreferrer\". Markdown in Chat/ChatRoom/ProjectBoard/WorkflowCopilot has no custom anchor override but react-markdown default urlTransform sanitizes javascript: URLs. javascript: href risk via default renderer: react-markdown's defaultUrlTransform only allows http/https/mailto etc. — safe.",
+      "recorded_by": "Frontend Security Agent",
+      "recorded_at": "2026-11-21 10:01:00 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "infra/scripts/deploy.sh + infra/scripts/ci/remote-deploy.sh",
+      "risk_area": "Hardcoded seed admin credentials",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Verified bcrypt('Admin1234!') for admin@example.com set at deploy.sh:418-421 and remote-deploy.sh, plaintext echoed to logs, credential public in infra/README.md:87. Filed vuln-0005.",
+      "recorded_by": "Infra Reporting Agent",
+      "recorded_at": "2026-11-21 10:02:59 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "infra/scripts/user-data.sh + infra/scripts/ci/gen-base-env.py + infra/scripts/deploy.sh env generation + backend/docker-compose.yml",
+      "risk_area": "Weak deployment secret defaults (Redis password, empty REDIS_PASSWORD, missing JWT_SECRET)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "user-data.sh:73-74 hardcodes 'super-agent-redis-password'; gen-base-env.py:25 and deploy.sh:213 emit empty REDIS_PASSWORD; gen-base-env.py omits JWT_SECRET (backend default fallback at config/index.ts:30/145); docker-compose dev secrets merged as same root cause. Filed vuln-0007.",
+      "recorded_by": "Infra Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:01 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "app-hosting/poc (docker-compose.floci.yml, services, k8s/tenants)",
+      "risk_area": "docker.sock exposure, insecure Traefik dashboard, hardcoded tenant JWT secrets",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Verified docker.sock mounts in traefik + app-host-api, --api.insecure=true on :8081, insforge.ts:54/64/74 and runtime/src/auth.ts:4 hardcoded secrets, k8s manifests literal JWT_SECRETs. Filed vuln-0010 as PoC-labelled medium.",
+      "recorded_by": "Infra Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:07 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend knowledge-base/briefing/businessScopes routes + knowledge-base.service (org scoping)",
+      "risk_area": "Cross-organization IDOR",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "All cited lines re-verified in source; no organization_id filter on findById:69/update:80/delete:91/listFiles:224/updateFile:277/deleteFile:294, briefing routes, or businessScopes :821/:940 raw SQL. Reported as vuln-0004.",
+      "recorded_by": "AuthZ Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend middleware/auth.ts + config/index.ts + auth.routes.ts (token verification)",
+      "risk_area": "Authentication forgery (default secret, internal-token HMAC key disclosure, query-param tokens)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Verified: JWT_SECRET default at config/index.ts:30, INTERNAL_TOKEN_SECRET = userPoolId (auth.ts:81-83), public /api/auth/config (auth.routes.ts:30-40), internal-token branch skips profile lookup (auth.ts:170-179), ?token= acceptance (auth.ts:129-157). Reported as vuln-0006.",
+      "recorded_by": "AuthZ Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:48 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend webhooks.routes.ts /v1/webhook/:id/trigger + webhook.service.ts triggerWebhook",
+      "risk_area": "Missing authentication on state-changing public endpoint",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Verified no preHandler, no HMAC, no replay/rate protection; only optional empty-by-default IP allowlist. Reported as vuln-0009.",
+      "recorded_by": "AuthZ Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:49 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend im.routes.ts generic POST /api/im/webhook/:bindingId",
+      "risk_area": "Unauthenticated webhook processing / origin validation",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Verified: no preHandler, findBindingById explicitly without org context, no signature verification on generic endpoint (platform adapters do verify). Reported as vuln-0011.",
+      "recorded_by": "AuthZ Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:51 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend avatarRoutes.ts (auth on avatar endpoints)",
+      "risk_area": "Missing authentication",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Re-verified: upload and presign have authenticate preHandler; generate, generate-batch, and GET /avatars/* proxy do not. Reported as vuln-0013 (revised to exclude presign).",
+      "recorded_by": "AuthZ Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:52 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend services/agentAccess.service.ts checkAccess + agentPermissions.routes.ts grant path",
+      "risk_area": "Cross-org permission confusion (org scoping on explicit permissions)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Verified explicit-permission lookup (agent_id,user_id) without org scoping short-circuits before the org-scoped agent lookup. Grant endpoint does enforce same-org membership when granting, so exploitation requires a cross-org row to exist via another writer path — reflected in severity (medium) and assumptions. Reported as vuln-0014.",
+      "recorded_by": "AuthZ Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:55 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend pack-deploy.routes.ts + pack-deploy.service.ts (path handling)",
+      "risk_area": "Path traversal",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Verified unvalidated packId/scopeDirName flow into join() with no containment check in getOnboardingConfig (:118-131) and deployScope (:226+). Reported as vuln-0015.",
+      "recorded_by": "AuthZ Reporting Agent",
+      "recorded_at": "2026-11-21 10:03:56 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend dependency tree (package-lock.json) — axios, protobufjs, lodash, undici, fastify, ws",
+      "risk_area": "known-CVE dependency reachability analysis",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Per-CVE usage analysis completed: ws 8.19.0 (vuln-0016, reachable, high), fastify 5.6.2 CVE-2026-25223 (vuln-0022, reachable, mitigated by zod), axios 1.13.6 (vuln-0017 not_reachable — no direct axios use, only fixed Feishu hosts, no NO_PROXY), protobufjs 7.5.4 (vuln-0018 not_reachable — no app imports), lodash 4.17.21 (vuln-0019 not_reachable — no _.template callers), undici 6.24.1 (vuln-0024 not_reachable — no Agent/TLS callers). Remaining ~80 low/medium axios/undici/fastify/protobufjs advisory lines share the same root packages and the same verdicts as the representative CVEs filed.",
+      "recorded_by": "Dependency CVE Reporting Agent",
+      "recorded_at": "2026-11-21 10:04:43 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "frontend dependency tree — xlsx, react-router, ws",
+      "risk_area": "known-CVE dependency reachability analysis",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "xlsx 0.18.5 both CVEs covered (vuln-0008 revised to reachable with parse-time pollution sink; vuln-0012 reachable ReDoS — filed by Frontend Reporting Agent). react-router 7.12.0 (vuln-0020 not_reachable — app uses BrowserRouter Declarative Mode, all 2026 CVEs require Framework/RSC mode). ws 8.19.0 in frontend lockfile noted inside vuln-0016 (client-side only).",
+      "recorded_by": "Dependency CVE Reporting Agent",
+      "recorded_at": "2026-11-21 10:04:44 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agentcore dependency tree — @modelcontextprotocol/sdk, ip-address",
+      "risk_area": "known-CVE dependency reachability analysis",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "MCP SDK 1.29.0 CVE-2026-104850 (vuln-0021, reachable — tenant-controlled payload.mcp_servers flows unvalidated into the SDK client options at agentcore/src/agent-runner.ts:298, the advisory's OAuth-credential-redirection scenario). ip-address 10.2.0 (vuln-0023, not_applicable — zero library usage in application code). Remaining MCP SDK CVEs (111767/111768/111769/111771) share the same package/version; GHSA-f897 and the mediums were not separately analyzed — the 1.31.0+ upgrade remediation covers all.",
+      "recorded_by": "Dependency CVE Reporting Agent",
+      "recorded_at": "2026-11-21 10:04:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "app-hosting/poc services (app-host-api, runtime) — fastify 4.29.1, find-my-way 8.2.2",
+      "risk_area": "known-CVE dependency reachability analysis",
+      "outcome": "needs_follow_up",
+      "outcome_label": "Requires further review",
+      "evidence": "PoC-grade app-hosting stack on fastify 4.29.1 (no 4.x fix for CVE-2026-25223, documented in vuln-0022) and find-my-way 8.2.2 (CVE-2026-47219). Remediation is a major-version upgrade of PoC services; route-level validation-bypass impact not individually audited. Genuinely blocked: PoC-grade component on an unpatchable line; tracked as follow-up alongside vuln-0022 remediation.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-21 10:04:48 UTC",
+      "updated_at": "2026-11-21 10:07:39 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend CORS config (app.ts:79-100, config/index.ts:64 CORS_ORIGIN default '*')",
+      "risk_area": "CORS wildcard + credentials:true with Bearer-token auth model",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Confirmed default is origin:true (reflect any origin) + credentials:true when CORS_ORIGIN='*'. However the backend uses no cookies anywhere (auth is Authorization: Bearer JWT; no setCookie in middleware/auth.ts; only logging redaction mentions cookie) — credentialed cross-origin reads therefore cannot attach ambient credentials, and the API requires an explicit Bearer token an attacker's page never possesses. gen-base-env.py does not set CORS_ORIGIN, so the wildcard default ships in deployment, but with token-header auth the impact is limited to unauthenticated/public endpoints (webhook trigger, avatar generate, Swagger) which are same-data regardless of origin. Weak misconfig observation, already folded into the config finding (entry ea19f7); not an independent exploitable vuln.",
+      "recorded_by": "SSRF & Residual Validation Agent",
+      "recorded_at": "2026-11-21 10:08:50 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "chat.service.ts:126 getSessionById + chat.routes.ts session detail/workspace endpoints",
+      "risk_area": "horizontal IDOR within org (session sharing design intent)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Session detail endpoints (getSessionById) are org-scoped but not user-scoped, and the session LIST endpoint is user-scoped (getSessions → findByUser, chat.service.ts:105-106) — so other users' sessions never appear in a member's UI list; cross-user access is only possible by guessing/enumerating session UUIDs. No code comment documents org-level sharing as intended, but the related KB/file scoping precedent in this codebase is org-level (file.service.ts org-prefix checks), and the Backend AuthZ Agent already filed this org-level scoping family (chat IDOR entry a8217e / vuln reports). No separate exploitable finding beyond what's already reported; reclassify as already-covered design observation rather than a distinct vuln.",
+      "recorded_by": "SSRF & Residual Validation Agent",
+      "recorded_at": "2026-11-21 10:08:52 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agentcore/src/index.ts:74 process.env.AUTH_TOKEN = payload.backend_api_key",
+      "risk_area": "backend API key persistence across AgentCore container invocations",
+      "outcome": "needs_follow_up",
+      "outcome_label": "Requires further review",
+      "evidence": "agentcore is a long-lived node http server (src/index.ts:27+): each POST /invocations writes payload.backend_api_key into process.env.AUTH_TOKEN and it is never cleared after the invocation's SSE stream ends. If the AgentCore runtime reuses one container across invocations (its documented execution model), the key from invocation N stays in the env for invocation N+1 — potentially a different tenant's invocation, where workspace files from prior runs could also persist (same code never cleans /workspace between invocations either; restoreWorkspaceFromS3 overwrites but doesn't clear). Cannot determine from the local repo whether AgentCore containers are reused per-tenant or torn down per invocation (platform lifecycle outside this codebase) — open proof gap; even if reused, the values are per-org backend keys within the same deployment, limiting cross-tenant impact. Not reportable without container lifecycle evidence.",
+      "recorded_by": "SSRF & Residual Validation Agent",
+      "recorded_at": "2026-11-21 10:08:54 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Swagger UI at /docs (backend app.ts:183-196)",
+      "risk_area": "unauthenticated API documentation exposure",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Verified: @fastify/swagger-ui registered at routePrefix '/docs' with no preHandler/auth and no env gate — the full OpenAPI spec (all endpoint schemas) is reachable unauthenticated. This is reconnaissance/information disclosure only (no secrets in the spec; schemas describe the API). Standard low/info observation; folded into existing config/misconfig findings rather than a standalone vuln report.",
+      "recorded_by": "SSRF & Residual Validation Agent",
+      "recorded_at": "2026-11-21 10:08:55 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "needs_follow_up",
+      "surface": "app-hosting/poc services (app-host-api, runtime) — fastify 4.29.1, find-my-way 8.2.2",
+      "risk_area": "known-CVE dependency reachability analysis",
+      "detail": "PoC-grade app-hosting stack on fastify 4.29.1 (no 4.x fix for CVE-2026-25223, documented in vuln-0022) and find-my-way 8.2.2 (CVE-2026-47219). Remediation is a major-version upgrade of PoC services; route-level validation-bypass impact not individually audited. Genuinely blocked: PoC-grade component on an unpatchable line; tracked as follow-up alongside vuln-0022 remediation."
+    },
+    {
+      "kind": "needs_follow_up",
+      "surface": "agentcore/src/index.ts:74 process.env.AUTH_TOKEN = payload.backend_api_key",
+      "risk_area": "backend API key persistence across AgentCore container invocations",
+      "detail": "agentcore is a long-lived node http server (src/index.ts:27+): each POST /invocations writes payload.backend_api_key into process.env.AUTH_TOKEN and it is never cleared after the invocation's SSE stream ends. If the AgentCore runtime reuses one container across invocations (its documented execution model), the key from invocation N stays in the env for invocation N+1 — potentially a different tenant's invocation, where workspace files from prior runs could also persist (same code never cleans /workspace between invocations either; restoreWorkspaceFromS3 overwrites but doesn't clear). Cannot determine from the local repo whether AgentCore containers are reused per-tenant or torn down per invocation (platform lifecycle outside this codebase) — open proof gap; even if reused, the values are per-org backend keys within the same deployment, limiting cross-tenant impact. Not reportable without container lifecycle evidence."
+    },
+    {
+      "kind": "agent_recorded_no_coverage",
+      "agent_name": "Frontend Reporting Agent",
+      "detail": "Frontend Reporting Agent ran (status: completed) without recording any coverage. Whatever it examined is absent from this record."
+    },
+    {
+      "kind": "agent_recorded_no_coverage",
+      "agent_name": "RCE Validation Agent",
+      "detail": "RCE Validation Agent ran (status: completed) without recording any coverage. Whatever it examined is absent from this record."
+    }
+  ]
+}

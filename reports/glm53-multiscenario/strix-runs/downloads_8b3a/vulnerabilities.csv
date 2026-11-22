@@ -1,0 +1,2 @@
+id,title,severity,timestamp,file
+vuln-0001,Path traversal / arbitrary file read in download() via unvalidated filename,MEDIUM,2026-11-20 07:29:12 UTC,vulnerabilities/vuln-0001.md

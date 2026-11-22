@@ -1,0 +1,6 @@
+id,title,severity,timestamp,file
+vuln-0002,"Cross-organization IDOR in knowledge-base routes (read/modify/delete of other orgs' KBs, files, folders)",HIGH,2026-11-20 13:28:11 UTC,vulnerabilities/vuln-0002.md
+vuln-0003,Cross-organization access on briefing routes (read/mark-read/archive other orgs' briefings),HIGH,2026-11-20 13:28:22 UTC,vulnerabilities/vuln-0003.md
+vuln-0004,Path traversal in workspace provisioning via unsanitized skill/agent names (workspace-manager.ts),HIGH,2026-11-20 13:29:55 UTC,vulnerabilities/vuln-0004.md
+vuln-0001,Path traversal in pack-deploy endpoints allows reading files outside the industry-packs tree,MEDIUM,2026-11-20 13:27:12 UTC,vulnerabilities/vuln-0001.md
+vuln-0005,"Missing authentication on avatar generation endpoints (POST /api/avatars/generate, /generate-batch)",MEDIUM,2026-11-20 13:33:35 UTC,vulnerabilities/vuln-0005.md

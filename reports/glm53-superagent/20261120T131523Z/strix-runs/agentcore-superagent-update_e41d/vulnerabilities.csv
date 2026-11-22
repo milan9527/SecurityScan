@@ -1,0 +1,14 @@
+id,title,severity,timestamp,file
+vuln-0003,"Internal service token HMAC uses public Cognito userPoolId as secret, enabling unauthenticated token forgery in cognito mode",CRITICAL,2026-11-20 13:18:02 UTC,vulnerabilities/vuln-0003.md
+vuln-0001,Hardcoded default JWT secret enables authentication bypass and role forgery in local auth mode,HIGH,2026-11-20 13:17:49 UTC,vulnerabilities/vuln-0001.md
+vuln-0004,Agent access control trusts org-unbound agent_permissions records (cross-org agent admin),HIGH,2026-11-20 13:18:11 UTC,vulnerabilities/vuln-0004.md
+vuln-0008,Hardcoded default INSFORGE_JWT_SECRET allows forging InsForge access tokens,HIGH,2026-11-20 13:20:04 UTC,vulnerabilities/vuln-0008.md
+vuln-0013,CVE-2026-84504 in fastify 5.6.2 (backend HTTP framework),HIGH,2026-11-20 13:20:41 UTC,vulnerabilities/vuln-0013.md
+vuln-0002,Cross-scope membership manipulation via unvalidated membershipId in scope-membership routes,MEDIUM,2026-11-20 13:18:00 UTC,vulnerabilities/vuln-0002.md
+vuln-0006,Members can read other members' chat sessions and history (org-scoped but not user-scoped),MEDIUM,2026-11-20 13:18:20 UTC,vulnerabilities/vuln-0006.md
+vuln-0007,Unauthenticated IM webhook allows arbitrary agent execution and org session creation (POST /api/im/webhook/:bindingId),MEDIUM,2026-11-20 13:19:52 UTC,vulnerabilities/vuln-0007.md
+vuln-0009,CVE-2026-53550 in js-yaml 4.1.1 (user-supplied YAML parsing),MEDIUM,2026-11-20 13:20:17 UTC,vulnerabilities/vuln-0009.md
+vuln-0010,Unauthenticated WebSocket execution gateway: any client can subscribe to any org's workflow execution events (/ws/executions),MEDIUM,2026-11-20 13:20:23 UTC,vulnerabilities/vuln-0010.md
+vuln-0005,Session JWT accepted and propagated via ?token= query parameter,LOW,2026-11-20 13:18:12 UTC,vulnerabilities/vuln-0005.md
+vuln-0012,CVE-2026-82662 in nodemailer 8.0.1 (SMTP transport in use),LOW,2026-11-20 13:20:35 UTC,vulnerabilities/vuln-0012.md
+vuln-0011,CVE-2026-48779 in ws 8.19.0 (type-only import; no runtime use in backend),INFO,2026-11-20 13:20:24 UTC,vulnerabilities/vuln-0011.md

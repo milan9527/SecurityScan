@@ -1,0 +1,969 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Strix",
+          "informationUri": "https://strix.ai",
+          "rules": [
+            {
+              "id": "CWE-639",
+              "name": "Cross-tenant IDOR on all knowledge-base routes (read/write/delete of other organizations' KBs and files)",
+              "shortDescription": {
+                "text": "Cross-tenant IDOR on all knowledge-base routes (read/write/delete of other organizations' KBs and files)"
+              },
+              "fullDescription": {
+                "text": "All knowledge-base management routes (`/api/knowledge-bases/*`) perform authentication but no organization-scoping on object lookups. `knowledgeBaseService` queries Prisma by bare record ID, so an authenticated user from any organization can read, modify, and delete another organization's knowledge bases, folders, and uploaded files."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "All knowledge-base management routes (`/api/knowledge-bases/*`) perform authentication but no organization-scoping on object lookups. `knowledgeBaseService` queries Prisma by bare record ID, so an authenticated user from any organization can read, modify, and delete another organization's knowledge bases, folders, and uploaded files.\n\nCross-tenant breach of knowledge-base confidentiality and integrity: an authenticated member of organization A can enumerate knowledge-base IDs and read org B's knowledge bases (names, descriptions, file listings), rename/soft-delete them, and modify or delete org B's uploaded knowledge files. Knowledge bases aggregate a tenant's RAG document corpus, so this exposes another tenant's content metadata and allows destructive modification.\n\nAdd organization scoping at the service layer: `findById(id, organizationId)` must use `findFirst({ where: { id, organization_id } })` (the pattern already used by `credential-vault.repository.ts`), and `update`/`delete`/folder/file operations must verify the parent record's organization before mutating. Alternatively, enforce org checks in the routes and pass `request.user.orgId` into every service call.",
+                "markdown": "All knowledge-base management routes (`/api/knowledge-bases/*`) perform authentication but no organization-scoping on object lookups. `knowledgeBaseService` queries Prisma by bare record ID, so an authenticated user from any organization can read, modify, and delete another organization's knowledge bases, folders, and uploaded files.\n\nCross-tenant breach of knowledge-base confidentiality and integrity: an authenticated member of organization A can enumerate knowledge-base IDs and read org B's knowledge bases (names, descriptions, file listings), rename/soft-delete them, and modify or delete org B's uploaded knowledge files. Knowledge bases aggregate a tenant's RAG document corpus, so this exposes another tenant's content metadata and allows destructive modification.\n\nAdd organization scoping at the service layer: `findById(id, organizationId)` must use `findFirst({ where: { id, organization_id } })` (the pattern already used by `credential-vault.repository.ts`), and `update`/`delete`/folder/file operations must verify the parent record's organization before mutating. Alternatively, enforce org checks in the routes and pass `request.user.orgId` into every service call."
+              },
+              "properties": {
+                "security-severity": "8.3",
+                "tags": [
+                  "security",
+                  "CWE-639",
+                  "stride:E"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "CWE-22",
+              "name": "Path traversal + git argument injection in plugin installation (installPlugins)",
+              "shortDescription": {
+                "text": "Path traversal + git argument injection in plugin installation (installPlugins)"
+              },
+              "fullDescription": {
+                "text": "The scope-plugin installation path (WorkspaceManager.installPlugins) joins an attacker-controlled plugin name into the filesystem without any traversal check, and passes an attacker-controlled git URL into git clone as a positional argument. An authenticated user with modify access on a business scope can make the backend git-clone a repository into an arbitrary directory outside the session workspace (arbitrary file write), and can inject git options such as --upload-pack to execute an arbitrary command."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The scope-plugin installation path (WorkspaceManager.installPlugins) joins an attacker-controlled plugin name into the filesystem without any traversal check, and passes an attacker-controlled git URL into git clone as a positional argument. An authenticated user with modify access on a business scope can make the backend git-clone a repository into an arbitrary directory outside the session workspace (arbitrary file write), and can inject git options such as --upload-pack to execute an arbitrary command.\n\nArbitrary file/directory write outside the session workspace as the backend process user (locally confirmed: repo cloned into /tmp/marker-plugin via a ../-laden plugin name), and arbitrary command execution via git argv injection (--upload-pack=touch /tmp/marker-uploadpack confirmed). Enables overwriting other tenants' session workspaces (cross-tenant integrity) and planting files into paths later executed or read by the backend/agent runtimes.\n\nValidate plugin.name and plugin.ref against a strict allowlist (e.g. ^[A-Za-z0-9._-]+$, no leading dash, no path separators) at the POST /plugins route and again in installPlugins before the join; reject any resolved target whose relative() from pluginsDir escapes it. Reject gitUrl/ref values beginning with a dash and pass them only after a `--` argument separator; allowlist the URL scheme to https/ssh. Apply the same validation to the DELETE plugin cleanup path, which rm -rf's join(sessionsDir, sess.name, '.claude', 'plugins', plugin.name).",
+                "markdown": "The scope-plugin installation path (WorkspaceManager.installPlugins) joins an attacker-controlled plugin name into the filesystem without any traversal check, and passes an attacker-controlled git URL into git clone as a positional argument. An authenticated user with modify access on a business scope can make the backend git-clone a repository into an arbitrary directory outside the session workspace (arbitrary file write), and can inject git options such as --upload-pack to execute an arbitrary command.\n\nArbitrary file/directory write outside the session workspace as the backend process user (locally confirmed: repo cloned into /tmp/marker-plugin via a ../-laden plugin name), and arbitrary command execution via git argv injection (--upload-pack=touch /tmp/marker-uploadpack confirmed). Enables overwriting other tenants' session workspaces (cross-tenant integrity) and planting files into paths later executed or read by the backend/agent runtimes.\n\nValidate plugin.name and plugin.ref against a strict allowlist (e.g. ^[A-Za-z0-9._-]+$, no leading dash, no path separators) at the POST /plugins route and again in installPlugins before the join; reject any resolved target whose relative() from pluginsDir escapes it. Reject gitUrl/ref values beginning with a dash and pass them only after a `--` argument separator; allowlist the URL scheme to https/ssh. Apply the same validation to the DELETE plugin cleanup path, which rm -rf's join(sessionsDir, sess.name, '.claude', 'plugins', plugin.name)."
+              },
+              "properties": {
+                "security-severity": "7.7",
+                "tags": [
+                  "security",
+                  "CWE-22",
+                  "stride:T",
+                  "stride:I"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+            },
+            {
+              "id": "CWE-862",
+              "name": "Hardcoded bypassPermissions with bypassable regex denylist enables unapproved arbitrary shell execution on backend host via agent tool calls",
+              "shortDescription": {
+                "text": "Hardcoded bypassPermissions with bypassable regex denylist enables unapproved arbitrary shell execution on backend host via agent tool calls"
+              },
+              "fullDescription": {
+                "text": "The backend's Claude agent runs with a hardcoded `permissionMode: 'bypassPermissions'` and `allowDangerouslySkipPermissions: true`. The only remaining guard is a small regex denylist (`dangerousCommandBlocker`) that is trivially bypassed, so any prompt the agent acts on — including instructions injected via retrieved documents, skills, or web content — results in arbitrary shell command execution on the backend host without any human approval."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The backend's Claude agent runs with a hardcoded `permissionMode: 'bypassPermissions'` and `allowDangerouslySkipPermissions: true`. The only remaining guard is a small regex denylist (`dangerousCommandBlocker`) that is trivially bypassed, so any prompt the agent acts on — including instructions injected via retrieved documents, skills, or web content — results in arbitrary shell command execution on the backend host without any human approval.\n\nArbitrary command execution on the backend server (the EC2 host running the Fastify backend, where the Claude CLI subprocess is spawned), outside the intended workspace directory and without any approval step. The executed process inherits the full backend environment, including Bedrock AWS credentials (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`) and an internal auth token (`AUTH_TOKEN`) explicitly injected into `options.env` — both readable via a single allowed command such as `env`. Host file exfiltration is equally unconstrained (`cat /etc/passwd` variants are only blocked by incidental regex matches, not by policy). Any authenticated user who can chat with an agent — or any attacker who can poison a document, skill, or fetched web page the agent reads — can trigger this.\n\nDo not hardcode `bypassPermissions` for host-side agent runs. Select a permission mode appropriate to the deployment (e.g. `default` or `acceptEdits`) so that Bash execution and out-of-workspace access require explicit human approval, and make the mode a server-side configuration decision rather than a constant in `buildOptions`. Replace the regex denylist with a positive allowlist enforced at the tool boundary: restrict the Bash tool to an approved command grammar (or run it inside a sandboxed container with no host credentials), canonicalize file paths (`path.resolve`) before the workspace-containment check instead of a raw `startsWith(cwd)` prefix comparison, and do not pass `AWS_*` credentials, `AUTH_TOKEN`, or the rest of `process.env` to the agent subprocess. Network egress from the agent should be restricted so exfiltration via `WebFetch` is not available to injected instructions.",
+                "markdown": "The backend's Claude agent runs with a hardcoded `permissionMode: 'bypassPermissions'` and `allowDangerouslySkipPermissions: true`. The only remaining guard is a small regex denylist (`dangerousCommandBlocker`) that is trivially bypassed, so any prompt the agent acts on — including instructions injected via retrieved documents, skills, or web content — results in arbitrary shell command execution on the backend host without any human approval.\n\nArbitrary command execution on the backend server (the EC2 host running the Fastify backend, where the Claude CLI subprocess is spawned), outside the intended workspace directory and without any approval step. The executed process inherits the full backend environment, including Bedrock AWS credentials (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`) and an internal auth token (`AUTH_TOKEN`) explicitly injected into `options.env` — both readable via a single allowed command such as `env`. Host file exfiltration is equally unconstrained (`cat /etc/passwd` variants are only blocked by incidental regex matches, not by policy). Any authenticated user who can chat with an agent — or any attacker who can poison a document, skill, or fetched web page the agent reads — can trigger this.\n\nDo not hardcode `bypassPermissions` for host-side agent runs. Select a permission mode appropriate to the deployment (e.g. `default` or `acceptEdits`) so that Bash execution and out-of-workspace access require explicit human approval, and make the mode a server-side configuration decision rather than a constant in `buildOptions`. Replace the regex denylist with a positive allowlist enforced at the tool boundary: restrict the Bash tool to an approved command grammar (or run it inside a sandboxed container with no host credentials), canonicalize file paths (`path.resolve`) before the workspace-containment check instead of a raw `startsWith(cwd)` prefix comparison, and do not pass `AWS_*` credentials, `AUTH_TOKEN`, or the rest of `process.env` to the agent subprocess. Network egress from the agent should be restricted so exfiltration via `WebFetch` is not available to injected instructions."
+              },
+              "properties": {
+                "security-severity": "9.9",
+                "tags": [
+                  "security",
+                  "CWE-862",
+                  "stride:E"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html"
+            },
+            {
+              "id": "strix-coverage/idor-cross-tenant-object-level-authorization",
+              "name": "IDOR / cross-tenant object-level authorization",
+              "shortDescription": {
+                "text": "Coverage: IDOR / cross-tenant object-level authorization"
+              },
+              "fullDescription": {
+                "text": "Coverage of IDOR / cross-tenant object-level authorization across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of IDOR / cross-tenant object-level authorization across the assessed attack surface.",
+                "markdown": "Coverage of IDOR / cross-tenant object-level authorization across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/authentication-and-tenant-scoped-authorization",
+              "name": "Authentication and tenant-scoped authorization",
+              "shortDescription": {
+                "text": "Coverage: Authentication and tenant-scoped authorization"
+              },
+              "fullDescription": {
+                "text": "Coverage of Authentication and tenant-scoped authorization across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Authentication and tenant-scoped authorization across the assessed attack surface.",
+                "markdown": "Coverage of Authentication and tenant-scoped authorization across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/shell-command-injection-in-container-command-wrappers",
+              "name": "Shell command injection in container command wrappers",
+              "shortDescription": {
+                "text": "Coverage: Shell command injection in container command wrappers"
+              },
+              "fullDescription": {
+                "text": "Coverage of Shell command injection in container command wrappers across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Shell command injection in container command wrappers across the assessed attack surface.",
+                "markdown": "Coverage of Shell command injection in container command wrappers across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/indirect-prompt-injection-reaching-tool-execution-boundary",
+              "name": "Indirect prompt injection reaching tool execution boundary",
+              "shortDescription": {
+                "text": "Coverage: Indirect prompt injection reaching tool execution boundary"
+              },
+              "fullDescription": {
+                "text": "Coverage of Indirect prompt injection reaching tool execution boundary across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Indirect prompt injection reaching tool execution boundary across the assessed attack surface.",
+                "markdown": "Coverage of Indirect prompt injection reaching tool execution boundary across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.1"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Cross-tenant IDOR on all knowledge-base routes (read/write/delete of other organizations' KBs and files)\n\nAll knowledge-base management routes (`/api/knowledge-bases/*`) perform authentication but no organization-scoping on object lookups. `knowledgeBaseService` queries Prisma by bare record ID, so an authenticated user from any organization can read, modify, and delete another organization's knowledge bases, folders, and uploaded files."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/api/knowledge-bases/*",
+                  "kind": "endpoint"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "aad50e46ec945814a646b48b2e88a8e4bd90a091d1291397187c990f4e66fd24"
+          },
+          "properties": {
+            "security-severity": "8.3",
+            "strix_vuln_class_hash": "ebf1ba63c404f36a89caddaa6fe5f69242fcb30f0ba18d9b0a595b1226f560fa",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "high",
+              "cvss": 8.3,
+              "timestamp": "2026-11-20 13:43:30 UTC",
+              "target": "/workspace/agentcore-superagent-update (super-agent/backend)",
+              "endpoint": "/api/knowledge-bases/*",
+              "method": "GET/PUT/DELETE/POST",
+              "cwe": "CWE-639",
+              "impact": "Cross-tenant breach of knowledge-base confidentiality and integrity: an authenticated member of organization A can enumerate knowledge-base IDs and read org B's knowledge bases (names, descriptions, file listings), rename/soft-delete them, and modify or delete org B's uploaded knowledge files. Knowledge bases aggregate a tenant's RAG document corpus, so this exposes another tenant's content metadata and allows destructive modification.",
+              "technical_analysis": "Route `src/routes/knowledge-base.routes.ts` guards every endpoint only with `[authenticate, requireModifyAccess]` — a role check, not a tenant check. Handlers call `knowledgeBaseService.findById(request.params.id)` etc. without passing `request.user.orgId`. In `src/services/knowledge-base.service.ts`:\n- `findById` (line 69): `prisma.knowledge_bases.findUnique({ where: { id } })` — no `organization_id` filter.\n- `update` (line 80) and `delete` (line 91): `update({ where: { id } })` — mutates any org's KB.\n- `renameFolder` (200), `deleteFolder` (215), `listFolders` (190): unscoped by organization.\n- File handlers in the route operate on `knowledge_files` by bare id.\n\nContrast with the correctly-scoped pattern in `credential-vault.repository.ts:37` (`findFirst({ where: { id, organization_id } })`), which shows the missing control.",
+              "remediation_steps": "Add organization scoping at the service layer: `findById(id, organizationId)` must use `findFirst({ where: { id, organization_id } })` (the pattern already used by `credential-vault.repository.ts`), and `update`/`delete`/folder/file operations must verify the parent record's organization before mutating. Alternatively, enforce org checks in the routes and pass `request.user.orgId` into every service call.",
+              "counterevidence": "Checked for mitigations: no `requireScopeAccess`/`requireAgentAccess` on these routes, no org filter in `knowledge-base.service.ts` read/update/delete/findById calls, and no global authz hook in route registration (`src/routes/index.ts` registers `knowledgeBaseRoutes` with a bare prefix). Only `listByOrganization` and `create` scope by org. No WAF or gateway-layer tenant filter exists in this codebase. The local repro follows production Prisma `where`-clause semantics exactly.",
+              "confidence": "high",
+              "severity_change_conditions": "If knowledge-base IDs were unguessable and never leaked this would not reduce the demonstrated IDOR; only confirmation of an upstream gateway tenant filter (none exists in this codebase) would lower severity.",
+              "poc": {
+                "description": "1. Authenticate as a member of org A. 2. GET /api/knowledge-bases/:id with an org B knowledge-base ID — 200 with org B data (organization_id of org B returned). 3. PUT /api/knowledge-bases/:id — renames org B's KB. 4. GET /api/knowledge-bases/:id/files — lists org B file records; PUT .../files/:fileId changes display metadata; DELETE .../files/:fileId removes org B's file record. 5. DELETE /api/knowledge-bases/:id soft-deletes org B's KB.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Cross-tenant IDOR on briefing routes (read/mark-read/archive other organizations' scope briefings)\n\nBriefing routes under `/api/business-scopes/:scopeId/briefings` filter only by `business_scope_id` and never by organization or caller membership. Any authenticated user can read another organization's scope briefings (titles, summaries, importance, agent identity) and mark them read or archive them."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/api/business-scopes/:scopeId/briefings*",
+                  "kind": "endpoint"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "5d921aa3769cbbe1fc4b92289f22a7012c36181df0d3e8adf5702f4d4ad1c9cb"
+          },
+          "properties": {
+            "security-severity": "5.4",
+            "strix_vuln_class_hash": "ebf1ba63c404f36a89caddaa6fe5f69242fcb30f0ba18d9b0a595b1226f560fa",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0002",
+              "severity": "medium",
+              "cvss": 5.4,
+              "timestamp": "2026-11-20 13:43:41 UTC",
+              "target": "/workspace/agentcore-superagent-update (super-agent/backend)",
+              "endpoint": "/api/business-scopes/:scopeId/briefings*",
+              "method": "GET/PATCH/DELETE",
+              "cwe": "CWE-639",
+              "impact": "Cross-tenant confidentiality and integrity breach on AI-generated business-scope briefings: another tenant's briefing content (titles, summaries, event metadata, agent display names) is disclosed, and read/archive state can be tampered with. Impact limited to briefing objects, hence lower than the KB finding.",
+              "technical_analysis": "`src/routes/briefing.routes.ts`: all four routes use only `preHandler: [authenticate]`. The GET handler (line ~29) queries `prisma.scope_briefings.findMany({ where: { business_scope_id: scopeId, ... } })` — no organization_id, no scope-membership check. The PATCH/DELETE handlers (lines ~58-84) call `prisma.scope_briefings.update({ where: { id, business_scope_id: scopeId } })` — again no tenant filter; the caller can act on any org's briefing given its scope and briefing IDs. The stats route likewise counts by scope only. Contrast with routes that correctly mount `requireScopeAccess` (e.g. scopeMemberships.routes.ts).",
+              "remediation_steps": "Add `organization_id: request.user.orgId` to every `scope_briefings` query, or mount `requireScopeAccess('member')` on these routes so scope membership is verified before the handler runs.",
+              "counterevidence": "Checked for mitigations: routes carry only `authenticate` (no `requireScopeAccess`, whose default extractor reads `params.scopeId` and would have enforced scope membership). No organization_id filter exists in any briefing query, and the schema has `organization_id` available on `scope_briefings` for enforcement. PoC used faithful Prisma where-clause semantics on real route plugins.",
+              "confidence": "high",
+              "severity_change_conditions": "If briefings were confirmed to contain no sensitive content (marketing-only) severity would drop; if they embed document excerpts severity would rise.",
+              "poc": {
+                "description": "1. Authenticate as member of org A. 2. GET /api/business-scopes/<orgB-scope-id>/briefings — returns org B's briefing list including titles/summaries. 3. PATCH .../briefings/:id/read — flips org B's briefing to read. 4. DELETE .../briefings/:id — archives org B's briefing.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-22",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Path traversal + git argument injection in plugin installation (installPlugins)\n\nThe scope-plugin installation path (WorkspaceManager.installPlugins) joins an attacker-controlled plugin name into the filesystem without any traversal check, and passes an attacker-controlled git URL into git clone as a positional argument. An authenticated user with modify access on a business scope can make the backend git-clone a repository into an arbitrary directory outside the session workspace (arbitrary file write), and can inject git options such as --upload-pack to execute an arbitrary command."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/agentcore-superagent-update (super-agent backend)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3ed788d0220b3a2e7204cfd65c753faffe83e7ee4cca63df3bf1dc0042f0b63e"
+          },
+          "properties": {
+            "security-severity": "7.7",
+            "strix_vuln_class_hash": "6c58275b746a212b66e13227aff805df9d5241b3a0ee6715ddb4941ae4556cfd",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0003",
+              "severity": "high",
+              "cvss": 7.7,
+              "timestamp": "2026-11-20 13:43:59 UTC",
+              "target": "/workspace/agentcore-superagent-update (super-agent backend)",
+              "cwe": "CWE-22",
+              "impact": "Arbitrary file/directory write outside the session workspace as the backend process user (locally confirmed: repo cloned into /tmp/marker-plugin via a ../-laden plugin name), and arbitrary command execution via git argv injection (--upload-pack=touch /tmp/marker-uploadpack confirmed). Enables overwriting other tenants' session workspaces (cross-tenant integrity) and planting files into paths later executed or read by the backend/agent runtimes.",
+              "technical_analysis": "POST /api/business-scopes/:id/plugins (super-agent/backend/src/routes/businessScopes.routes.ts:836) accepts name (only minLength 1 / maxLength 100 — no character or path validation), gitUrl, ref from an authenticated user with modify access, stored raw into scope_plugins. On session provisioning, chat.service.ts buildScopeForWorkspace loads them and WorkspaceManager.ensureSessionWorkspace → installPlugins (src/services/workspace-manager.ts:932) computes `const targetDir = join(pluginsDir, plugin.name)` (line 941) with no containment check, then `execFile('git', ['clone','--depth','1','--branch', plugin.ref, plugin.gitUrl, targetDir])` (lines 949-952). Two primitives: (1) plugin.name containing `../` or an absolute path makes git clone write a full repo tree outside the workspace; (2) plugin.gitUrl is positional but git parses a leading-dash value as an option, so `--upload-pack=<cmd>` or `-o ProxyCommand=…` executes an arbitrary command with backend privileges — execFile's argv-array form does not mitigate option injection. Local replication of the exact sink code confirmed both primitives.",
+              "remediation_steps": "Validate plugin.name and plugin.ref against a strict allowlist (e.g. ^[A-Za-z0-9._-]+$, no leading dash, no path separators) at the POST /plugins route and again in installPlugins before the join; reject any resolved target whose relative() from pluginsDir escapes it. Reject gitUrl/ref values beginning with a dash and pass them only after a `--` argument separator; allowlist the URL scheme to https/ssh. Apply the same validation to the DELETE plugin cleanup path, which rm -rf's join(sessionsDir, sess.name, '.claude', 'plugins', plugin.name).",
+              "counterevidence": "Checked all paths for controls: route schema (businessScopes.routes.ts:839) allows any string; DB stores raw; buildScopeForWorkspace passes raw; installPlugins has no name validation. deleteWorkspaceSkill DOES have a startsWith guard (workspace-manager.ts:1420), proving the pattern was known but not applied here. gitUrl must be a clonable URL for the traversal variant, but the --upload-pack variant needs no valid repo.",
+              "confidence": "high",
+              "confidence_rationale": "Sink code read in full (complete source→sink trace); escape behavior of join+mkdir/cp and git-clone-into-traversal-path both demonstrated locally with exact code replicated. Only unexecuted step is the full HTTP route round-trip, straight-line code with no intervening sanitization.",
+              "severity_change_conditions": "Confirmation that the backend runs with privileges that make planted files auto-executed (cron, systemd, module resolution paths) would raise this to critical; a read-only container FS would lower impact but not the vulnerability class.",
+              "poc": {
+                "description": "1. POST /api/business-scopes/:id/plugins with name `../../../../../../../tmp/marker-plugin`, gitUrl of any reachable repo, ref main (businessScopes.routes.ts:836; requires only authenticate + requireModifyAccess). 2. Start any chat session in that scope — ensureSessionWorkspace calls installPlugins, which computes targetDir = join(workspace/.claude/plugins, plugin.name) and runs `git clone --depth 1 --branch ref gitUrl targetDir`. 3. Observe the cloned repo written outside the workspace base dir. Command-exec variant: set gitUrl to `--upload-pack=<cmd>`; git parses it as an option and executes it.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-22",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Path traversal via skill/generated-skill names in workspace provisioning (downloadSkill, installSkillToWorkspace, generateAgentSubagentFiles)\n\nSkill names flow unvalidated from authenticated-user-controlled and externally-derived sources into path joins in WorkspaceManager.downloadSkill, installSkillToWorkspace, and generateAgentSubagentFiles (generated skills), allowing arbitrary file write outside the workspace root during session workspace provisioning. A skill or generated-skill name containing ../ makes the backend write attacker-controlled SKILL.md content (skill body) to arbitrary paths as the backend process user."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/agentcore-superagent-update (super-agent backend)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3ed788d0220b3a2e7204cfd65c753faffe83e7ee4cca63df3bf1dc0042f0b63e"
+          },
+          "properties": {
+            "security-severity": "6.5",
+            "strix_vuln_class_hash": "6c58275b746a212b66e13227aff805df9d5241b3a0ee6715ddb4941ae4556cfd",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0004",
+              "severity": "medium",
+              "cvss": 6.5,
+              "timestamp": "2026-11-20 13:44:16 UTC",
+              "target": "/workspace/agentcore-superagent-update (super-agent backend)",
+              "cwe": "CWE-22",
+              "impact": "Arbitrary file write (content partially attacker-controlled via skill body / generated-skill body) outside the session workspace, as the backend process user. Enables overwriting config, other tenants' workspaces, or any file writable by the backend user.",
+              "technical_analysis": "downloadSkill (src/services/workspace-manager.ts:968) computes `const skillDir = join(targetDir, skill.name)` with no traversal check, then either `cp(skill.localPath, skillDir, {recursive:true})` (localPath from skill metadata, also unvalidated) or writes SKILL.md with skill.body/description (inline fallback, lines 1020-1046). skill.name originates from POST /api/skills (skills.routes.ts:51 — no schema on name, only authenticate), marketplace install (name derived from external GitHub/skills.sh content: installRef substring or directory/file names from attacker-hosted repos), zip upload (parent directory name inside an attacker-supplied archive), and generated skills from agent model_config.generatedSkills / tools[].name (agents.routes.ts:177 model_config: additionalProperties true). generateAgentSubagentFiles (workspace-manager.ts:738+) similarly joins skillsDir with generated skill.name and writes SKILL.md, and joins agentsDir with agent.name + '.md'. Session provisioning (ensureSessionWorkspace, called from chat.service on every new chat/session) makes this reachable by any user who can start a chat in a scope with the malicious skill bound. Local replication of the exact join+mkdir+write logic confirmed the out-of-root write.",
+              "remediation_steps": "Apply a single shared containment helper at the write sites: validate skill/subagent/generated-skill names against ^[A-Za-z0-9._-]+$ (no separators, no leading dash) at API ingestion (skills.routes.ts create/patch, skill-marketplace install/installFromZip, agents model_config.generatedSkills and tools[].name) and re-check in downloadSkill, installSkillToWorkspace, and generateAgentSubagentFiles that the resolved path stays inside the target directory (reuse the startsWith/relative pattern already present in deleteWorkspaceSkill). Same for agent.name in the .claude/agents/{name}.md join.",
+              "counterevidence": "Searched for sanitization of skill.name at every hop: skills.routes.ts:51 POST /api/skills applies no schema/regex to name; skill.service.createSkill stores raw; buildScopeForWorkspace (chat.service.ts:425-460) maps it raw; downloadSkill and generateAgentSubagentFiles contain no containment checks. The one guard that exists (deleteWorkspaceSkill startsWith, workspace-manager.ts:1420) is not on the write path. installFromZip/GitHub paths derive names from external content rather than validating, which broadens rather than restricts.",
+              "confidence": "high",
+              "confidence_rationale": "Sink code read in full and traversal write of SKILL.md confirmed locally; the DB-side control of skill.name (via /api/skills create with unvalidated name) is a direct straight-line path with no intervening sanitization.",
+              "severity_change_conditions": "Demonstrating that a planted file is auto-executed by the backend or runtime (module resolution, cron) would raise to critical/high-with-RCE; restricting skill creation to tenant-admin roles would lower privileges_required.",
+              "poc": {
+                "description": "1. Create a skill via POST /api/skills (skills.routes.ts:51 — no name validation) or via marketplace import whose derived name contains `../` segments, with metadata.body set. 2. Bind the skill to a scope and start a chat session. 3. ensureSessionWorkspace → downloadSkill computes join(skillsDir, skill.name) and writes SKILL.md with the attacker-controlled body — confirmed locally that this lands outside the workspace root.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-22",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Zip-slip in extractSkillZip python3 -m zipfile fallback\n\nThe skill-archive extraction fallback `python3 -m zipfile -e` does not sanitize archive member paths, so a skill.zip containing `../` members writes files outside the extraction directory (zip-slip) during workspace provisioning."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/agentcore-superagent-update (super-agent backend)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "08a566088641be8b9f2f3a102129314c1d66d68fe8c01b04c6197861b03b428a"
+          },
+          "properties": {
+            "security-severity": "5.3",
+            "strix_vuln_class_hash": "1840cf17ecf3eff65017ba6be739cbc9fcaf385706fa1e4f1f80923d904623ae",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0005",
+              "severity": "medium",
+              "cvss": 5.3,
+              "timestamp": "2026-11-20 13:44:29 UTC",
+              "target": "/workspace/agentcore-superagent-update (super-agent backend)",
+              "cwe": "CWE-22",
+              "impact": "Arbitrary file write outside the skill directory as the backend process user, when the python3 fallback is used.",
+              "technical_analysis": "extractSkillZip (src/services/workspace-manager.ts:1049-1061) first tries `unzip -o <zip> -d <dir>` and on failure falls back to `python3 -m zipfile -e <zip> <dir>`. Python's zipfile module extracts member names without path sanitization, so archive members containing `../` escape targetDir. The zip originates from S3 (skill.s3Prefix + 'skill.zip'), i.e. from skill uploads (skill-marketplace installFromZip / upload flows), which accept user-supplied archives. Local PoC confirmed the escape.",
+              "remediation_steps": "Replace the python3 -m zipfile fallback with a sanitizing extractor (reject members with absolute paths or `..` segments, verify resolved destination stays inside targetDir), or drop the fallback and fail closed when unzip is unavailable.",
+              "counterevidence": "Primary path uses system unzip, which refuses `../` members (Info-ZIP behavior) and would block the attack; the python3 fallback only runs when unzip is unavailable or errors. The route only accepts .zip/.tar.gz/.tgz extensions (skill-marketplace.routes.ts:272), which does not constrain archive member names.",
+              "confidence": "medium",
+              "confidence_rationale": "zip-slip behavior of python3 -m zipfile confirmed locally with a crafted archive; reachability is conditional on the python fallback branch being taken (unzip missing/failing), which is environment-dependent and could not be verified against a deployed host.",
+              "severity_change_conditions": "Confirmation that the production image lacks `unzip` (forcing the fallback on every extraction) would raise this to high.",
+              "poc": {
+                "description": "1. Upload a skill whose skill.zip contains a member named `../../../../../tmp/marker-zipslip.txt` (stored to S3 via the normal skill upload path). 2. Ensure the extraction path takes the python3 fallback (unzip unavailable/failing on the host). 3. Start a session that provisions the skill — extractSkillZip writes the member outside the skill dir.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-862",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Hardcoded bypassPermissions with bypassable regex denylist enables unapproved arbitrary shell execution on backend host via agent tool calls\n\nThe backend's Claude agent runs with a hardcoded `permissionMode: 'bypassPermissions'` and `allowDangerouslySkipPermissions: true`. The only remaining guard is a small regex denylist (`dangerousCommandBlocker`) that is trivially bypassed, so any prompt the agent acts on — including instructions injected via retrieved documents, skills, or web content — results in arbitrary shell command execution on the backend host without any human approval."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (Claude Agent execution path)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "6e418d06a1d64a34f12048dba198af8a1920bd2ce2d21971ff1fb3849b193607"
+          },
+          "properties": {
+            "security-severity": "9.9",
+            "strix_vuln_class_hash": "5b65fc0e3be20d984e94a01c2ec4e529c5596582975f67e755e47f73eb3d72c3",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0006",
+              "severity": "critical",
+              "cvss": 9.9,
+              "timestamp": "2026-11-20 13:44:41 UTC",
+              "target": "super-agent/backend (Claude Agent execution path)",
+              "method": "POST",
+              "cwe": "CWE-862",
+              "impact": "Arbitrary command execution on the backend server (the EC2 host running the Fastify backend, where the Claude CLI subprocess is spawned), outside the intended workspace directory and without any approval step. The executed process inherits the full backend environment, including Bedrock AWS credentials (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`) and an internal auth token (`AUTH_TOKEN`) explicitly injected into `options.env` — both readable via a single allowed command such as `env`. Host file exfiltration is equally unconstrained (`cat /etc/passwd` variants are only blocked by incidental regex matches, not by policy). Any authenticated user who can chat with an agent — or any attacker who can poison a document, skill, or fetched web page the agent reads — can trigger this.",
+              "technical_analysis": "`ClaudeAgentService.buildOptions` constructs the SDK options for every chat conversation:\n\n```ts title=backend/src/services/claude-agent.service.ts startLineNumber=405 endLineNumber=415\nconst options: ClaudeCodeOptions = {\n  systemPrompt,\n  allowedTools: [...DEFAULT_ALLOWED_TOOLS, 'Skill'],\n  cwd: workspacePath,\n  model,\n  permissionMode: 'bypassPermissions',\n  allowDangerouslySkipPermissions: true,\n  hooks: { PreToolUse: preToolUseHooks },\n```\n\n`DEFAULT_ALLOWED_TOOLS` is `['Bash','Read','Write','Edit','Glob','Grep','WebFetch']` (line 217). With `bypassPermissions`, the Claude Code CLI/SDK executes every tool call without prompting any user. The only security control on this path is the `PreToolUse` hook chain `[dangerousCommandBlocker, binaryFileReadBlocker]` from `claude-hooks.ts`. `dangerousCommandBlocker` compares `tool_input.command` against 7 regexes (5 \"dangerous\" patterns such as `rm -rf /`, `curl | bash`, plus path-escape patterns matching `..` and absolute paths under a fixed directory list `/Users|home|etc|var|tmp|...`). This is a denylist, not an approval boundary: any command that does not match those literals is executed. Verified locally against the real hook code: `python3 -c \"open('/tmp/X','w')\"`, `node -e \"fs.writeFileSync('/tmp/X')\"`, and writes to `$HOME` all pass. The file-path check for Read/Write/Edit uses `filePath.startsWith(cwd)` on the un-normalized string (`claude-hooks.ts:149`), so a path like `<cwd>/../../etc/shadow` passes the containment check. The settings escalation is systemic: `WorkspaceManager` also writes sub-agent definition files containing `permissionMode: bypassPermissions` (`workspace-manager.ts:767`) and a `settings.json` with `permissions.allow` for the same tool list, so the bypass is re-instantiated through the `Skill`/`Task` delegation paths too. Additionally, `buildOptions` copies `...process.env` and Bedrock AWS credentials into the agent subprocess environment (`claude-agent.service.ts:436-449`), so an executed command can read the backend's cloud credentials.",
+              "remediation_steps": "Do not hardcode `bypassPermissions` for host-side agent runs. Select a permission mode appropriate to the deployment (e.g. `default` or `acceptEdits`) so that Bash execution and out-of-workspace access require explicit human approval, and make the mode a server-side configuration decision rather than a constant in `buildOptions`. Replace the regex denylist with a positive allowlist enforced at the tool boundary: restrict the Bash tool to an approved command grammar (or run it inside a sandboxed container with no host credentials), canonicalize file paths (`path.resolve`) before the workspace-containment check instead of a raw `startsWith(cwd)` prefix comparison, and do not pass `AWS_*` credentials, `AUTH_TOKEN`, or the rest of `process.env` to the agent subprocess. Network egress from the agent should be restricted so exfiltration via `WebFetch` is not available to injected instructions.",
+              "counterevidence": "Considered defenses: (1) the PreToolUse hook chain is real and registered on every conversation (verified in buildOptions output, PreToolUse hook entries: 1), but it is a fixed 7-regex denylist, not an approval or allowlist — it cannot constrain the input class; (2) cwd confines Write/Edit file_path via startsWith(cwd), but the check is on the un-normalized string and Bash is entirely unconstrained apart from the patterns; (3) no other permission gate exists — permissionMode is hardcoded, not read from request or DB, so no stronger user/org setting can raise it. The only genuine limitation is that this is the intended \"dangerous by design\" agent mode, which is precisely the control weakness being reported.",
+              "confidence": "high",
+              "severity_change_conditions": "Evidence that agents are only ever invoked with sanitized/whitelisted prompts and never consume untrusted retrieved content would lower this; conversely, confirming a live deployment reaches the internet with real AWS credentials in the agent environment would cement critical severity.",
+              "poc": {
+                "description": "1. Import the repository's real PreToolUse hook `dangerousCommandBlocker` from `backend/src/services/claude-hooks.ts` and instantiate the real `ClaudeAgentService.buildOptions()` with the repo's own `.env`. 2. Confirm the emitted SDK options hardcode `permissionMode: 'bypassPermissions'` and `allowDangerouslySkipPermissions: true` with `Bash`, `Write`, `Edit`, `WebFetch` in `allowedTools`. 3. Feed the Bash tool input `python3 -c \"open('/tmp/PWNED_VIA_HOOK_BYPASS','w')\"` through the hook — it returns no block decision (allow). 4. Execute that same command exactly as the SDK's Bash tool would — the marker file `/tmp/PWNED_VIA_HOOK_BYPASS` appears on the host filesystem. 5. Also observe the file_path guard accepts `<cwd>/../../etc/shadow` because it uses an un-normalized `startsWith(cwd)` prefix check.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-862",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "AgentCore runtime executes all agent tool calls with no approval or PreToolUse security hook (bypassPermissions, unfiltered Bash/WebFetch/Write)\n\nThe AgentCore container runtime (`agentcore/src/agent-runner.ts`) runs the Claude agent with hardcoded `permissionMode: 'bypassPermissions'` and registers **no security hook at all** — its only hooks are S3 file-sync observers. Every tool call, including shell commands, web fetches, and arbitrary file writes, executes with zero approval or filtering, so injected instructions in restored workspace files, RAG results, or fetched web content translate directly into unapproved execution inside the runtime container."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/agentcore (AgentCore runtime container)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d4225bfbdfffc1284cffab92da93cdb405eaa36662a93c276dd33bf62c19833d"
+          },
+          "properties": {
+            "security-severity": "9.9",
+            "strix_vuln_class_hash": "a6072715f915072500f3db8195d44a5d1a2c800d0e786974fdcc18eb04ed191c",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0007",
+              "severity": "critical",
+              "cvss": 9.9,
+              "timestamp": "2026-11-20 13:45:00 UTC",
+              "target": "super-agent/agentcore (AgentCore runtime container)",
+              "method": "POST",
+              "cwe": "CWE-862",
+              "impact": "Arbitrary unapproved shell command execution, arbitrary file write, and unrestricted network egress (WebFetch/WebSearch) inside the AgentCore runtime container for any instruction the model acts on — including instructions from prompt-injection sources: workspace files restored from S3 (skills, sub-agent definitions, `CLAUDE.md`), knowledge/RAG results fetched via the injected backend token, and fetched web pages. The container holds the workspace, the `AUTH_TOKEN` backend credential, and any container-resident credentials; the Stop-hook full S3 sync (`syncWorkspaceToS3`) then mirrors attacker-created or modified files back into the organization's persistent S3 workspace, persisting the compromise across sessions.",
+              "technical_analysis": "`runAgent()` in `agentcore/src/agent-runner.ts` builds the SDK options for every AgentCore invocation:\n\n```ts title=agentcore/src/agent-runner.ts startLineNumber=283 endLineNumber=289\nconst baseOptions: Record<string, unknown> = {\n  systemPrompt: payload.system_prompt ?? undefined,\n  allowedTools: payload.allowed_tools ?? DEFAULT_TOOLS,\n  cwd: '/workspace',\n  permissionMode: 'bypassPermissions',\n  allowDangerouslySkipPermissions: true,\n```\n\n`DEFAULT_TOOLS` (line 23) includes `Bash`, `Write`, `Edit`, `WebSearch`, `WebFetch`, `Task`, `Skill`. Hooks are registered **only** when S3 workspace sync is configured, and those hooks are `PostToolUse` (matcher `Write|Edit`, uploads the file the tool already wrote) and `Stop` (full workspace upload). A repository-wide search of `agentcore/src/` shows zero `PreToolUse` registrations — unlike the backend runtime (`claude-agent.service.ts`), which at least installs `dangerousCommandBlocker`. So in the AgentCore path there is no security inspection of any tool invocation: the model's tool call goes straight to execution. The prompt itself is attacker-influenceable through several untrusted channels: (a) `restoreWorkspaceFromS3` (`index.ts:46-53`) copies every object under the org/session S3 prefix — including skill `SKILL.md` files, sub-agent `.md` definitions, and `CLAUDE.md` — into `/workspace` before the run, all of which the SDK loads via `settingSources: ['project']`; (b) `index.ts:73-75` sets `process.env.AUTH_TOKEN` from the payload so the agent can query the backend RAG; (c) `WebFetch`/`WebSearch` pull arbitrary web content mid-run. Any instruction embedded in those sources is executed with no approval step, and attacker-written files persist via `syncWorkspaceToS3`.",
+              "remediation_steps": "Port the PreToolUse guard chain from the backend runtime into `agent-runner.ts` as a baseline, then move beyond a denylist: default the container runtime to a permission mode requiring approval for Bash and out-of-workspace access (or restrict `allowedTools` per deployment), register a PreToolUse hook that enforces workspace containment via canonicalized path comparison, and restrict outbound network access from the container so injected instructions cannot exfiltrate data or fetch additional payloads via WebFetch/WebSearch. Ensure the injected `AUTH_TOKEN` is scoped to the minimum API surface (read-only RAG search) rather than a full member-role token.",
+              "counterevidence": "Considered: the runtime does register hooks (PostToolUse S3-sync, Stop full sync), but neither intercepts tool execution; `payload.allowed_tools` could theoretically narrow the tool list, but no backend caller sets it (grep shows no producer), so the default full list applies; the container is a microVM, which limits host blast radius relative to the backend-host finding, but the workspace, the injected backend token, and any credentials placed in the container remain fully exposed; `WebFetch`/`WebSearch` have no egress restriction anywhere in the runtime. No control was found that gates or inspects a tool call before execution.",
+              "confidence": "high",
+              "severity_change_conditions": "Evidence that `payload.allowed_tools` is populated with a restrictive list by the backend in real deployments would lower this; confirmation that microVM isolation plus IAM blocks all credential and S3 reachability would lower confidentiality/integrity impact.",
+              "poc": {
+                "description": "1. Read `agentcore/src/agent-runner.ts` `runAgent()` and `agentcore/src/index.ts`: confirm `permissionMode: 'bypassPermissions'` + `allowDangerouslySkipPermissions: true` with `DEFAULT_TOOLS` including `Bash`, `Write`, `Edit`, `WebSearch`, `WebFetch`, `Task`, `Skill`. 2. Enumerate all hook registrations: only `PostToolUse` (S3 sync of Write/Edit results) and `Stop` (full workspace sync) exist — there is no `PreToolUse` security hook in the entire `agentcore/src/` tree. 3. Note the untrusted-content entry points: `restoreWorkspaceFromS3` restores organization-controlled/S3-restored skill and agent files into `/workspace` before the run, and `index.ts` sets `AUTH_TOKEN` from the payload so the agent can call the backend RAG API. Under `bypassPermissions` the SDK executes any Bash tool call derived from these sources immediately — no human approval step exists in this code path. Local-only constraint prevented invoking a live Bedrock AgentCore runtime; the absence of the control is a complete static fact of the executed code path.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Cross-tenant IDOR in userGroups member removal and skill/MCP access-grant endpoints (no org scoping)\n\nThe user-group member and access-grant endpoints operate on bare group/skill/MCP IDs with no organization scoping. An authenticated user of any tenant can remove members from another tenant's user group and rewrite the full access-grant list (skill and MCP server group access) for another organization's skills and MCP servers."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (local repo /workspace/agentcore-superagent-update)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d86166bcd82d000e7ec2d0b0ad3b644f6e3ed0e37f448a6199ff08bddabaa294"
+          },
+          "properties": {
+            "security-severity": "7.6",
+            "strix_vuln_class_hash": "ebf1ba63c404f36a89caddaa6fe5f69242fcb30f0ba18d9b0a595b1226f560fa",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0008",
+              "severity": "high",
+              "cvss": 7.6,
+              "timestamp": "2026-11-20 13:46:39 UTC",
+              "target": "super-agent/backend (local repo /workspace/agentcore-superagent-update)",
+              "method": "DELETE, PUT, GET",
+              "cwe": "CWE-639",
+              "impact": "Cross-tenant integrity: arbitrary removal of members from a foreign tenant's user groups (access revocation/DoS on their workflows), and full rewrite of skill_group_access / mcp_group_access rows for foreign tenants' skills and MCP servers — granting or revoking cross-org access to sensitive skills and MCP tool servers, a lateral-movement primitive.",
+              "technical_analysis": "Route handlers (`routes/userGroups.routes.ts:147` DELETE /:id/members/:userId, `:160` PUT /skills/:skillId/access, `:182` PUT /mcp/:mcpId/access) pass raw path params straight to the repository. `userGroup.repository.ts` scopes findById/update/delete by organization_id (line 48), but `removeMember` (line 94-98) deletes `user_group_members` by bare `group_id`+`user_id`, `grantSkillAccess` (line 112-120) deletes and re-creates `skill_group_access` by bare `skill_id`, and `grantMcpAccess` (line 144-151) does the same for `mcp_group_access` by bare `mcp_server_id`. `getSkillGroupIds`/`getMcpGroupIds` (lines 122, 153) also leak cross-org group IDs unscoped. No organization_id appears anywhere in these where clauses, so a caller from Org A operating on Org B's IDs succeeds.",
+              "remediation_steps": "Add organization_id to every where clause in userGroup.repository.ts (addMember, removeMember, grantSkillAccess, grantMcpAccess, getSkillGroupIds, getMcpGroupIds) and have route handlers pass request.user.orgId through, matching the pattern already used by findById/update/delete in the same repository.",
+              "counterevidence": "Checked for controls: requireModifyAccess runs on mutating routes but is a role gate, not an object-ownership check — it never inspects orgId against the target row. Repository has no org filter on removeMember/grantSkillAccess. The same repository's findById/update/delete DO filter by organization_id, confirming org scoping is the intended pattern and is absent only on these sinks.",
+              "confidence": "high",
+              "confidence_rationale": "Complete source-to-sink trace with executed local PoC against real route code with mocked Prisma; no live multi-tenant deployment exists to run the HTTP request end-to-end (local-only scope).",
+              "severity_change_conditions": "A live two-tenant deployment test would confirm end-to-end; if group/skill/MCP IDs proved unguessable in practice, exploitability (attack_complexity) would rise and severity could drop.",
+              "poc": {
+                "description": "1. Authenticate as any user in Org A. 2. DELETE /api/user-groups/:id/members/:userId with a foreign org's group id — userGroupRepository.removeMember deletes by bare group_id+user_id with no org filter. 3. PUT /api/user-groups/skills/:skillId/access (and /mcp/:mcpId/access) with a foreign skill/MCP id — grantSkillAccess/grantMcpAccess first deleteMany by bare skill_id/mcp_server_id then re-create grants, cross-tenant. Local unit PoC (vitest, mocked Prisma) confirms the Prisma where clauses contain no organization scoping.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Cross-tenant IDOR in business-scope membership role update and removal (no org scoping)\n\nBusiness-scope membership update and removal endpoints operate on bare membership IDs with no organization scoping. An authenticated user who is scope-admin of any scope in their own org can change a member's role to 'admin' on, or delete, a scope membership belonging to another organization, escalating or revoking a foreign tenant's members."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (local repo /workspace/agentcore-superagent-update)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "9113e9da73161b8ce6a5568131d639d9f371aec9cab8fdc13927d4b38737dc6d"
+          },
+          "properties": {
+            "security-severity": "7.1",
+            "strix_vuln_class_hash": "ebf1ba63c404f36a89caddaa6fe5f69242fcb30f0ba18d9b0a595b1226f560fa",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0009",
+              "severity": "high",
+              "cvss": 7.1,
+              "timestamp": "2026-11-20 13:46:50 UTC",
+              "target": "super-agent/backend (local repo /workspace/agentcore-superagent-update)",
+              "method": "PATCH, DELETE",
+              "cwe": "CWE-639",
+              "impact": "Cross-tenant integrity: an org-A scope-admin can grant 'admin' role to any user (including the attacker) on an org-B scope, or remove org-B members from their scopes — privilege escalation into a foreign tenant's agent scopes (which control skills, plugins, IM channels).",
+              "technical_analysis": "routes/scopeMemberships.routes.ts PATCH /:id/members/:membershipId (line ~115) and DELETE /:id/members/:membershipId (line ~138) call scopeAccessService.updateMemberRole / removeMember with request.params.membershipId only. scopeAccess.service.ts lines 122-128 pass it straight through, and scopeMembership.repository.ts updateRole (line 86-91) and delete (line 96-98) run prisma.scope_memberships.update/delete with where: { id } — no organization_id, and no check that the membership belongs to the scope in the URL path. requireScopeAccess gates on the caller's access to the path scope, not on the target membership's scope or org.",
+              "remediation_steps": "In scopeMembership.repository.ts (updateRole line 86, delete line 96) add organization_id scoping — either filter by the caller's org (passing it from the route handler through scopeAccessService) or first verify the membership's business_scope_id resolves to the caller's organization and to the scope named in the URL path, rejecting mismatches.",
+              "counterevidence": "requireScopeAccess('admin') on the mutation routes does verify the caller is an admin of the scope named in the URL path (:id) — but the target row deleted is selected solely by membershipId, which is never checked to belong to that path scope. The enrichment query in the GET members route (profiles.findMany by user_id) is also org-free but only returns public profile fields.",
+              "confidence": "high",
+              "confidence_rationale": "Complete source-to-sink trace with executed local PoC against real repository code with mocked Prisma; no live multi-tenant deployment exists to run the HTTP request end-to-end (local-only scope).",
+              "severity_change_conditions": "A live two-tenant deployment test would confirm end-to-end; if membership IDs proved unguessable in practice, attack_complexity would rise and severity could drop.",
+              "poc": {
+                "description": "1. Authenticate as a user with admin access to a scope in Org A. 2. PATCH /api/business-scopes/:myScopeId/members/:membershipId with role 'admin', where membershipId belongs to Org B — scopeMembershipRepository.updateRole updates by bare id. 3. DELETE variant removes a foreign membership by bare id. Local unit PoC (vitest, mocked Prisma) confirms the where clause contains only { id } with no organization_id.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Cross-tenant IDOR in business-scope plugin/MCP delete and list routes (no org scoping)\n\nThe business-scope plugin and MCP-server management routes issue DELETE statements scoped only by plugin/assignment ID and scope ID with no organization_id filter, and the plugin/MCP listing routes read cross-org data the same way. An authenticated user of any tenant can delete another tenant's scope plugins (including removing their cloned directories from disk) and detach their MCP server assignments."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (local repo /workspace/agentcore-superagent-update)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "52340c747d9a7f58fb6effa3371e6015d92926c6ed83c9467d5357fb82231915"
+          },
+          "properties": {
+            "security-severity": "7.6",
+            "strix_vuln_class_hash": "ebf1ba63c404f36a89caddaa6fe5f69242fcb30f0ba18d9b0a595b1226f560fa",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0010",
+              "severity": "high",
+              "cvss": 7.6,
+              "timestamp": "2026-11-20 13:47:03 UTC",
+              "target": "super-agent/backend (local repo /workspace/agentcore-superagent-update)",
+              "method": "DELETE, GET",
+              "cwe": "CWE-639",
+              "impact": "Cross-tenant integrity/availability: delete a foreign tenant's scope plugins (also recursively deletes their cloned plugin directories from session workspaces on disk) and detach their MCP server assignments, disrupting foreign tenants' agent capabilities; and read foreign tenants' plugin git URLs and MCP server configs (including host addresses) via the unscoped GET routes.",
+              "technical_analysis": "In routes/businessScopes.routes.ts the DELETE /:id/plugins/:pluginId handler (lines ~880-927) executes `DELETE FROM scope_plugins WHERE id = ${pluginId}::uuid AND business_scope_id = ${scopeId}::uuid` with no organization_id in the WHERE, then removes cloned plugin directories for that scope. DELETE /:id/mcp-servers/:assignmentId (lines ~1001-1022) executes `DELETE FROM scope_mcp_servers WHERE id = ${assignmentId}::uuid AND business_scope_id = ${scopeId}::uuid` — also unscoped. GET /:id/plugins (~821) and GET /:id/mcp-servers (~940) SELECT by business_scope_id only, leaking foreign plugin git_urls and MCP server configs (host_address, config JSON). The config_version bump after each mutation is scoped by org but only updates the count, not the deletion.",
+              "remediation_steps": "In businessScopes.routes.ts, verify the target scope belongs to the caller's organization (businessScopeService.getBusinessScopeById(id, orgId)) before the DELETE/SELECT statements on plugin delete, plugin list, MCP assignment delete, and MCP list — matching the verification already present on the POST routes.",
+              "counterevidence": "POST plugin and POST mcp-servers routes DO verify scope ownership via businessScopeService.getBusinessScopeById(id, orgId) before writing — confirming the codebase's intended pattern, absent only on the delete/list routes. requireModifyAccess is a role gate, not an ownership check. Note org_id only appears in the config_version bump UPDATE, which does not restrict the DELETE statements.",
+              "confidence": "high",
+              "confidence_rationale": "Complete source-to-sink trace verified directly in route code (raw SQL where clauses read verbatim); no live deployment available for HTTP-level reproduction (local-only scope).",
+              "severity_change_conditions": "A live two-tenant deployment test would confirm end-to-end; if the raw DELETE affected 0 rows for foreign scopes due to an unverified DB-level control, severity would drop.",
+              "poc": {
+                "description": "1. Authenticate as any user in Org A. 2. DELETE /api/business-scopes/:scopeId/plugins/:pluginId with Org B's scope ID and plugin ID — the raw SQL deletes by plugin_id + scope_id only; org_id appears in no WHERE clause of the DELETE. 3. The route then removes cloned plugin directories under workspaceBaseDir/<orgB>/<scopeB>/sessions. 4. DELETE /api/business-scopes/:id/mcp-servers/:assignmentId similarly deletes scope_mcp_servers by assignment_id + scope_id only. GET /:id/plugins and /:id/mcp-servers also leak foreign data (plugin git_urls, MCP configs).",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Cross-tenant IDOR in support agent-group member removal (no org scoping)\n\nThe support-settings agent-group member removal endpoint deletes group members by bare group and user IDs with no organization scoping, allowing an authenticated user of one tenant to remove members from another tenant's support agent groups."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (local repo /workspace/agentcore-superagent-update)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "98bf5fca95730209df2ef9125630f432fd4262a783bf831f8a2eadc1d4d17911"
+          },
+          "properties": {
+            "security-severity": "7.1",
+            "strix_vuln_class_hash": "ebf1ba63c404f36a89caddaa6fe5f69242fcb30f0ba18d9b0a595b1226f560fa",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0011",
+              "severity": "high",
+              "cvss": 7.1,
+              "timestamp": "2026-11-20 13:47:11 UTC",
+              "target": "super-agent/backend (local repo /workspace/agentcore-superagent-update)",
+              "method": "DELETE",
+              "cwe": "CWE-639",
+              "impact": "Cross-tenant integrity: removal of members from a foreign tenant's support agent groups, disrupting their support routing and escalation workflows.",
+              "technical_analysis": "routes/support.routes.ts DELETE /agent-groups/:id/members/:userId (line ~246) calls supportSettingsService.removeGroupMember(request.params.id, request.params.userId) — no orgId passed. support-settings.service.ts removeGroupMember (line 59-63) runs deleteMany with where { agent_group_id, user_id } only. The route-level caller supplies orgId to updateAgentGroup/deleteAgentGroup and addGroupMember but not to the remove path.",
+              "remediation_steps": "In support-settings.service.ts removeGroupMember, replicate the ownership check already present in addGroupMember (agent_groups.findFirst where id + organization_id, 404 when not found) before the deleteMany.",
+              "counterevidence": "The sibling addGroupMember in the same service DOES verify group ownership (agent_groups.findFirst where id + organization_id) before inserting — the check exists in the file but was omitted only from removeGroupMember. Routes require authenticate.",
+              "confidence": "high",
+              "confidence_rationale": "Source-to-sink trace with the where clause read verbatim from service code; local repo, no live deployment for HTTP-level reproduction.",
+              "severity_change_conditions": "A live two-tenant deployment test would confirm end-to-end; unguessable group IDs in practice would raise attack_complexity.",
+              "poc": {
+                "description": "1. Authenticate as any user in Org A. 2. DELETE /api/support/settings/agent-groups/:id/members/:userId with Org B's group id — removeGroupMember deletes by bare agent_group_id + user_id. Contrast with POST members (addGroupMember), which verifies organization_id and returns 404 for foreign groups.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/idor-cross-tenant-object-level-authorization",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "IDOR / cross-tenant object-level authorization — Ruled out: connectors.routes.ts (credential vault + connectors, 23 routes)\n\nEvery handler passes request.user.orgId to credentialVaultService/connector service; repository filters by organization_id (credential-vault.repository.ts:30-78 findFirst where {id, organization_id}). Vault routes carry authenticate/requireModifyAccess. Named control verified on all routes."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "connectors.routes.ts (credential vault + connectors, 23 routes)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "IDOR / cross-tenant object-level authorization",
+              "surface": "connectors.routes.ts (credential vault + connectors, 23 routes)",
+              "recorded_by": "AuthN/AuthZ Boundary Specialist",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/idor-cross-tenant-object-level-authorization",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "IDOR / cross-tenant object-level authorization — Ruled out: apiKeys.routes.ts, mcp.routes.ts\n\nAll handlers pass request.user.orgId into apiKeyService.revokeApiKey/deleteApiKey (org-scoped where) and mcpServerService.getMcpServerById(id, orgId); mcp.repository findAll filters by organizationId. Auth + requireModifyAccess present on all mutating routes."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "apiKeys.routes.ts, mcp.routes.ts"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "IDOR / cross-tenant object-level authorization",
+              "surface": "apiKeys.routes.ts, mcp.routes.ts",
+              "recorded_by": "AuthN/AuthZ Boundary Specialist",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/idor-cross-tenant-object-level-authorization",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "IDOR / cross-tenant object-level authorization — No issue identified: chatRooms.routes.ts, documents.routes.ts, files.routes.ts, agents.routes.ts\n\nHandlers pass request.user.orgId into repositories/services which filter by organization_id (chat.repository findById where {id, organization_id}; document.service getDocumentById(id, orgId)); agents routes use orgId in where clauses. Same-org user-level (non-org) sharing is by design, not cross-tenant."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "chatRooms.routes.ts, documents.routes.ts, files.routes.ts, agents.routes.ts"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "IDOR / cross-tenant object-level authorization",
+              "surface": "chatRooms.routes.ts, documents.routes.ts, files.routes.ts, agents.routes.ts",
+              "recorded_by": "AuthN/AuthZ Boundary Specialist",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/authentication-and-tenant-scoped-authorization",
+          "ruleIndex": 4,
+          "kind": "open",
+          "level": "none",
+          "message": {
+            "text": "Authentication and tenant-scoped authorization — Requires further review: Remaining backend route files (scope-memory, rehearsal, integrations, projects, workflows, tasks, skills, enterprise-skills, showcase, pack-deploy, token-usage, schedules, webhooks, checkpoint, userGroups, document-groups, support, im admin, organizations, businessScopes, scope-generator, chat, execution, agentPermissions, audit, litellm, apps, appData, appBackend, a2a, openapi, widget, im webhooks)\n\nSubstantially resolved by follow-up sweep: projects, workflows, tasks, scope-memory, rehearsal, integrations, skills, enterprise-skills, showcase, checkpoint, pack-deploy, appData, appBackend, im, apps, organizations, avatarRoutes verified org-scoped (entry b09954); userGroups, scopeMemberships, businessScopes plugin/MCP, support group routes confirmed vulnerable and reported (vuln-0008..0011). Still only spot-checked (not per-handler verified): a2a, openapi, llm-proxy, widget, token-usage, schedules, webhooks, audit, agentPermissions, chat-session, execution, scope-generator, im admin, document-groups — all authenticate and use API-key/signature auth, but handler-level org scoping unverified."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Remaining backend route files (scope-memory, rehearsal, integrations, projects, workflows, tasks, skills, enterprise-skills, showcase, pack-deploy, token-usage, schedules, webhooks, checkpoint, userGroups, document-groups, support, im admin, organizations, businessScopes, scope-generator, chat, execution, agentPermissions, audit, litellm, apps, appData, appBackend, a2a, openapi, widget, im webhooks)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "needs_follow_up",
+              "risk_area": "Authentication and tenant-scoped authorization",
+              "surface": "Remaining backend route files (scope-memory, rehearsal, integrations, projects, workflows, tasks, skills, enterprise-skills, showcase, pack-deploy, token-usage, schedules, webhooks, checkpoint, userGroups, document-groups, support, im admin, organizations, businessScopes, scope-generator, chat, execution, agentPermissions, audit, litellm, apps, appData, appBackend, a2a, openapi, widget, im webhooks)",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/shell-command-injection-in-container-command-wrappers",
+          "ruleIndex": 5,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Shell command injection in container command wrappers — No issue identified: agentcore-command.service.ts sanitizePath / shellEscape\n\nReviewed sanitizePath (rejects .., leading /, backtick $ ; | & < >) and shellEscape ($'...' with backslash and single-quote escaping); heredoc writer uses quoted delimiter. No injected-path route found; wrappers build fixed commands with sanitized relative paths only. Reachability requires an already-authenticated chat session (AGENT_RUNTIME=agentcore), consistent with design."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "agentcore-command.service.ts sanitizePath / shellEscape"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Shell command injection in container command wrappers",
+              "surface": "agentcore-command.service.ts sanitizePath / shellEscape",
+              "recorded_by": "Agent-Execution Boundary Specialist",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/indirect-prompt-injection-reaching-tool-execution-boundary",
+          "ruleIndex": 6,
+          "kind": "open",
+          "level": "none",
+          "message": {
+            "text": "Indirect prompt injection reaching tool execution boundary — Requires further review: RAG / knowledge / retrieved-content flow into agent prompt (backend + agentcore container)\n\nTraced: container gets AUTH_TOKEN to call backend RAG search; workspace skills/SKILL.md are restored from S3 into the prompt context; user message flows verbatim as prompt. Injection reachability at the LLM layer is stochastic and cannot be validated locally without a live model — but the *consequence* boundary (unapproved tool execution) is separately confirmed as broken (see the two reported surfaces). No egress filtering on WebFetch/WebSearch exists in agentcore runtime."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "RAG / knowledge / retrieved-content flow into agent prompt (backend + agentcore container)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "needs_follow_up",
+              "risk_area": "Indirect prompt injection reaching tool execution boundary",
+              "surface": "RAG / knowledge / retrieved-content flow into agent prompt (backend + agentcore container)",
+              "recorded_by": "Agent-Execution Boundary Specialist",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/idor-cross-tenant-object-level-authorization",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "IDOR / cross-tenant object-level authorization — No issue identified: projects, workflows, tasks, scope-memory, rehearsal, integrations, skills, enterprise-skills, showcase, checkpoint (GET execution), pack-deploy, appData, appBackend, im, apps, organizations, avatarRoutes routes\n\nHandlers consistently pass request.user.orgId into services/repositories that filter by organization_id (verified representative sinks: projectService, workflow/task services+repos, scopeMemoryRepository.findById, rehearsalService, skillService, showcaseRepository, app_data where clauses, imChannelRepository, published_apps). Exceptions reported separately (vuln-0008..0011, businessScopes deletes). RAG retriever retrieveByKnowledgeBases confirmed unscoped but is same root cause/objects as already-reported rag.routes finding (vuln coverage f4cd86) — noted, not re-filed."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "projects, workflows, tasks, scope-memory, rehearsal, integrations, skills, enterprise-skills, showcase, checkpoint (GET execution), pack-deploy, appData, appBackend, im, apps, organizations, avatarRoutes routes"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "IDOR / cross-tenant object-level authorization",
+              "surface": "projects, workflows, tasks, scope-memory, rehearsal, integrations, skills, enterprise-skills, showcase, checkpoint (GET execution), pack-deploy, appData, appBackend, im, apps, organizations, avatarRoutes routes",
+              "recorded_by": "Remaining-Routes AuthZ Sweeper",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": false,
+          "toolExecutionNotifications": [
+            {
+              "level": "warning",
+              "message": {
+                "text": "1 agent(s) did not finish cleanly (Remaining-Routes AuthZ Sweeper); any surface they held is under-covered."
+              }
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 11
+      }
+    }
+  ]
+}

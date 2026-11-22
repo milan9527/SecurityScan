@@ -4,7 +4,7 @@ Self-hosted GLM-5.3 / SGLang / TP8 / MTP / p6-b200.48xlarge.
 
 Deep mode; full scope; sequential scans to avoid cross-scan contention.
 
-Non-streaming request latency is not TTFT or streaming TTOT. Findings require independent verification. EC2 was running at the time of this test; this is not a live resource status.
+Non-streaming request latency is E2E latency; TTFT is unavailable. Findings require independent verification. EC2 was running at the time of this test; this is not a live resource status.
 
 ## agentcoreshell-deep
 

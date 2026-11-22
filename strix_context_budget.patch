@@ -1,0 +1,59 @@
+diff --git a/strix/config/settings.py b/strix/config/settings.py
+index f7068c9..1f8e7df 100644
+--- a/strix/config/settings.py
++++ b/strix/config/settings.py
+@@ -146,6 +146,12 @@ class ContextSettings(BaseSettings):
+     model_config = _BASE_CONFIG
+ 
+     auto_compact: bool = Field(default=True, alias="STRIX_CONTEXT_AUTO_COMPACT")
++    context_tokens_override: int | None = Field(
++        default=None, gt=0, alias="STRIX_CONTEXT_TOKENS"
++    )
++    output_tokens_override: int | None = Field(
++        default=None, gt=0, alias="STRIX_OUTPUT_TOKENS"
++    )
+     compact_buffer_tokens: int = Field(default=20_000, gt=0, alias="STRIX_CONTEXT_BUFFER_TOKENS")
+     keep_tokens: int = Field(default=8_000, gt=0, alias="STRIX_CONTEXT_KEEP_TOKENS")
+     fallback_context_tokens: int = Field(
+diff --git a/strix/llm/context_budget.py b/strix/llm/context_budget.py
+index baa02c4..f1d43e5 100644
+--- a/strix/llm/context_budget.py
++++ b/strix/llm/context_budget.py
+@@ -64,12 +64,18 @@ def _model_info(model: str) -> dict[str, int]:
+ 
+ def context_window(model: str) -> int:
+     """Input token capacity for ``model`` (configured fallback when unmapped)."""
++    override = load_settings().context.context_tokens_override
++    if override is not None:
++        return override
+     resolved = _model_info(model)["max_input_tokens"]
+     return resolved or load_settings().context.fallback_context_tokens
+ 
+ 
+ def output_limit(model: str) -> int:
+     """Max output tokens for ``model`` (a conservative default when unmapped)."""
++    override = load_settings().context.output_tokens_override
++    if override is not None:
++        return override
+     return _model_info(model)["max_output_tokens"] or _DEFAULT_OUTPUT_TOKENS
+ 
+ 
+diff --git a/tests/test_context_budget.py b/tests/test_context_budget.py
+index 8c06fa4..b265c91 100644
+--- a/tests/test_context_budget.py
++++ b/tests/test_context_budget.py
+@@ -63,3 +63,14 @@ def test_count_tokens_fallback_on_error(monkeypatch: pytest.MonkeyPatch) -> None
+ 
+ def test_count_tokens_empty_is_zero() -> None:
+     assert context_budget.count_tokens("gpt-4o", "") == 0
++
++
++def test_deployment_budget_overrides_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
++    settings = load_settings()
++    monkeypatch.setattr(settings.context, "context_tokens_override", 262_144)
++    monkeypatch.setattr(settings.context, "output_tokens_override", 32_768)
++    monkeypatch.setattr(context_budget, "_model_info", lambda _: {
++        "max_input_tokens": 1_000_000, "max_output_tokens": 8_192,
++    })
++    assert context_budget.context_window("openai/glm-5.3") == 262_144
++    assert context_budget.output_limit("openai/glm-5.3") == 32_768

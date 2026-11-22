@@ -1,0 +1,449 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Strix",
+          "informationUri": "https://strix.ai",
+          "rules": [
+            {
+              "id": "CWE-78",
+              "name": "Shell command injection via JIRA task ID in coding_workflow.py git/commit/push commands",
+              "shortDescription": {
+                "text": "Shell command injection via JIRA task ID in coding_workflow.py git/commit/push commands"
+              },
+              "fullDescription": {
+                "text": "The JIRA task ID passed as `sys.argv[1]` to `coding_workflow.py` is interpolated unquoted into several `/bin/bash -c` command strings (`git checkout -b`, `git commit -m`, `git push origin`) that are executed on the AWS Bedrock AgentCore Runtime host via `InvokeAgentRuntimeCommand`. A task ID containing shell metacharacters (spaces, `;`, `$`, quotes) escapes the intended git command and executes arbitrary shell commands on the remote runtime host under the runtime's privileges. The same value is used unquoted as a git branch name and commit message, so option-prefixed values are also interpreted as git options."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The JIRA task ID passed as `sys.argv[1]` to `coding_workflow.py` is interpolated unquoted into several `/bin/bash -c` command strings (`git checkout -b`, `git commit -m`, `git push origin`) that are executed on the AWS Bedrock AgentCore Runtime host via `InvokeAgentRuntimeCommand`. A task ID containing shell metacharacters (spaces, `;`, `$`, quotes) escapes the intended git command and executes arbitrary shell commands on the remote runtime host under the runtime's privileges. The same value is used unquoted as a git branch name and commit message, so option-prefixed values are also interpreted as git options.\n\nArbitrary shell command execution on the AgentCore Runtime host under the runtime's privileges, demonstrated locally by creating a marker file via a task ID payload. The injected commands inherit the `cd /workspace` working directory and ambient IAM credentials of the runtime. The git-push sink is demonstrably attacker-steerable: a locally verified task ID `--receive-pack=touch /tmp/poc/pwned2` makes git spawn the attacker-named program as the remote helper. An attacker who can influence the task ID (a ticket field in an automated trigger, a shared automation queue, or a value copied into the command line) can execute any command on the remote host.\n\nDo not interpolate the task ID into shell strings. Validate it against a strict allowlist (e.g. `^[A-Z]+-\\d+$`) before use, and pass the branch name to git as a discrete argument rather than embedding it in a `bash -c` string — e.g. run `git checkout -b -- <branch>` (with `--` to prevent option interpretation), or better, use a library-level git invocation where the branch name is a single argv element and cannot be tokenized by a shell. Construct the commit message with an explicit argument form as well. If the command string must be assembled, use `shlex.quote()` on every interpolated value — though note `shlex.quote` does not protect the git-option interpretation, hence the `--` separator or allowlist validation is still required.",
+                "markdown": "The JIRA task ID passed as `sys.argv[1]` to `coding_workflow.py` is interpolated unquoted into several `/bin/bash -c` command strings (`git checkout -b`, `git commit -m`, `git push origin`) that are executed on the AWS Bedrock AgentCore Runtime host via `InvokeAgentRuntimeCommand`. A task ID containing shell metacharacters (spaces, `;`, `$`, quotes) escapes the intended git command and executes arbitrary shell commands on the remote runtime host under the runtime's privileges. The same value is used unquoted as a git branch name and commit message, so option-prefixed values are also interpreted as git options.\n\nArbitrary shell command execution on the AgentCore Runtime host under the runtime's privileges, demonstrated locally by creating a marker file via a task ID payload. The injected commands inherit the `cd /workspace` working directory and ambient IAM credentials of the runtime. The git-push sink is demonstrably attacker-steerable: a locally verified task ID `--receive-pack=touch /tmp/poc/pwned2` makes git spawn the attacker-named program as the remote helper. An attacker who can influence the task ID (a ticket field in an automated trigger, a shared automation queue, or a value copied into the command line) can execute any command on the remote host.\n\nDo not interpolate the task ID into shell strings. Validate it against a strict allowlist (e.g. `^[A-Z]+-\\d+$`) before use, and pass the branch name to git as a discrete argument rather than embedding it in a `bash -c` string — e.g. run `git checkout -b -- <branch>` (with `--` to prevent option interpretation), or better, use a library-level git invocation where the branch name is a single argv element and cannot be tokenized by a shell. Construct the commit message with an explicit argument form as well. If the command string must be assembled, use `shlex.quote()` on every interpolated value — though note `shlex.quote` does not protect the git-option interpretation, hence the `--` separator or allowlist validation is still required."
+              },
+              "properties": {
+                "security-severity": "8.8",
+                "tags": [
+                  "security",
+                  "CWE-78",
+                  "stride:T",
+                  "stride:E"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html"
+            },
+            {
+              "id": "strix-coverage/hardcoded-secret-credential-exposure",
+              "name": "Hardcoded secret / credential exposure",
+              "shortDescription": {
+                "text": "Coverage: Hardcoded secret / credential exposure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Hardcoded secret / credential exposure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Hardcoded secret / credential exposure across the assessed attack surface.",
+                "markdown": "Coverage of Hardcoded secret / credential exposure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/known-cve-dependency-sca",
+              "name": "Known-CVE dependency (SCA)",
+              "shortDescription": {
+                "text": "Coverage: Known-CVE dependency (SCA)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Known-CVE dependency (SCA) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Known-CVE dependency (SCA) across the assessed attack surface.",
+                "markdown": "Coverage of Known-CVE dependency (SCA) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/injection-unsafe-patterns-opengrep-taint-ast-grep-structural",
+              "name": "Injection / unsafe patterns (opengrep taint + ast-grep structural)",
+              "shortDescription": {
+                "text": "Coverage: Injection / unsafe patterns (opengrep taint + ast-grep structural)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Injection / unsafe patterns (opengrep taint + ast-grep structural) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Injection / unsafe patterns (opengrep taint + ast-grep structural) across the assessed attack surface.",
+                "markdown": "Coverage of Injection / unsafe patterns (opengrep taint + ast-grep structural) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/misconfiguration-secrets-in-git-history",
+              "name": "Misconfiguration / secrets in git history",
+              "shortDescription": {
+                "text": "Coverage: Misconfiguration / secrets in git history"
+              },
+              "fullDescription": {
+                "text": "Coverage of Misconfiguration / secrets in git history across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Misconfiguration / secrets in git history across the assessed attack surface.",
+                "markdown": "Coverage of Misconfiguration / secrets in git history across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/shell-quote-breaking-on-user-typed-commands",
+              "name": "Shell quote-breaking on user-typed commands",
+              "shortDescription": {
+                "text": "Coverage: Shell quote-breaking on user-typed commands"
+              },
+              "fullDescription": {
+                "text": "Coverage of Shell quote-breaking on user-typed commands across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Shell quote-breaking on user-typed commands across the assessed attack surface.",
+                "markdown": "Coverage of Shell quote-breaking on user-typed commands across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/requested-assessment-areas-from-engagement-scope",
+              "name": "Requested assessment areas from engagement scope",
+              "shortDescription": {
+                "text": "Coverage: Requested assessment areas from engagement scope"
+              },
+              "fullDescription": {
+                "text": "Coverage of Requested assessment areas from engagement scope across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Requested assessment areas from engagement scope across the assessed attack surface.",
+                "markdown": "Coverage of Requested assessment areas from engagement scope across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/hardcoded-secrets-sensitive-identifier-exposure",
+              "name": "Hardcoded secrets / sensitive identifier exposure",
+              "shortDescription": {
+                "text": "Coverage: Hardcoded secrets / sensitive identifier exposure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Hardcoded secrets / sensitive identifier exposure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Hardcoded secrets / sensitive identifier exposure across the assessed attack surface.",
+                "markdown": "Coverage of Hardcoded secrets / sensitive identifier exposure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.1"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-78",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Shell command injection via JIRA task ID in coding_workflow.py git/commit/push commands\n\nThe JIRA task ID passed as `sys.argv[1]` to `coding_workflow.py` is interpolated unquoted into several `/bin/bash -c` command strings (`git checkout -b`, `git commit -m`, `git push origin`) that are executed on the AWS Bedrock AgentCore Runtime host via `InvokeAgentRuntimeCommand`. A task ID containing shell metacharacters (spaces, `;`, `$`, quotes) escapes the intended git command and executes arbitrary shell commands on the remote runtime host under the runtime's privileges. The same value is used unquoted as a git branch name and commit message, so option-prefixed values are also interpreted as git options."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/workspace/AgentcoreShell",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b742697919c70513b171eb341c52cc15a451b00b38ee99764d830ffdee37e8ea"
+          },
+          "properties": {
+            "security-severity": "8.8",
+            "strix_vuln_class_hash": "12c6db8d05ce36b63d97441c58bd0dc6c7081ec04fd9309c5b5fd83b0f6605fd",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "high",
+              "cvss": 8.8,
+              "timestamp": "2026-11-21 09:56:12 UTC",
+              "target": "/workspace/AgentcoreShell",
+              "method": "POST",
+              "cwe": "CWE-78",
+              "impact": "Arbitrary shell command execution on the AgentCore Runtime host under the runtime's privileges, demonstrated locally by creating a marker file via a task ID payload. The injected commands inherit the `cd /workspace` working directory and ambient IAM credentials of the runtime. The git-push sink is demonstrably attacker-steerable: a locally verified task ID `--receive-pack=touch /tmp/poc/pwned2` makes git spawn the attacker-named program as the remote helper. An attacker who can influence the task ID (a ticket field in an automated trigger, a shared automation queue, or a value copied into the command line) can execute any command on the remote host.",
+              "technical_analysis": "`coding_workflow.py:103` takes `task` from `sys.argv[1]`. At line 81 it builds `branch = f\"fix/{task.lower()}\"`, then at lines 83, 85-87, and 88-90 interpolates `branch`/`task` raw into `/bin/bash -c \"...\"` command strings passed to `shell.run()`, which sends them to the AgentCore Runtime for execution (`shell_client.py` `run()` → `invoke_agent_runtime_command`). Because the values are placed inside a double-quoted (or single-quoted, for the commit message) bash string with no escaping:\n\n- `;`, `&&`, newlines etc. terminate the git command and start a new one — the classic command-injection primitive, verified locally.\n- `'` in the task ID closes the single-quoted commit message at line 86 and injects shell syntax there too, also verified locally.\n- `$VAR`, backticks and `${IFS}` expand inside the double quotes, useful when spaces are awkward.\n- Since `branch` is `fix/{task}`, a task starting with `-` cannot be a git option for `git checkout -b` (it is prefixed by `fix/`), but git's own refspec/option parsing in `git push origin {branch}` still accepts an embedded `--receive-pack=` style payload after `fix/` because git treats the whole token as `<repository>` and passes it to the remote-helper mechanism — demonstrated locally where git attempted to use the attacker-controlled path as the remote, i.e. it spawns the named program (`--receive-pack=touch /tmp/poc/pwned2` executed `touch`).\n\nNo validation, allowlist, or quoting exists anywhere on the path from `argv` to the shell string.",
+              "remediation_steps": "Do not interpolate the task ID into shell strings. Validate it against a strict allowlist (e.g. `^[A-Z]+-\\d+$`) before use, and pass the branch name to git as a discrete argument rather than embedding it in a `bash -c` string — e.g. run `git checkout -b -- <branch>` (with `--` to prevent option interpretation), or better, use a library-level git invocation where the branch name is a single argv element and cannot be tokenized by a shell. Construct the commit message with an explicit argument form as well. If the command string must be assembled, use `shlex.quote()` on every interpolated value — though note `shlex.quote` does not protect the git-option interpretation, hence the `--` separator or allowlist validation is still required.",
+              "counterevidence": "Actively looked for mitigations: no input validation, allowlist, regex, or sanitization of `task` anywhere in the file or the repository; `shell.run` passes the string verbatim to the runtime with no filtering; no allowlist of git subcommand arguments and no `--` end-of-options guard before the interpolated branch name. The only mitigating factor is that the operator launches the script — if every invocation is a human typing a fully trusted task ID, the injection requires a compromised or careless invocation, which lowers exposure but does not constitute a control.",
+              "confidence": "high",
+              "severity_change_conditions": "Evidence that these scripts are invoked with task IDs sourced from an untrusted or automated channel (ticketing webhook, queue consumer, CI parameter) would raise this to critical; conversely, if the tool is confirmed to be used only interactively by a single trusted operator who always types task IDs by hand, severity could be argued down to medium.",
+              "poc": {
+                "description": "1. Stub `boto3` (no AWS contact) and substitute `AgentCoreShell` with a local mock whose `run()` executes the exact command string via `subprocess` in a scratch git repo, simulating the runtime host.\n2. Call `coding_workflow(mock_shell, \"x; touch /tmp/poc/pwned #\")` — the same code path `main()` drives with `sys.argv[1]`.\n3. Observe the interpolated command `/bin/bash -c \"cd /workspace && git checkout -b fix/x; touch /tmp/poc/pwned #\"` and that the marker file is created on the executing host.\n4. Separately, run the step-5 command with a task ID of `'; touch /tmp/poc/pwned3; x='` to show the commit-message sink also escapes quoting, and with `--receive-pack=touch /tmp/poc/pwned2` to show git option injection in `git push origin {branch}`.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/hardcoded-secret-credential-exposure",
+          "ruleIndex": 1,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Hardcoded secret / credential exposure — No issue identified: config.py hardcoded AgentCore runtime ARN / AWS account ID 632930644527\n\ngitleaks (worktree + single-commit git history, gitleaks.json empty) and trufflehog (0 findings) both clean. The value is a resource ARN containing the account ID and agent name — an identifier, not a credential; cannot authenticate or authorize anything. Informational exposure at most, per task instruction not a reportable vulnerability."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "config.py hardcoded AgentCore runtime ARN / AWS account ID 632930644527"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Hardcoded secret / credential exposure",
+              "surface": "config.py hardcoded AgentCore runtime ARN / AWS account ID 632930644527",
+              "recorded_by": "Static Triage Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/known-cve-dependency-sca",
+          "ruleIndex": 2,
+          "kind": "notApplicable",
+          "level": "none",
+          "message": {
+            "text": "Known-CVE dependency (SCA) — Not applicable: requirements.txt boto3>=1.35.0 (unpinned floor)\n\ntrivy fs vuln scan returned zero vulnerabilities (trivy-fs.json Results=[]). boto3>=1.35.0 is a floor constraint, not a pinned vulnerable version — no lockfile exists, and the installed resolution is whatever pip picks; no advisory-matched version is pinned, so there is no confirmed CVE to report. Unpinned dependency is a hygiene observation only."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "requirements.txt boto3>=1.35.0 (unpinned floor)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "not_applicable",
+              "risk_area": "Known-CVE dependency (SCA)",
+              "surface": "requirements.txt boto3>=1.35.0 (unpinned floor)",
+              "recorded_by": "Static Triage Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/injection-unsafe-patterns-opengrep-taint-ast-grep-structural",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Injection / unsafe patterns (opengrep taint + ast-grep structural) — No issue identified: Python sources (shell_client.py, interactive.py, demo.py, coding_workflow.py, config.py)\n\nopengrep full ruleset (--config /opt/opengrep-rules --taint-intrafile, 617 rules): 0 findings. ast-grep structural pass over the 5 files confirms the only shell-string construction sites are the intended /bin/bash -c wrappers (shell.run), including the task-ID interpolation in coding_workflow.py already captured in the threat model as an operator-input command-injection caveat. No secrets, no eval/exec, no SQL, no path traversal sinks."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Python sources (shell_client.py, interactive.py, demo.py, coding_workflow.py, config.py)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Injection / unsafe patterns (opengrep taint + ast-grep structural)",
+              "surface": "Python sources (shell_client.py, interactive.py, demo.py, coding_workflow.py, config.py)",
+              "recorded_by": "Static Triage Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/misconfiguration-secrets-in-git-history",
+          "ruleIndex": 4,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Misconfiguration / secrets in git history — No issue identified: Repository-wide (all 10 git-tracked files, incl. README.md)\n\ngitleaks detect scanned worktree and history (repo has a single commit 3b4cc26); trufflehog filesystem 0 findings; trivy fs misconfig+secret scanners reported no results. No credential material beyond the ARN identifier."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Repository-wide (all 10 git-tracked files, incl. README.md)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Misconfiguration / secrets in git history",
+              "surface": "Repository-wide (all 10 git-tracked files, incl. README.md)",
+              "recorded_by": "Static Triage Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/shell-quote-breaking-on-user-typed-commands",
+          "ruleIndex": 5,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Shell quote-breaking on user-typed commands — Ruled out: interactive.py:50 f'/bin/bash -c \"{cmd}\"'\n\nControl: intended operation. The REPL's documented purpose is to execute whatever the local operator types on the runtime host (threat model: \"Command execution via the REPL is the intended product, not a finding\"). Quote-breaking (a typed `\"` in the command breaks the wrapper and shifts argument boundaries — verified locally that `echo \"hello\"; touch /tmp/poc/pwned4 #` runs the semicolon segment) only changes what the operator already fully controls, so it is not an exploitable boundary here. Documented as a robustness/hygiene issue, not a vulnerability report."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "interactive.py:50 f'/bin/bash -c \"{cmd}\"'"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "Shell quote-breaking on user-typed commands",
+              "surface": "interactive.py:50 f'/bin/bash -c \"{cmd}\"'",
+              "recorded_by": "Command Injection Validator",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/requested-assessment-areas-from-engagement-scope",
+          "ruleIndex": 6,
+          "kind": "notApplicable",
+          "level": "none",
+          "message": {
+            "text": "Requested assessment areas from engagement scope — Not applicable: AgentcoreShell repository — WebSockets, JWT/internal signatures, tenant ownership/multi-tenant authorization, file uploads, webhooks, URL fetching/SSRF, archive/path traversal\n\nRepository is a 5-file CLI client for AWS Bedrock AgentCore with no HTTP server, WebSocket endpoint, token issuance/validation, tenant model, upload handling, webhook, outbound URL fetch, or archive processing anywhere in the source (verified by full file read and structural AST pass). None of these surfaces exist to test."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "AgentcoreShell repository — WebSockets, JWT/internal signatures, tenant ownership/multi-tenant authorization, file uploads, webhooks, URL fetching/SSRF, archive/path traversal"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "not_applicable",
+              "risk_area": "Requested assessment areas from engagement scope",
+              "surface": "AgentcoreShell repository — WebSockets, JWT/internal signatures, tenant ownership/multi-tenant authorization, file uploads, webhooks, URL fetching/SSRF, archive/path traversal",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/hardcoded-secrets-sensitive-identifier-exposure",
+          "ruleIndex": 7,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Hardcoded secrets / sensitive identifier exposure — No issue identified: config.py default AWS account ID and AgentCore runtime ARN committed in source/git history\n\ngitleaks (worktree + full git history) and trufflehog both returned zero findings; the ARN is an identifier, not a credential, and grants no access. Remaining exposure is informational (real account ID 632930644527 in a public repo); noted as a hygiene recommendation (env-only config), not a vulnerability."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "config.py default AWS account ID and AgentCore runtime ARN committed in source/git history"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Hardcoded secrets / sensitive identifier exposure",
+              "surface": "config.py default AWS account ID and AgentCore runtime ARN committed in source/git history",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 1
+      }
+    }
+  ]
+}

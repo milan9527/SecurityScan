@@ -1,0 +1,12 @@
+id,title,severity,timestamp,file
+vuln-0006,Hardcoded bypassPermissions with bypassable regex denylist enables unapproved arbitrary shell execution on backend host via agent tool calls,CRITICAL,2026-11-20 13:44:41 UTC,vulnerabilities/vuln-0006.md
+vuln-0007,"AgentCore runtime executes all agent tool calls with no approval or PreToolUse security hook (bypassPermissions, unfiltered Bash/WebFetch/Write)",CRITICAL,2026-11-20 13:45:00 UTC,vulnerabilities/vuln-0007.md
+vuln-0001,Cross-tenant IDOR on all knowledge-base routes (read/write/delete of other organizations' KBs and files),HIGH,2026-11-20 13:43:30 UTC,vulnerabilities/vuln-0001.md
+vuln-0003,Path traversal + git argument injection in plugin installation (installPlugins),HIGH,2026-11-20 13:43:59 UTC,vulnerabilities/vuln-0003.md
+vuln-0008,Cross-tenant IDOR in userGroups member removal and skill/MCP access-grant endpoints (no org scoping),HIGH,2026-11-20 13:46:39 UTC,vulnerabilities/vuln-0008.md
+vuln-0009,Cross-tenant IDOR in business-scope membership role update and removal (no org scoping),HIGH,2026-11-20 13:46:50 UTC,vulnerabilities/vuln-0009.md
+vuln-0010,Cross-tenant IDOR in business-scope plugin/MCP delete and list routes (no org scoping),HIGH,2026-11-20 13:47:03 UTC,vulnerabilities/vuln-0010.md
+vuln-0011,Cross-tenant IDOR in support agent-group member removal (no org scoping),HIGH,2026-11-20 13:47:11 UTC,vulnerabilities/vuln-0011.md
+vuln-0002,Cross-tenant IDOR on briefing routes (read/mark-read/archive other organizations' scope briefings),MEDIUM,2026-11-20 13:43:41 UTC,vulnerabilities/vuln-0002.md
+vuln-0004,"Path traversal via skill/generated-skill names in workspace provisioning (downloadSkill, installSkillToWorkspace, generateAgentSubagentFiles)",MEDIUM,2026-11-20 13:44:16 UTC,vulnerabilities/vuln-0004.md
+vuln-0005,Zip-slip in extractSkillZip python3 -m zipfile fallback,MEDIUM,2026-11-20 13:44:29 UTC,vulnerabilities/vuln-0005.md

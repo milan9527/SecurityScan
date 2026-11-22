@@ -1,0 +1,18 @@
+{
+  "name": "missing",
+  "url": "https://d2ic29y1hc1eco.cloudfront.net/security-check-nonexistent-20261120",
+  "final_url": "https://d2ic29y1hc1eco.cloudfront.net/security-check-nonexistent-20261120",
+  "status": 403,
+  "headers": {
+    "Content-Type": "application/xml",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close",
+    "Date": "Fri, 20 Nov 2026 03:43:04 GMT",
+    "Server": "AmazonS3",
+    "X-Cache": "Error from cloudfront",
+    "Via": "1.1 da2853f1f2064d28227e87fa7e317dec.cloudfront.net (CloudFront)",
+    "X-Amz-Cf-Pop": "IAD89-P3",
+    "X-Amz-Cf-Id": "CRU9muqWm_89_EABglEh_5EGWygxt0ETfqOBA_jEMAWYJMbvdNDjFw=="
+  },
+  "bytes": 111
+}

@@ -1,0 +1,19 @@
+{
+  "name": "tiers-no-auth",
+  "url": "https://qzd3j8cmn2.execute-api.us-west-2.amazonaws.com/prod/tickets/security-check-nonexistent/tiers",
+  "final_url": "https://qzd3j8cmn2.execute-api.us-west-2.amazonaws.com/prod/tickets/security-check-nonexistent/tiers",
+  "status": 401,
+  "headers": {
+    "Date": "Fri, 20 Nov 2026 03:43:05 GMT",
+    "Content-Type": "application/json",
+    "Content-Length": "52",
+    "Connection": "close",
+    "x-amzn-RequestId": "0221e17d-5458-4466-90bb-9d044b66c159",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    "x-amz-apigw-id": "HHs3fF6tvHcErkw=",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+    "X-Amzn-Trace-Id": "Root=1-6affc1c9-0c9d676632c32bdc60af35bb;Parent=59f92877939582cd;Sampled=0;Lineage=1:2a66c94b:0"
+  },
+  "bytes": 52
+}

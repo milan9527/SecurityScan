@@ -1,0 +1,18 @@
+[Unit]
+Description=Stage GLM weights on local NVMe and serve GLM
+Requires=docker.service dlami-nvme.service
+After=docker.service dlami-nvme.service
+RequiresMountsFor=/model-cache /opt/dlami/nvme
+StartLimitIntervalSec=7200
+StartLimitBurst=2
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/glm53-nvme-start
+ExecStop=-/usr/bin/docker stop -t 30 glm53-nvme
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

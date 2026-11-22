@@ -1,0 +1,22 @@
+{
+    "CommandId": "94dee090-49ea-4fd7-8a66-24241d101305",
+    "InstanceId": "i-0e45eeaa532318d93",
+    "Comment": "",
+    "DocumentName": "AWS-RunShellScript",
+    "DocumentVersion": "$DEFAULT",
+    "PluginName": "aws:runShellScript",
+    "ResponseCode": 0,
+    "ExecutionStartDateTime": "2026-11-20T05:57:02.980Z",
+    "ExecutionElapsedTime": "PT0.147S",
+    "ExecutionEndDateTime": "2026-11-20T05:57:02.980Z",
+    "Status": "Success",
+    "StatusDetails": "Success",
+    "StandardOutputContent": "Fri Nov 20 05:57:02 UTC 2026\nname, memory.total [MiB], driver_version\nNVIDIA B200, 183359 MiB, 595.112.07\nNVIDIA B200, 183359 MiB, 595.112.07\nNVIDIA B200, 183359 MiB, 595.112.07\nNVIDIA B200, 183359 MiB, 595.112.07\nNVIDIA B200, 183359 MiB, 595.112.07\nNVIDIA B200, 183359 MiB, 595.112.07\nNVIDIA B200, 183359 MiB, 595.112.07\nNVIDIA B200, 183359 MiB, 595.112.07\n[\"lmsysorg/sglang@sha256:f832b5c39559c9caa900b22ad37c76fcce66470676855c42052102c537812f1f\"]\n[\"python3\",\"-m\",\"sglang.launch_server\",\"--model-path\",\"zai-org/GLM-5.3\",\"--served-model-name\",\"glm-5.3\",\"--tp-size\",\"8\",\"--trust-remote-code\",\"--kv-cache-dtype\",\"fp8_e4m3\",\"--tool-call-parser\",\"glm47\",\"--reasoning-parser\",\"glm45\",\"--context-length\",\"262144\",\"--max-running-requests\",\"2\",\"--mem-fraction-static\",\"0.85\",\"--chunked-prefill-size\",\"32768\",\"--watchdog-timeout\",\"1800\",\"--host\",\"0.0.0.0\",\"--port\",\"8000\"]\n{\"object\":\"list\",\"data\":[{\"id\":\"glm-5.3\",\"object\":\"model\",\"created\":1795154223,\"owned_by\":\"sglang\",\"root\":\"glm-5.3\",\"parent\":null,\"max_model_len\":262144}]}[2026-11-20 05:56:58 TP0] Decode batch, #running-req: 1, #token: 72832, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.31, #queue-req: 0\n[2026-11-20 05:56:59 TP0] Decode batch, #running-req: 1, #token: 72832, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.25, #queue-req: 0\n[2026-11-20 05:56:59 TP0] Decode batch, #running-req: 1, #token: 72896, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.30, #queue-req: 0\n[2026-11-20 05:56:59 TP0] Decode batch, #running-req: 1, #token: 72960, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.31, #queue-req: 0\n[2026-11-20 05:56:59 TP0] Decode batch, #running-req: 1, #token: 72960, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.31, #queue-req: 0\n[2026-11-20 05:57:00 TP0] Decode batch, #running-req: 1, #token: 73024, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.31, #queue-req: 0\n[2026-11-20 05:57:00 TP0] Decode batch, #running-req: 1, #token: 73024, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.32, #queue-req: 0\n[2026-11-20 05:57:00 TP0] Decode batch, #running-req: 1, #token: 73088, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.32, #queue-req: 0\n[2026-11-20 05:57:01 TP0] Decode batch, #running-req: 1, #token: 73152, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.30, #queue-req: 0\n[2026-11-20 05:57:01 TP0] Decode batch, #running-req: 1, #token: 73152, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.29, #queue-req: 0\n[2026-11-20 05:57:01 TP0] Decode batch, #running-req: 1, #token: 73216, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.36, #queue-req: 0\n[2026-11-20 05:57:02 TP0] Decode batch, #running-req: 1, #token: 73280, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.34, #queue-req: 0\n[2026-11-20 05:57:02 TP0] Decode batch, #running-req: 1, #token: 73280, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.31, #queue-req: 0\n[2026-11-20 05:57:02 TP0] Decode batch, #running-req: 1, #token: 73344, token usage: 0.05, cuda graph: True, gen throughput (token/s): 125.31, #queue-req: 0\n[2026-11-20 05:57:03] INFO:     127.0.0.1:44246 - \"GET /v1/models HTTP/1.1\" 200 OK\n",
+    "StandardOutputUrl": "",
+    "StandardErrorContent": "",
+    "StandardErrorUrl": "",
+    "CloudWatchOutputConfig": {
+        "CloudWatchLogGroupName": "",
+        "CloudWatchOutputEnabled": false
+    }
+}

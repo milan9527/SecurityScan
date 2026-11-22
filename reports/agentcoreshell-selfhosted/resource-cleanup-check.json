@@ -1,0 +1,26 @@
+{
+  "volumes": {
+    "returncode": 0,
+    "data": [
+      {
+        "Id": "vol-0dfdbf7691a8c16ff",
+        "State": "in-use"
+      },
+      {
+        "Id": "vol-05e9fe2a6b246fc75",
+        "State": "in-use"
+      }
+    ]
+  },
+  "spot": {
+    "returncode": 0,
+    "data": [
+      {
+        "Id": "sir-ifnfm7ig",
+        "State": "cancelled",
+        "Status": "request-canceled-and-instance-running"
+      }
+    ]
+  },
+  "time": "2026-11-20T06:03:42.701409+00:00"
+}

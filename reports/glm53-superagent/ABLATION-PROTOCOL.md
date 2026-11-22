@@ -5,7 +5,7 @@
 ## 实验矩阵
 
 | 组别 | 提示词 | 推理服务 | 用途 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | baseline | 原始审计提示词 | 不启用 speculative decoding | 两组共享的新基线 |
 | concise | 基线追加紧凑表格输出要求 | 与 baseline 相同 | 单独检验精简输出 |
 | mtp | 与 baseline 完全相同 | 启用 GLM NextN / EAGLE | 单独检验 MTP |
@@ -29,9 +29,8 @@
 
 - **TTFT**：发送请求至第一个生成的流式 delta，包含 reasoning。
 - **首次正文**：发送请求至第一个 content delta。
-- **TTOT**：发送请求至最后一个生成的 delta。
 - **E2E**：发送请求至读取完成事件，包含最后的 usage 和协议开销。
-- **近似 TPOT**：`(TTOT − TTFT) / (completion_tokens − 1)`；受 SSE token 合并影响，不等于服务端逐 token 计时。
+- **近似 TPOT**：`(最后生成增量到达耗时 − TTFT) / (completion_tokens − 1)`；受 SSE token 合并影响，不等于服务端逐 token 计时。
 - 输出 token 包含服务返回 usage 所计入的生成 token；另保存正文字符数和 reasoning 字符数。
 - 吞吐量使用该并发批次的总生成 token / 批次墙钟时间。
 
@@ -45,7 +44,7 @@
 
 三组按 baseline、concise、mtp 顺序运行，并非随机交错。每个场景/并发只有 5 次测量，p95 是描述性估计，不代表生产 SLA。即使温度为零，并发调度和推理内核仍可能导致输出变化；MTP 的端到端时间要结合输出长度与 TPOT 解释。
 
-历史经过 SSM 隧道的测量和 InferenceX 的不同模型、量化、缓存与输出长度数据不作为本轮因果对照。模型加载时间另记录，不计入预热后的单请求 TTOT。
+历史经过 SSM 隧道的测量和 InferenceX 的不同模型、量化、缓存与输出长度数据不作为本轮因果对照。模型加载时间另记录，不计入预热后的单请求 E2E。
 
 ## 执行结果
 

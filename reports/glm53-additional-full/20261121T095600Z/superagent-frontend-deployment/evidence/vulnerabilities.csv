@@ -1,0 +1,29 @@
+id,title,severity,timestamp,file
+vuln-0005,Hardcoded default admin password 'Admin1234!' seeded and logged by deployment scripts,CRITICAL,2026-11-21 10:02:23 UTC,vulnerabilities/vuln-0005.md
+vuln-0006,"Authentication forgery family: internal-token HMAC key publicly disclosed, default JWT secret, and query-parameter token acceptance",CRITICAL,2026-11-21 10:02:35 UTC,vulnerabilities/vuln-0006.md
+vuln-0010,"PoC app-hosting stack: docker.sock mounts, insecure Traefik dashboard, and hardcoded tenant JWT secrets",CRITICAL,2026-11-21 10:02:52 UTC,vulnerabilities/vuln-0010.md
+vuln-0004,"Cross-organization IDOR on knowledge-base, briefing, and scope plugin/MCP-server routes (missing organization_id scoping)",HIGH,2026-11-21 10:02:23 UTC,vulnerabilities/vuln-0004.md
+vuln-0007,Hardcoded Redis password and unset deployment secrets (REDIS_PASSWORD/JWT_SECRET) in provisioning scripts,HIGH,2026-11-21 10:02:35 UTC,vulnerabilities/vuln-0007.md
+vuln-0009,"Unauthenticated webhook trigger endpoint allows arbitrary tenant workflow execution (no auth, no HMAC, no replay/rate limit)",HIGH,2026-11-21 10:02:50 UTC,vulnerabilities/vuln-0009.md
+vuln-0011,Unauthenticated generic IM webhook processes attacker messages through the victim organization's agent,HIGH,2026-11-21 10:02:59 UTC,vulnerabilities/vuln-0011.md
+vuln-0016,CVE-2026-48779 in ws 8.19.0 (WebSocket small-fragment memory exhaustion DoS of the chat gateway),HIGH,2026-11-21 10:03:55 UTC,vulnerabilities/vuln-0016.md
+vuln-0025,Authenticated RCE via eval() of workflow custom transform expression,HIGH,2026-11-21 10:06:56 UTC,vulnerabilities/vuln-0025.md
+vuln-0001,Missing origin and state validation on OAuth postMessage handler in ConnectorPanel,MEDIUM,2026-11-21 10:01:50 UTC,vulnerabilities/vuln-0001.md
+vuln-0003,"Preview iframes combine allow-scripts with allow-same-origin, nullifying sandbox isolation",MEDIUM,2026-11-21 10:02:13 UTC,vulnerabilities/vuln-0003.md
+vuln-0013,"Unauthenticated avatar generation, presign, and retrieval endpoints (missing authenticate preHandler)",MEDIUM,2026-11-21 10:03:11 UTC,vulnerabilities/vuln-0013.md
+vuln-0014,agentAccess explicit-permission lookup ignores organization scoping (cross-org permission confusion),MEDIUM,2026-11-21 10:03:22 UTC,vulnerabilities/vuln-0014.md
+vuln-0015,Path traversal in pack-deploy onboarding/deploy via unvalidated packId and scopeDirName,MEDIUM,2026-11-21 10:03:37 UTC,vulnerabilities/vuln-0015.md
+vuln-0021,CVE-2026-104850 in @modelcontextprotocol/sdk 1.29.0 (OAuth credential redirection to attacker-chosen MCP server),MEDIUM,2026-11-21 10:04:24 UTC,vulnerabilities/vuln-0021.md
+vuln-0026,Unauthenticated WebSocket subscription to arbitrary execution events at /ws/executions,MEDIUM,2026-11-21 10:07:02 UTC,vulnerabilities/vuln-0026.md
+vuln-0027,Path traversal in agentcore workspace-sync S3 restore and related workspace-manager path containment weaknesses,MEDIUM,2026-11-21 10:07:12 UTC,vulnerabilities/vuln-0027.md
+vuln-0028,Unrestricted server-side fetch (SSRF) with response readback in workflow API-call node,MEDIUM,2026-11-21 10:08:44 UTC,vulnerabilities/vuln-0028.md
+vuln-0002,Session token passed in URL query string across preview endpoints,LOW,2026-11-21 10:02:00 UTC,vulnerabilities/vuln-0002.md
+vuln-0008,CVE-2023-30533 in xlsx 0.18.5 (prototype pollution parsing agent-generated spreadsheets),LOW,2026-11-21 10:02:40 UTC,vulnerabilities/vuln-0008.md
+vuln-0012,CVE-2024-22363 in xlsx 0.18.5 (ReDoS via crafted spreadsheet parsing),LOW,2026-11-21 10:03:01 UTC,vulnerabilities/vuln-0012.md
+vuln-0017,"axios 1.13.6 in backend (multiple 2026 SSRF/proxy-bypass CVEs, not reachable as used)",INFO,2026-11-21 10:04:01 UTC,vulnerabilities/vuln-0017.md
+vuln-0018,"protobufjs 7.5.4 in backend (CVE-2026-41242 code injection, not reachable as used)",INFO,2026-11-21 10:04:07 UTC,vulnerabilities/vuln-0018.md
+vuln-0019,"lodash 4.17.21 in backend (CVE-2026-4800 template code injection, not reachable as used)",INFO,2026-11-21 10:04:13 UTC,vulnerabilities/vuln-0019.md
+vuln-0020,"react-router 7.12.0 in frontend (CVE-2026-42211 and related 2026 CVEs, not reachable in Declarative Mode)",INFO,2026-11-21 10:04:19 UTC,vulnerabilities/vuln-0020.md
+vuln-0022,CVE-2026-25223 in fastify 5.6.2 / 4.29.1 (Content-Type tab validation bypass),INFO,2026-11-21 10:04:30 UTC,vulnerabilities/vuln-0022.md
+vuln-0023,"ip-address 10.2.0 in agentcore (CVE-2026-69192 octal host confusion, not applicable as used)",INFO,2026-11-21 10:04:35 UTC,vulnerabilities/vuln-0023.md
+vuln-0024,"undici 6.24.1 in backend (CVE-2026-109383 dropped TLS callback, not reachable as used)",INFO,2026-11-21 10:04:40 UTC,vulnerabilities/vuln-0024.md

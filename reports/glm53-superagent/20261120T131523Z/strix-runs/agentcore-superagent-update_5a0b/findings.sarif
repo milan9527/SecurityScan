@@ -1,0 +1,860 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Strix",
+          "informationUri": "https://strix.ai",
+          "rules": [
+            {
+              "id": "CWE-22",
+              "name": "Path traversal in pack-deploy endpoints allows reading files outside the industry-packs tree",
+              "shortDescription": {
+                "text": "Path traversal in pack-deploy endpoints allows reading files outside the industry-packs tree"
+              },
+              "fullDescription": {
+                "text": "The `packId` and `scopeDirName` parameters of the pack-deploy endpoints (`GET /api/packs/onboarding/:packId/:scopeDirName`, `POST /api/packs/deploy`) are used directly in filesystem path construction (`join(baseDir, 'industry-pack-' + packId)`, `join(packDir, 'scopes', scopeDirName)`) without any traversal or containment check. An authenticated user can supply traversal sequences (e.g. `a/../../` and `../`-chains) to make the service read files outside the `industry-packs` directory tree and return their contents."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "help": {
+                "text": "The `packId` and `scopeDirName` parameters of the pack-deploy endpoints (`GET /api/packs/onboarding/:packId/:scopeDirName`, `POST /api/packs/deploy`) are used directly in filesystem path construction (`join(baseDir, 'industry-pack-' + packId)`, `join(packDir, 'scopes', scopeDirName)`) without any traversal or containment check. An authenticated user can supply traversal sequences (e.g. `a/../../` and `../`-chains) to make the service read files outside the `industry-packs` directory tree and return their contents.\n\nRead-only local file disclosure: an authenticated attacker can read the contents of any file with the fixed names consumed by the service (`onboarding.json`, `scope.json`, `sop.md`, `SKILL.md`, `initial-memories.json`, `workflow-plan.json`, `manifest.json`) located anywhere on the server filesystem reachable by the backend process. No write or execute primitive was demonstrated: the appended filenames are fixed, so arbitrary-name files (e.g. `.env`, `package.json`, SSH keys) cannot be read directly, and all writes go through mocked/DB paths that only copy already-read content.\n\nValidate that `packId` and `scopeDirName` match a strict allowlist pattern (e.g. `^[A-Za-z0-9_-]+$`, no slashes or dots) before any path construction. Independently, after resolving the pack and scope directories, canonicalize with `resolve()` and verify the result starts with the canonical packs base directory plus path separator, rejecting otherwise. Apply the same check to the `deploy` flow, which shares the identical join pattern and additionally reads `scope.json`, agents, skills, SOP, and workflow files from the traversed directory.",
+                "markdown": "The `packId` and `scopeDirName` parameters of the pack-deploy endpoints (`GET /api/packs/onboarding/:packId/:scopeDirName`, `POST /api/packs/deploy`) are used directly in filesystem path construction (`join(baseDir, 'industry-pack-' + packId)`, `join(packDir, 'scopes', scopeDirName)`) without any traversal or containment check. An authenticated user can supply traversal sequences (e.g. `a/../../` and `../`-chains) to make the service read files outside the `industry-packs` directory tree and return their contents.\n\nRead-only local file disclosure: an authenticated attacker can read the contents of any file with the fixed names consumed by the service (`onboarding.json`, `scope.json`, `sop.md`, `SKILL.md`, `initial-memories.json`, `workflow-plan.json`, `manifest.json`) located anywhere on the server filesystem reachable by the backend process. No write or execute primitive was demonstrated: the appended filenames are fixed, so arbitrary-name files (e.g. `.env`, `package.json`, SSH keys) cannot be read directly, and all writes go through mocked/DB paths that only copy already-read content.\n\nValidate that `packId` and `scopeDirName` match a strict allowlist pattern (e.g. `^[A-Za-z0-9_-]+$`, no slashes or dots) before any path construction. Independently, after resolving the pack and scope directories, canonicalize with `resolve()` and verify the result starts with the canonical packs base directory plus path separator, rejecting otherwise. Apply the same check to the `deploy` flow, which shares the identical join pattern and additionally reads `scope.json`, agents, skills, SOP, and workflow files from the traversed directory."
+              },
+              "properties": {
+                "security-severity": "4.3",
+                "tags": [
+                  "security",
+                  "CWE-22",
+                  "stride:T",
+                  "stride:I"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+            },
+            {
+              "id": "CWE-639",
+              "name": "Cross-organization IDOR in knowledge-base routes (read/modify/delete of other orgs' KBs, files, folders)",
+              "shortDescription": {
+                "text": "Cross-organization IDOR in knowledge-base routes (read/modify/delete of other orgs' KBs, files, folders)"
+              },
+              "fullDescription": {
+                "text": "Knowledge-base routes accept bare resource UUIDs and pass them to service methods that filter only by primary key, with no organization_id constraint. An authenticated member of any organization can read, rename, move, tag, or soft/hard-delete knowledge bases, folders, and files belonging to other organizations."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Knowledge-base routes accept bare resource UUIDs and pass them to service methods that filter only by primary key, with no organization_id constraint. An authenticated member of any organization can read, rename, move, tag, or soft/hard-delete knowledge bases, folders, and files belonging to other organizations.\n\nCross-tenant disclosure and destruction of another organization's knowledge-base content: file names, tags, sizes and metadata are returned by listFiles; display names/tags/folder assignments can be rewritten (updateFile, batchMoveFiles, batchAddTags); files can be hard-deleted (deleteFile, batchDeleteFiles); entire knowledge bases can be renamed or soft-deleted (update, delete). PoC: 9/9 assertions green.\n\nAdd organization_id derived from request.user.orgId to every where clause on these paths: change findById/update/delete to filter by {id, organization_id} (findFirst), filter listFiles by organization_id alongside knowledge_base_id, filter updateFile/deleteFile/batchMoveFiles/batchDeleteFiles/batchAddTags/updateStats, and validate that knowledge_base_id-scoped routes (folders, bindings, tags) first load the KB scoped to the caller's org. The only org-scoped method today is listByOrganization.",
+                "markdown": "Knowledge-base routes accept bare resource UUIDs and pass them to service methods that filter only by primary key, with no organization_id constraint. An authenticated member of any organization can read, rename, move, tag, or soft/hard-delete knowledge bases, folders, and files belonging to other organizations.\n\nCross-tenant disclosure and destruction of another organization's knowledge-base content: file names, tags, sizes and metadata are returned by listFiles; display names/tags/folder assignments can be rewritten (updateFile, batchMoveFiles, batchAddTags); files can be hard-deleted (deleteFile, batchDeleteFiles); entire knowledge bases can be renamed or soft-deleted (update, delete). PoC: 9/9 assertions green.\n\nAdd organization_id derived from request.user.orgId to every where clause on these paths: change findById/update/delete to filter by {id, organization_id} (findFirst), filter listFiles by organization_id alongside knowledge_base_id, filter updateFile/deleteFile/batchMoveFiles/batchDeleteFiles/batchAddTags/updateStats, and validate that knowledge_base_id-scoped routes (folders, bindings, tags) first load the KB scoped to the caller's org. The only org-scoped method today is listByOrganization."
+              },
+              "properties": {
+                "security-severity": "8.8",
+                "tags": [
+                  "security",
+                  "CWE-639",
+                  "stride:E"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html"
+            },
+            {
+              "id": "vuln-0005",
+              "name": "Missing authentication on avatar generation endpoints (POST /api/avatars/generate, /generate-batch)",
+              "shortDescription": {
+                "text": "Missing authentication on avatar generation endpoints (POST /api/avatars/generate, /generate-batch)"
+              },
+              "fullDescription": {
+                "text": "POST /api/avatars/generate and POST /api/avatars/generate-batch lack the `authenticate` preHandler used by sibling avatar routes, so anonymous callers can invoke paid Nova Canvas image generation and write objects to the shared avatars S3 bucket when the feature flag is enabled."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "help": {
+                "text": "POST /api/avatars/generate and POST /api/avatars/generate-batch lack the `authenticate` preHandler used by sibling avatar routes, so anonymous callers can invoke paid Nova Canvas image generation and write objects to the shared avatars S3 bucket when the feature flag is enabled.\n\nUnauthenticated resource consumption (AWS Bedrock Nova Canvas per-image cost) and unauthenticated writes to the global avatars/ S3 namespace. Data confidentiality is unaffected (generated keys are returned only to the caller); impact is cost abuse plus unauthenticated state change.\n\nAdd the `preHandler: [authenticate]` option to the POST /avatars/generate and POST /avatars/generate-batch route registrations in avatarRoutes.ts, matching the /avatars/upload route. Optionally add rate limiting and per-user quota for avatar generation.",
+                "markdown": "POST /api/avatars/generate and POST /api/avatars/generate-batch lack the `authenticate` preHandler used by sibling avatar routes, so anonymous callers can invoke paid Nova Canvas image generation and write objects to the shared avatars S3 bucket when the feature flag is enabled.\n\nUnauthenticated resource consumption (AWS Bedrock Nova Canvas per-image cost) and unauthenticated writes to the global avatars/ S3 namespace. Data confidentiality is unaffected (generated keys are returned only to the caller); impact is cost abuse plus unauthenticated state change.\n\nAdd the `preHandler: [authenticate]` option to the POST /avatars/generate and POST /avatars/generate-batch route registrations in avatarRoutes.ts, matching the /avatars/upload route. Optionally add rate limiting and per-user quota for avatar generation."
+              },
+              "properties": {
+                "security-severity": "5.3",
+                "tags": [
+                  "security",
+                  "stride:T",
+                  "stride:I"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/idor-object-level-authorization-in-upload-download-flows",
+              "name": "IDOR / object-level authorization in upload/download flows",
+              "shortDescription": {
+                "text": "Coverage: IDOR / object-level authorization in upload/download flows"
+              },
+              "fullDescription": {
+                "text": "Coverage of IDOR / object-level authorization in upload/download flows across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of IDOR / object-level authorization in upload/download flows across the assessed attack surface.",
+                "markdown": "Coverage of IDOR / object-level authorization in upload/download flows across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/path-traversal-in-workspace-file-read-write",
+              "name": "Path traversal in workspace file read/write",
+              "shortDescription": {
+                "text": "Coverage: Path traversal in workspace file read/write"
+              },
+              "fullDescription": {
+                "text": "Coverage of Path traversal in workspace file read/write across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Path traversal in workspace file read/write across the assessed attack surface.",
+                "markdown": "Coverage of Path traversal in workspace file read/write across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/path-traversal-via-uploaded-filename",
+              "name": "Path traversal via uploaded filename",
+              "shortDescription": {
+                "text": "Coverage: Path traversal via uploaded filename"
+              },
+              "fullDescription": {
+                "text": "Coverage of Path traversal via uploaded filename across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Path traversal via uploaded filename across the assessed attack surface.",
+                "markdown": "Coverage of Path traversal via uploaded filename across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/cross-org-s3-key-access-traversal",
+              "name": "Cross-org S3 key access / traversal",
+              "shortDescription": {
+                "text": "Coverage: Cross-org S3 key access / traversal"
+              },
+              "fullDescription": {
+                "text": "Coverage of Cross-org S3 key access / traversal across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Cross-org S3 key access / traversal across the assessed attack surface.",
+                "markdown": "Coverage of Cross-org S3 key access / traversal across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/filename-path-injection-in-storage-key",
+              "name": "Filename/path injection in storage key",
+              "shortDescription": {
+                "text": "Coverage: Filename/path injection in storage key"
+              },
+              "fullDescription": {
+                "text": "Coverage of Filename/path injection in storage key across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Filename/path injection in storage key across the assessed attack surface.",
+                "markdown": "Coverage of Filename/path injection in storage key across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/command-injection-traversal-in-agentcore-container-file-ops",
+              "name": "Command injection / traversal in AgentCore container file ops",
+              "shortDescription": {
+                "text": "Coverage: Command injection / traversal in AgentCore container file ops"
+              },
+              "fullDescription": {
+                "text": "Coverage of Command injection / traversal in AgentCore container file ops across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Command injection / traversal in AgentCore container file ops across the assessed attack surface.",
+                "markdown": "Coverage of Command injection / traversal in AgentCore container file ops across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/symlink-and-copy-source-boundary-crossing-into-session-workspaces",
+              "name": "Symlink and copy-source boundary crossing into session workspaces",
+              "shortDescription": {
+                "text": "Coverage: Symlink and copy-source boundary crossing into session workspaces"
+              },
+              "fullDescription": {
+                "text": "Coverage of Symlink and copy-source boundary crossing into session workspaces across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Symlink and copy-source boundary crossing into session workspaces across the assessed attack surface.",
+                "markdown": "Coverage of Symlink and copy-source boundary crossing into session workspaces across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/zip-slip-path-traversal-in-archive-extraction",
+              "name": "Zip-slip / path traversal in archive extraction",
+              "shortDescription": {
+                "text": "Coverage: Zip-slip / path traversal in archive extraction"
+              },
+              "fullDescription": {
+                "text": "Coverage of Zip-slip / path traversal in archive extraction across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Zip-slip / path traversal in archive extraction across the assessed attack surface.",
+                "markdown": "Coverage of Zip-slip / path traversal in archive extraction across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/cross-user-avatar-access-missing-object-level-authorization",
+              "name": "Cross-user avatar access / missing object-level authorization",
+              "shortDescription": {
+                "text": "Coverage: Cross-user avatar access / missing object-level authorization"
+              },
+              "fullDescription": {
+                "text": "Coverage of Cross-user avatar access / missing object-level authorization across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Cross-user avatar access / missing object-level authorization across the assessed attack surface.",
+                "markdown": "Coverage of Cross-user avatar access / missing object-level authorization across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/idor-unauthenticated-access-in-avatar-upload-download",
+              "name": "IDOR / unauthenticated access in avatar upload/download",
+              "shortDescription": {
+                "text": "Coverage: IDOR / unauthenticated access in avatar upload/download"
+              },
+              "fullDescription": {
+                "text": "Coverage of IDOR / unauthenticated access in avatar upload/download across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of IDOR / unauthenticated access in avatar upload/download across the assessed attack surface.",
+                "markdown": "Coverage of IDOR / unauthenticated access in avatar upload/download across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.1"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-22",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Path traversal in pack-deploy endpoints allows reading files outside the industry-packs tree\n\nThe `packId` and `scopeDirName` parameters of the pack-deploy endpoints (`GET /api/packs/onboarding/:packId/:scopeDirName`, `POST /api/packs/deploy`) are used directly in filesystem path construction (`join(baseDir, 'industry-pack-' + packId)`, `join(packDir, 'scopes', scopeDirName)`) without any traversal or containment check. An authenticated user can supply traversal sequences (e.g. `a/../../` and `../`-chains) to make the service read files outside the `industry-packs` directory tree and return their contents."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (local repository)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3ed788d0220b3a2e7204cfd65c753faffe83e7ee4cca63df3bf1dc0042f0b63e"
+          },
+          "properties": {
+            "security-severity": "4.3",
+            "strix_vuln_class_hash": "6c58275b746a212b66e13227aff805df9d5241b3a0ee6715ddb4941ae4556cfd",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "medium",
+              "cvss": 4.3,
+              "timestamp": "2026-11-20 13:27:12 UTC",
+              "target": "super-agent/backend (local repository)",
+              "cwe": "CWE-22",
+              "impact": "Read-only local file disclosure: an authenticated attacker can read the contents of any file with the fixed names consumed by the service (`onboarding.json`, `scope.json`, `sop.md`, `SKILL.md`, `initial-memories.json`, `workflow-plan.json`, `manifest.json`) located anywhere on the server filesystem reachable by the backend process. No write or execute primitive was demonstrated: the appended filenames are fixed, so arbitrary-name files (e.g. `.env`, `package.json`, SSH keys) cannot be read directly, and all writes go through mocked/DB paths that only copy already-read content.",
+              "technical_analysis": "`getOnboardingConfig` in `src/services/pack-deploy.service.ts` builds paths as `join(baseDir, 'industry-pack-' + packId)` and `join(packDir, 'scopes', scopeDirName)` where `baseDir = resolve(process.cwd(), '..', 'industry-packs')`. Node's `join` does not reject `..` segments, and the prefix string `industry-pack-` is neutralized by supplying `packId = 'a/../../'` — the resulting segment `industry-pack-a` is canceled by the following `..`, so `packDir` resolves to the parent of the packs base directory, which exists and therefore passes the `existsSync` guard. `scopeDirName` then completes the escape to any directory, and `onboarding.json` inside it is read and returned. The same unvalidated pattern is used in `deploy()` (scope metadata, agents, skills, SOP, workflow reads). Fastify decodes URL-encoded parameters (`%2F`, `%2E%2E`) before they reach the handler, so encoded traversal survives route matching. Only the `authenticate` preHandler protects these routes — any authenticated user of any organization can call them, with no role or admin restriction.",
+              "remediation_steps": "Validate that `packId` and `scopeDirName` match a strict allowlist pattern (e.g. `^[A-Za-z0-9_-]+$`, no slashes or dots) before any path construction. Independently, after resolving the pack and scope directories, canonicalize with `resolve()` and verify the result starts with the canonical packs base directory plus path separator, rejecting otherwise. Apply the same check to the `deploy` flow, which shares the identical join pattern and additionally reads `scope.json`, agents, skills, SOP, and workflow files from the traversed directory.",
+              "counterevidence": "The `authenticate` preHandler is enforced on every pack route (verified by the 401 control test), so this is not unauthenticated. The final file read always appends a fixed filename (`onboarding.json`, `scope.json`, `sop.md`, `SKILL.md`, `manifest.json`, `initial-memories.json`, `workflow-plan.json`), so the attacker cannot read arbitrary filenames such as `package.json`, `.env`, or SSH keys — only files with those fixed names outside the pack tree. JSON parse failures are caught and return null (onboarding path) rather than erroring. No WAF or path sanitization exists on this path (locally verified), but the filename constraint is a real ceiling on impact.",
+              "confidence": "high",
+              "severity_change_conditions": "Discovery of any code path where the fixed appended filename is attacker-influenced (e.g. an endpoint accepting a filename within a scope directory), or confirmation that sensitive files with the consumed fixed names exist in reachable directories, would raise the severity.",
+              "poc": {
+                "description": "1. Run the PoC test `npx vitest run tests/unit/pack-deploy-traversal.poc.test.ts` in `super-agent/backend` (test file added in this assessment).\n2. The test starts a real Fastify instance registering the genuine `packDeployRoutes` with a mocked `authenticate` that accepts any Bearer token.\n3. Create a marker file `onboarding.json` containing `TRAVERSAL-MARKER-9f31ab` in a temp directory outside `industry-packs/`.\n4. Issue `GET /api/packs/onboarding/a%2F..%2F..%2F..%2F<relative-escape>%2Fleaked-scope` with any Bearer token: `packId = a/../../` resolves `packDir` above the packs base directory (the `industry-pack-a` segment is canceled by the following `..`), and `scopeDirName` traverses from there to the temp directory.\n5. Observe HTTP 200 with the marker file's contents returned in `data`.\n6. A control request with a nonexistent in-root pack returns `data: null`, and a request without a Bearer token returns 401.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Cross-organization IDOR in knowledge-base routes (read/modify/delete of other orgs' KBs, files, folders)\n\nKnowledge-base routes accept bare resource UUIDs and pass them to service methods that filter only by primary key, with no organization_id constraint. An authenticated member of any organization can read, rename, move, tag, or soft/hard-delete knowledge bases, folders, and files belonging to other organizations."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (local repository: /workspace/agentcore-superagent-update)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "1863911d653fa96b8271222da81d516a8890f0e2b94dad931e28a4258a35c6d9"
+          },
+          "properties": {
+            "security-severity": "8.8",
+            "strix_vuln_class_hash": "ebf1ba63c404f36a89caddaa6fe5f69242fcb30f0ba18d9b0a595b1226f560fa",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0002",
+              "severity": "high",
+              "cvss": 8.8,
+              "timestamp": "2026-11-20 13:28:11 UTC",
+              "target": "super-agent/backend (local repository: /workspace/agentcore-superagent-update)",
+              "cwe": "CWE-639",
+              "impact": "Cross-tenant disclosure and destruction of another organization's knowledge-base content: file names, tags, sizes and metadata are returned by listFiles; display names/tags/folder assignments can be rewritten (updateFile, batchMoveFiles, batchAddTags); files can be hard-deleted (deleteFile, batchDeleteFiles); entire knowledge bases can be renamed or soft-deleted (update, delete). PoC: 9/9 assertions green.",
+              "technical_analysis": "Every KnowledgeBaseService method that operates on an existing object filters only by primary key and never by organization_id: `findById` (where: {id}), `update` (where: {id}), `delete` (where: {id}), `listFiles` (where: {knowledge_base_id}), `updateFile`/`deleteFile` (where: {id}), `batchMoveFiles`/`batchDeleteFiles`/`batchAddTags` (where: {id: {in: fileIds}}), `listFolders`, `renameFolder`, `deleteFolder`, `getScopeBindings`, `updateStats`. The routes in knowledge-base.routes.ts pass request.params.id/fileId/folderId/scopeId straight into these methods with no ownership check. The only preHandlers are `authenticate` (identity only) and `requireModifyAccess`, which is `requireRole('owner','admin','member')` — a role check with no org binding, so any org's member qualifies. Only `listByOrganization` scopes by `request.user!.orgId`. Prisma's schema has organization_id on all these tables, so the fix is to include it in every where clause.",
+              "remediation_steps": "Add organization_id derived from request.user.orgId to every where clause on these paths: change findById/update/delete to filter by {id, organization_id} (findFirst), filter listFiles by organization_id alongside knowledge_base_id, filter updateFile/deleteFile/batchMoveFiles/batchDeleteFiles/batchAddTags/updateStats, and validate that knowledge_base_id-scoped routes (folders, bindings, tags) first load the KB scoped to the caller's org. The only org-scoped method today is listByOrganization.",
+              "counterevidence": "Checked for guards that could neutralize this: (1) authenticate (src/middleware/auth.ts) only verifies identity — it does not bind the request to any resource; (2) requireModifyAccess is requireRole('owner','admin','member') — a plain member of ANY org passes, so it constrains nothing cross-org; (3) no requireScopeAccess preHandler or app-level hook guards these routes (verified src/app.ts registerRoutes wiring); (4) listByOrganization IS correctly org-scoped, so the listing endpoint does not leak foreign IDs directly — an attacker needs the target UUID from another source, and UUIDv4 enumeration is impractical; (5) kb upload route does check existence but not ownership, so upload to a foreign KB also succeeds if the UUID is known. These constraints reduce the attack's ease but do not restore tenant isolation.",
+              "confidence": "high",
+              "confidence_rationale": "Executed PoC through the real route handlers and real service functions with a where-clause-faithful in-memory prisma; 9/9 tests green. Only the transport (JWT verification) was stubbed, which is upstream of the broken control.",
+              "severity_change_conditions": "Evidence that any UUIDs are exposed cross-org (e.g. in logs, exports, analytics, or the briefings/bindings endpoints) would confirm mass exploitability; conversely nothing observed lowers it.",
+              "poc": {
+                "description": "Run `npx vitest run tests/unit/kb-idor.poc.test.ts` in super-agent/backend. The test mocks prisma with an in-memory store that filters records strictly by the where clause the production code passes, stubs only token verification to install an org-A member identity, then drives the real route handlers via fastify.inject against an org-B KB/file. All six C1 assertions pass: cross-org read (KB + file listing), update, file metadata rewrite, file deletion, KB rename, and KB soft-delete all succeed for the org-A member.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-639",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Cross-organization access on briefing routes (read/mark-read/archive other orgs' briefings)\n\nAll four briefing endpoints under /api/business-scopes/:scopeId/briefings filter only by business_scope_id with no organization or scope-membership check. An authenticated user of any organization can read another org's briefing feed (titles, summaries, agent identities) and mutate its state (mark read, archive)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (local repository: /workspace/agentcore-superagent-update)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "a7473dbe5e9e47fbe097e31e345860116dd7979b23bb30002d58f3666cf52636"
+          },
+          "properties": {
+            "security-severity": "7.6",
+            "strix_vuln_class_hash": "7cb43bf93f2e5aa43c8b98e8e9f77e97db1ff02c2e44140782bd408ca55d226c",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0003",
+              "severity": "high",
+              "cvss": 7.6,
+              "timestamp": "2026-11-20 13:28:22 UTC",
+              "target": "super-agent/backend (local repository: /workspace/agentcore-superagent-update)",
+              "cwe": "CWE-639",
+              "impact": "Cross-tenant disclosure of another organization's briefing content (titles, summaries, categories, statuses, agent display names) plus unauthorized state changes (mark-read, archive) that suppress those briefings for the victim org's users.",
+              "technical_analysis": "src/routes/briefing.routes.ts queries prisma.scope_briefings with where: {business_scope_id: scopeId, ...} for list/count/groupBy and where: {id, business_scope_id: scopeId} for the mark-read and archive updates. The scope_briefings and business_scopes tables both carry organization_id, but no query references it. The sole preHandler is authenticate, which populates request.user (id/orgId/role) and performs no authorization; unlike several other route files, no scopeAccess middleware is attached here. Therefore request.user.orgId is available but unused, and any org's scope UUID grants full read and state mutation of that scope's briefings.",
+              "remediation_steps": "Resolve the business scope first with an organization_id (or scope membership) constraint — e.g. load business_scopes by {id, organization_id: request.user.orgId} (or via scope_memberships) and 404 on miss — and add organization_id to every scope_briefings where clause, including the findMany, counts, groupBy, and the update filters.",
+              "counterevidence": "Checked: (1) authenticate resolves identity but performs no scope-membership or org check; (2) no requireScopeAccess preHandler is attached to any briefing route (other route files use it, this one does not); (3) scope_briefings carries organization_id in the schema but the queries never reference it; (4) the PATCH/DELETE filters use {id, business_scope_id} — that binds to the scope but the scope itself is unauthenticated, so it adds no tenant protection; (5) UUIDv4 scope IDs make blind enumeration impractical. Severity reflects that briefings are agent-generated summaries (potentially business-sensitive) and the writes are limited to read/archive flags rather than content.",
+              "confidence": "high",
+              "confidence_rationale": "Same executed-PoC basis as vuln-0002: real route handlers and prisma where clauses against a faithful in-memory store; only token verification stubbed.",
+              "severity_change_conditions": "Proof that briefing summaries contain credentials or highly sensitive business data would raise integrity/confidentiality impact; confirmation that scope UUIDs are broadly exposed (logs/exports) would confirm exploitability at scale.",
+              "poc": {
+                "description": "Run `npx vitest run tests/unit/kb-idor.poc.test.ts` in super-agent/backend — the C4 describe block drives the real briefing route handlers with an org-A member identity against an org-B scope and briefing, using an in-memory prisma whose filtering mirrors exactly the where clauses the production code builds.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "CWE-22",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Path traversal in workspace provisioning via unsanitized skill/agent names (workspace-manager.ts)\n\nSkill and agent names are stored and later used in filesystem path joins (workspace-manager.ts) without any sanitization or containment check. An authenticated org user who creates a skill or agent with a `../`-containing name causes the backend, when provisioning a chat session workspace, to write files (SKILL.md, agent .md, or a copied skill directory) to attacker-chosen locations outside the intended `.claude/skills` and `.claude/agents` directories on the server."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent backend (local repository)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3ed788d0220b3a2e7204cfd65c753faffe83e7ee4cca63df3bf1dc0042f0b63e"
+          },
+          "properties": {
+            "security-severity": "7.6",
+            "strix_vuln_class_hash": "6c58275b746a212b66e13227aff805df9d5241b3a0ee6715ddb4941ae4556cfd",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0004",
+              "severity": "high",
+              "cvss": 7.6,
+              "timestamp": "2026-11-20 13:29:55 UTC",
+              "target": "super-agent backend (local repository)",
+              "cwe": "CWE-22",
+              "impact": "An authenticated org user can make the backend write arbitrary-content files (SKILL.md content / agent markdown with a controlled system prompt, or a full copied skill directory) to arbitrary relative paths reachable from the workspace base directory — e.g. overwriting application configs, other tenants' workspaces, cron/system files writable by the service user, or planting files that a later interpreter loads. File content includes substantial attacker-controlled text (skill body/description, agent systemPrompt). Demonstrated locally with synthetic markers reading the written files back outside the skills/agents roots.",
+              "technical_analysis": "Root cause is the absence of both input validation at creation time and containment checks at write time.\n\n**Unvalidated creation path.** `POST /api/skills` (skills.routes.ts:50-54) accepts `{ name, display_name, ... }` with only a TypeScript interface — no zod/JSON-schema validation on `name`. `skillService.createSkill` (skill.service.ts:77-89) stores `input.name` verbatim to Postgres (`skills.name VARCHAR(255)`, no format constraint in prisma/schema.prisma:265). Similarly `createAgentSchema` (agent.schema.ts:17-21) enforces only min/max length and non-whitespace — `../../evil` passes. Notably, agent and skill names flow into `ScopeForWorkspace` (chat.service.ts) unmodified.\n\n**Missing containment at the sink.** `WorkspaceManager.downloadSkill` (workspace-manager.ts:968-1044) computes `const skillDir = join(targetDir, skill.name)` with no containment check — unlike `readWorkspaceFile` (workspace-manager.ts:1474-1476), which explicitly rejects paths escaping `workspacePath`. The same unchecked join pattern exists in `generateAgentSubagentFiles` (workspace-manager.ts:756, `join(skillsDir, skill.name)` and :785 `${agent.name}.md`), `installSkillToWorkspace` (workspace-manager.ts:1359-1362, `join(skillsDir, skillName)` + `cp -r`), and `syncSkills` (workspace-manager.ts:862-883, removes/creates skill dirs by name). A `../` sequence in a name escapes the per-session workspace entirely: `join(skillsDir, '../../../../../../x')` resolves above the workspace base directory.\n\nThese sinks run during session provisioning (`ensureSessionWorkspace`, workspace-manager.ts:250-307), triggered whenever a chat session is created in a scope whose agents reference the crafted skill, and during workspace refresh on skill sync. Contrast: `createDocGroupSymlinks` (workspace-manager.ts:278) sanitizes document-group names with `replace(/[/\\\\:*?\"<>|]/g, '-')` — the codebase sanitizes this same class of user data elsewhere but not for skills/agents.",
+              "remediation_steps": "Enforce a strict name format at the API boundary: validate skill and agent names with a schema (e.g. `^[A-Za-z0-9][A-Za-z0-9._-]*$`, no `/`, `\\`, or leading dots) in the create/update routes and services, and reject existing stored names that violate it before workspace provisioning. Defense in depth: in WorkspaceManager, apply the same containment check used by `readWorkspaceFile` (resolve the joined path and verify it starts with the intended skills/agents directory) in `downloadSkill`, `generateAgentSubagentFiles`, `installSkillToWorkspace`, and when syncing/removing stale skill directories.",
+              "counterevidence": "Actively searched for controls: (1) skills.routes.ts has no JSON-schema or zod validation on POST / body name — only TypeScript interfaces; skill.service.ts createSkill passes input.name to the repository verbatim; updateSkill cannot change name but create can set any value. (2) The Prisma schema (skills.name VARCHAR(255)) and migration impose no format constraint — slashes and dots are valid characters. (3) The contrast control readWorkspaceFile at workspace-manager.ts:1474-1476 explicitly implements prefix containment, showing the codebase knows this pattern but did not apply it to skill/agent name joins. (4) Notably, document-group symlink names ARE sanitized with .replace(/[/\\\\:*?\"<>|]/g, '-') (workspace-manager.ts:278), another proof sanitization exists elsewhere but not for skill/agent names. (5) Scope-generator-created skills and marketplace skills also feed these paths; I did not audit every name source, but the primary user-controlled route (POST /api/skills) is unvalidated, which alone establishes reachability. Searched for sanitization between service and workspace-manager (scope building in chat.service.ts/agent-runtime-claude.ts) — names are passed through as-is.",
+              "confidence": "high",
+              "severity_change_conditions": "Demonstrating that session workspaces are provisioned with the process owner able to write to a path that influences execution (e.g. another tenant's workspace, a service config, or a writable autoload directory) would raise confidentiality/availability and potentially the severity to high; if a name-format validation exists in an ingest layer not examined here (e.g. enterprise skill publish or import), reachability of the primary POST /api/skills route would need re-checking.",
+              "poc": {
+                "description": "1. Create a skill via POST /api/skills with name `../../../../../../escaped-skill` and a body/description (no route/service validation exists). 2. Attach the skill to a business scope/agent so it enters SkillForWorkspace. 3. Start a chat session; ensureSessionWorkspace calls downloadSkill which computes join(skillsDir, skill.name) and writes SKILL.md there. 4. Observe the marker file written outside the skills directory. Repeat with an agent named `../../../../../evil-agent` (generateAgentSubagentFiles writes `${agent.name}.md` into agentsDir) and with installSkillToWorkspace (skillName joined into skillsDir then cp -r).",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "vuln-0005",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "Missing authentication on avatar generation endpoints (POST /api/avatars/generate, /generate-batch)\n\nPOST /api/avatars/generate and POST /api/avatars/generate-batch lack the `authenticate` preHandler used by sibling avatar routes, so anonymous callers can invoke paid Nova Canvas image generation and write objects to the shared avatars S3 bucket when the feature flag is enabled."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "super-agent/backend (local repository)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d698b443f78fb8b52d42f3dfcee0170bd27df04b897a5d47a2b246e576054e5b"
+          },
+          "properties": {
+            "security-severity": "5.3",
+            "strix_vuln_class_hash": "4775e39cba8569249e7975a4e5d9b88f88b00a3a5060535e02941361c8668fd8",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0005",
+              "severity": "medium",
+              "cvss": 5.3,
+              "timestamp": "2026-11-20 13:33:35 UTC",
+              "target": "super-agent/backend (local repository)",
+              "impact": "Unauthenticated resource consumption (AWS Bedrock Nova Canvas per-image cost) and unauthenticated writes to the global avatars/ S3 namespace. Data confidentiality is unaffected (generated keys are returned only to the caller); impact is cost abuse plus unauthenticated state change.",
+              "technical_analysis": "In `src/routes/avatarRoutes.ts`, `POST /avatars/upload` registers `preHandler: [authenticate]`, but `POST /avatars/generate` (~line 50) and `POST /avatars/generate-batch` (~line 119) register only a JSON schema — no `preHandler`. `src/routes/index.ts` registers `avatarRoutes` with `prefix: '/api'` and no global authentication hook exists in `app.ts` (auth is per-route preHandler only), so these endpoints are reachable anonymously. The handlers call `avatarService.generateAvatar`, which invokes Bedrock Nova Canvas (`amazon.nova-canvas-v1:0`, a paid model) and uploads to S3 under a global `avatars/` namespace with no owner binding. A server-side `ENABLE_AVATAR_GENERATION === 'true'` gate exists, but it only controls the feature, not authentication.",
+              "remediation_steps": "Add the `preHandler: [authenticate]` option to the POST /avatars/generate and POST /avatars/generate-batch route registrations in avatarRoutes.ts, matching the /avatars/upload route. Optionally add rate limiting and per-user quota for avatar generation.",
+              "counterevidence": "No auth middleware, ownership check, or rate limit exists on these routes — confirmed by mounting the real plugin. Mitigations found: ENABLE_AVATAR_GENERATION defaults to false (.env.example), batch is capped at 10 items, and generated keys are non-enumerable (Date.now + random suffix). These reduce but do not remove the issue when the feature is enabled.",
+              "confidence": "high",
+              "confidence_rationale": "Working local vitest PoC exercising the real route registration and real handler code with mocked S3/Bedrock; auth gap is visible in the route registration itself.",
+              "severity_change_conditions": "If the flag is enabled by default in production deployments, severity rises to medium (confirmed cost abuse); a per-user rate limit plus auth would eliminate it.",
+              "poc": {
+                "description": "1. Set ENABLE_AVATAR_GENERATION=true. 2. Send POST /api/avatars/generate with body {\"role\":\"engineer\"} and no Authorization header. 3. Observe 200 and an avatarKey — an S3 object written anonymously. 4. Repeat with POST /api/avatars/generate-batch with {\"roles\":[10 roles]} — all succeed anonymously.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/idor-object-level-authorization-in-upload-download-flows",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "IDOR / object-level authorization in upload/download flows — No issue identified: backend routes: files.routes.ts, documents.routes.ts, document-groups.routes.ts\n\nfiles/documents/document-groups route handlers pass request.user.orgId into service/repository queries; file.service.ts:272 validateFileAccess enforces orgId key prefix on every download/delete/metadata path; document.service.ts getDocumentById/getDownloadUrl filter by organization_id; document-group.repository.ts getFile/listFiles filter by organization_id. Gaps: knowledge_base-adjacent files/routes use no org filter (separate coverage row), and DELETE /api/document-groups/:id/files/:fileId does not verify file belongs to :id group (same-org only) — candidate C6."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "backend routes: files.routes.ts, documents.routes.ts, document-groups.routes.ts"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "IDOR / object-level authorization in upload/download flows",
+              "surface": "backend routes: files.routes.ts, documents.routes.ts, document-groups.routes.ts",
+              "recorded_by": "Upload/Download Authz Discovery",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/path-traversal-in-workspace-file-read-write",
+          "ruleIndex": 4,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Path traversal in workspace file read/write — No issue identified: workspace-manager.ts resolveWorkspaceFilePath / readWorkspaceFile / writeWorkspaceFile(Raw)\n\njoin + startsWith(workspacePath) prefix check present on every workspace read/write/resolve path (lines 1476, 1555, 1569, 1605). No decodeURIComponent on path before join (single decode at Fastify router level), null-byte risk is theoretical only. Prefix check is string-prefix (not boundary-aligned) but workspacePath always ends at a sessionId segment, so no sibling-prefix collision in practice."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "workspace-manager.ts resolveWorkspaceFilePath / readWorkspaceFile / writeWorkspaceFile(Raw)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Path traversal in workspace file read/write",
+              "surface": "workspace-manager.ts resolveWorkspaceFilePath / readWorkspaceFile / writeWorkspaceFile(Raw)",
+              "recorded_by": "File-Path Boundary Discovery",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/path-traversal-via-uploaded-filename",
+          "ruleIndex": 5,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Path traversal via uploaded filename — No issue identified: knowledge-base.routes.ts upload (storedFilename -> join(localDir, storedFilename))\n\nFilename sanitized with replace(/[/\\\\:*?\"<>|]/g,'-') removing both separators; Date.now() prefix; join into org-scoped kb dir. No traversal component can survive."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "knowledge-base.routes.ts upload (storedFilename -> join(localDir, storedFilename))"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Path traversal via uploaded filename",
+              "surface": "knowledge-base.routes.ts upload (storedFilename -> join(localDir, storedFilename))",
+              "recorded_by": "File-Path Boundary Discovery",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/cross-org-s3-key-access-traversal",
+          "ruleIndex": 6,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Cross-org S3 key access / traversal — No issue identified: files.routes.ts / file.service.ts S3 key handling\n\nvalidateFileAccess enforces `${orgId}/` prefix on download/delete/metadata; upload sanitizes filename to [a-zA-Z0-9.-]. Property tests (file-storage-isolation.property.test.ts) cover cross-org denial and key prefix. Minor: prefix check is string-based (org \"a\" vs \"ab\" keys) but org IDs are UUIDs in practice."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "files.routes.ts / file.service.ts S3 key handling"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Cross-org S3 key access / traversal",
+              "surface": "files.routes.ts / file.service.ts S3 key handling",
+              "recorded_by": "File-Path Boundary Discovery",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/filename-path-injection-in-storage-key",
+          "ruleIndex": 7,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Filename/path injection in storage key — No issue identified: avatarRoutes.ts / avatarService.ts avatar upload & generation\n\nFilenames are server-generated (Date.now + random); user upload re-encoded via sharp to WebP; S3 only, no filesystem paths from user input."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "avatarRoutes.ts / avatarService.ts avatar upload & generation"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Filename/path injection in storage key",
+              "surface": "avatarRoutes.ts / avatarService.ts avatar upload & generation",
+              "recorded_by": "File-Path Boundary Discovery",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/command-injection-traversal-in-agentcore-container-file-ops",
+          "ruleIndex": 8,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Command injection / traversal in AgentCore container file ops — Ruled out: agentcore-command.service.ts sanitizePath / writeFile heredoc / syncFileFromS3\n\nsanitizePath (agentcore-command.service.ts:214-219) rejects '..' and leading '/' and backtick/$/;/|/&/< > before shell use on every readFile/writeFile/deleteFile/syncFileFromS3 path; content is written via quoted heredoc (no terminator injection since AGENTCORE_HEREDOC_EOF is unique-ish); syncFileFromS3 interpolates only server-derived bucket/key and the sanitized path."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "agentcore-command.service.ts sanitizePath / writeFile heredoc / syncFileFromS3"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "Command injection / traversal in AgentCore container file ops",
+              "surface": "agentcore-command.service.ts sanitizePath / writeFile heredoc / syncFileFromS3",
+              "recorded_by": "File-Path Boundary Discovery",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/symlink-and-copy-source-boundary-crossing-into-session-workspaces",
+          "ruleIndex": 9,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Symlink and copy-source boundary crossing into session workspaces — No issue identified: workspace-manager.ts doc group symlinks / installPlugins / marketplace install localPath\n\nDoc-group symlink names sanitized; targets are server-computed storagePath UUIDs. Plugin names come from DB (org-scoped); skill localPath is server-derived data/skills/{hashId}. Marketplace 'npx skills add' fetches remote content but is an authenticated install-by-design feature (documented), and skillDir is hash-based."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "workspace-manager.ts doc group symlinks / installPlugins / marketplace install localPath"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Symlink and copy-source boundary crossing into session workspaces",
+              "surface": "workspace-manager.ts doc group symlinks / installPlugins / marketplace install localPath",
+              "recorded_by": "File-Path Boundary Discovery",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/zip-slip-path-traversal-in-archive-extraction",
+          "ruleIndex": 10,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Zip-slip / path traversal in archive extraction — Ruled out: workspace-manager.ts extractSkillZip (backend/src/services/workspace-manager.ts:1049)\n\nPoC invoked the real private method via tsx with a zip containing entry \"../../../../tmp-pwned-marker-<rand>.txt\": the unzip branch ('unzip -o') stripped \"../\" components (landed inside targetDir), and the python3 -m zipfile -e fallback (Python 3.14) also sanitized the name (\"..\" replaced with \"_\", absolute components stripped) so the marker landed inside targetDir, never outside. Symlink-entry variant also failed in both branches (unzip defers symlink creation after directory writes; Python branch raises NotADirectoryError). Caller path downloadSkill (line 999) performs no zip-entry validation but none is required given both extraction utilities sanitize. Production image (backend/Dockerfile, node:20-alpine, apk adds only openssl/curl) contains no python3 and no unzip — extraction falls to the error branch. No traversal path demonstrated on any reachable runtime."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "workspace-manager.ts extractSkillZip (backend/src/services/workspace-manager.ts:1049)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "Zip-slip / path traversal in archive extraction",
+              "surface": "workspace-manager.ts extractSkillZip (backend/src/services/workspace-manager.ts:1049)",
+              "recorded_by": "Zip-Slip Validation",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/cross-user-avatar-access-missing-object-level-authorization",
+          "ruleIndex": 11,
+          "kind": "open",
+          "level": "none",
+          "message": {
+            "text": "Cross-user avatar access / missing object-level authorization — Requires further review: GET /api/avatars/presign/:key and GET /api/avatars/* proxy (avatarRoutes.ts)\n\nPresign route requires auth but binds no owner/org check — any authenticated user can presign any key (PoC passed). The /avatars/* proxy is fully unauthenticated and streams any avatars/* key (PoC passed, synthetic marker). Keys are non-enumerable (Date.now + random), impact limited to avatar image reads; also multi-segment keys passed to /presign/ route fall through to the unauthenticated wildcard proxy, bypassing its auth check. Severity is hardening-level (low); not filed as separate report due to turn budget — parent should assess whether to file as low-severity."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "GET /api/avatars/presign/:key and GET /api/avatars/* proxy (avatarRoutes.ts)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "needs_follow_up",
+              "risk_area": "Cross-user avatar access / missing object-level authorization",
+              "surface": "GET /api/avatars/presign/:key and GET /api/avatars/* proxy (avatarRoutes.ts)",
+              "recorded_by": "Avatar-Route Auth Validation",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/idor-unauthenticated-access-in-avatar-upload-download",
+          "ruleIndex": 12,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "IDOR / unauthenticated access in avatar upload/download — Ruled out: backend routes: avatarRoutes.ts (/avatars/*, /avatars/presign/:key, /avatars/generate*)\n\nRoot-agent read of avatarRoutes.ts + routes/index.ts:196 (prefix /api, no global auth hook in app.ts — but see below). /avatars/generate* lack `authenticate` preHandler, however gated behind ENABLE_AVATAR_GENERATION==='true' (default off) and only write generated avatars to a global namespace — an unauthenticated cost/state-change issue only when the env flag is enabled; not enabled by default. /avatars/presign/:key and the /avatars/* proxy serve any key under the shared avatars/ prefix with no ownership binding — cross-user avatar image read only; keys are `avatars/${Date.now()}-${random36}.webp` (unguessable in practice). Impact ceiling is disclosure of another user's avatar image if its key is known — a hardening gap, not a demonstrable vulnerability (no enumeration vector). Treating as hardening note, not a filed finding."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "backend routes: avatarRoutes.ts (/avatars/*, /avatars/presign/:key, /avatars/generate*)"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "IDOR / unauthenticated access in avatar upload/download",
+              "surface": "backend routes: avatarRoutes.ts (/avatars/*, /avatars/presign/:key, /avatars/generate*)",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": false,
+          "toolExecutionNotifications": [
+            {
+              "level": "warning",
+              "message": {
+                "text": "1 agent(s) did not finish cleanly (Avatar-Route Auth Validation); any surface they held is under-covered."
+              }
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 5
+      }
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Strix",
+          "informationUri": "https://strix.ai",
+          "rules": [
+            {
+              "id": "CWE-22",
+              "name": "Path traversal / arbitrary file read in download() via unvalidated filename",
+              "shortDescription": {
+                "text": "Path traversal / arbitrary file read in download() via unvalidated filename"
+              },
+              "fullDescription": {
+                "text": "The **`download()`** function in `app.py` joins a user-supplied `filename` onto the administrator-configured `root` without any validation or containment check, allowing arbitrary file reads anywhere the process can access. Both relative traversal sequences (`../../`) and absolute paths (which entirely replace the root when joined) escape the intended download root."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "help": {
+                "text": "The **`download()`** function in `app.py` joins a user-supplied `filename` onto the administrator-configured `root` without any validation or containment check, allowing arbitrary file reads anywhere the process can access. Both relative traversal sequences (`../../`) and absolute paths (which entirely replace the root when joined) escape the intended download root.\n\nAn attacker able to supply the `filename` parameter can read any file accessible to the application process, including files outside the download root: credentials, configuration, source code, and other users' data. This fully breaks the documented trust boundary that restricts downloads to the configured root.\n\nReplace `download()` with the containment logic already implemented in `download_v2()`: resolve the root once, resolve the joined target, and verify the resolved target is relative to the resolved root (e.g. `Path.is_relative_to`) before opening the file, rejecting otherwise. Alternatively, restrict filenames to a safe character set and reject separators and absolute paths, though the resolve-and-containment approach is the robust fix because it holds after symlink resolution.",
+                "markdown": "The **`download()`** function in `app.py` joins a user-supplied `filename` onto the administrator-configured `root` without any validation or containment check, allowing arbitrary file reads anywhere the process can access. Both relative traversal sequences (`../../`) and absolute paths (which entirely replace the root when joined) escape the intended download root.\n\nAn attacker able to supply the `filename` parameter can read any file accessible to the application process, including files outside the download root: credentials, configuration, source code, and other users' data. This fully breaks the documented trust boundary that restricts downloads to the configured root.\n\nReplace `download()` with the containment logic already implemented in `download_v2()`: resolve the root once, resolve the joined target, and verify the resolved target is relative to the resolved root (e.g. `Path.is_relative_to`) before opening the file, rejecting otherwise. Alternatively, restrict filenames to a safe character set and reject separators and absolute paths, though the resolve-and-containment approach is the robust fix because it holds after symlink resolution."
+              },
+              "properties": {
+                "security-severity": "6.5",
+                "tags": [
+                  "security",
+                  "CWE-22",
+                  "stride:T",
+                  "stride:I"
+                ]
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html"
+            },
+            {
+              "id": "strix-coverage/path-traversal-arbitrary-file-read",
+              "name": "Path traversal / arbitrary file read",
+              "shortDescription": {
+                "text": "Coverage: Path traversal / arbitrary file read"
+              },
+              "fullDescription": {
+                "text": "Coverage of Path traversal / arbitrary file read across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Path traversal / arbitrary file read across the assessed attack surface.",
+                "markdown": "Coverage of Path traversal / arbitrary file read across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.1"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-22",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Path traversal / arbitrary file read in download() via unvalidated filename\n\nThe **`download()`** function in `app.py` joins a user-supplied `filename` onto the administrator-configured `root` without any validation or containment check, allowing arbitrary file reads anywhere the process can access. Both relative traversal sequences (`../../`) and absolute paths (which entirely replace the root when joined) escape the intended download root."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "local_code: /home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/downloads (app.py)",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3ed788d0220b3a2e7204cfd65c753faffe83e7ee4cca63df3bf1dc0042f0b63e"
+          },
+          "properties": {
+            "security-severity": "6.5",
+            "strix_vuln_class_hash": "6c58275b746a212b66e13227aff805df9d5241b3a0ee6715ddb4941ae4556cfd",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "medium",
+              "cvss": 6.5,
+              "timestamp": "2026-11-20 07:29:12 UTC",
+              "target": "local_code: /home/ec2-user/bedrock/scan/deploy/glm53-ec2/benchmarks/fixtures/downloads (app.py)",
+              "cwe": "CWE-22",
+              "impact": "An attacker able to supply the `filename` parameter can read any file accessible to the application process, including files outside the download root: credentials, configuration, source code, and other users' data. This fully breaks the documented trust boundary that restricts downloads to the configured root.",
+              "technical_analysis": "In `app.py` line 7, `(Path(root) / filename)` is passed directly to `.read_bytes()`. `pathlib` performs no sanitization of the right-hand operand: a relative payload containing `..` segments escapes the root after resolution, and an absolute `filename` discards the root entirely (pathlib semantics: `Path('/a') / '/b'` yields `/b`). The documented trust boundary (root and ancestors are admin-controlled, no client symlink creation) makes this an attacker-controlled input reaching an unguarded filesystem sink. The sibling function `download_v2` (lines 9-14) implements the correct control — resolve both paths and require `target.is_relative_to(base)` — demonstrating the intended invariant that `download` fails to enforce.",
+              "remediation_steps": "Replace `download()` with the containment logic already implemented in `download_v2()`: resolve the root once, resolve the joined target, and verify the resolved target is relative to the resolved root (e.g. `Path.is_relative_to`) before opening the file, rejecting otherwise. Alternatively, restrict filenames to a safe character set and reject separators and absolute paths, though the resolve-and-containment approach is the robust fix because it holds after symlink resolution.",
+              "counterevidence": "The docstring confirms the root and ancestors are admin-controlled and clients cannot create symlinks, so symlink races and root-tampering variants are out of contract and were not tested. Absolute-path joining is standard Path behavior, not a framework bug. The only mitigating observation found is that the sibling download_v2 function implements a correct resolve-and-containment check, which shows the intended invariant exists but does not protect the unguarded download() path.",
+              "confidence": "high",
+              "confidence_rationale": "Working PoC executed in a local Python process with synthetic data, demonstrating arbitrary file read both via relative traversal and absolute-path injection, with a negative control (v2) proving the environment otherwise permits the operation when guarded.",
+              "severity_change_conditions": "If the application were confirmed to run as an unprivileged user in a container with no sensitive files readable, the confidentiality impact would lower; conversely, proof that the filename reaches an unauthenticated network interface would confirm network-reachable exploitation.",
+              "poc": {
+                "description": "Set up a synthetic download root and a secret file outside it. Call `download(root, filename)` with a benign filename to establish baseline behavior. Then call it with a relative traversal payload (`../../secret/flag.txt`) and an absolute path payload (the direct path to the secret file). Both payload classes return the secret file's contents. Call `download_v2()` with the same payloads as a control and observe it rejects them.",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/path-traversal-arbitrary-file-read",
+          "ruleIndex": 1,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Path traversal / arbitrary file read — No issue identified: downloads/app.py download_v2\n\nResolve-then-containment-check with is_relative_to rejects both relative traversal (../../secret/flag.txt) and absolute path injection; verified with negative-control payloads in a local Python process."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "downloads/app.py download_v2"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Path traversal / arbitrary file read",
+              "surface": "downloads/app.py download_v2",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 1
+      }
+    }
+  ]
+}

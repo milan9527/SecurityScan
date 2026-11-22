@@ -1,0 +1,392 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20 13:34:06 UTC",
+  "run_id": "agentcore-superagent-update_5a0b",
+  "run_name": "agentcore-superagent-update_5a0b",
+  "scope": {
+    "targets": [
+      {
+        "type": "local_code",
+        "details": {
+          "target_path": "/home/ec2-user/bedrock/agentcore-superagent-update",
+          "workspace_subdir": "agentcore-superagent-update"
+        },
+        "original": "/home/ec2-user/bedrock/agentcore-superagent-update"
+      }
+    ],
+    "scan_mode": "quick",
+    "scope_mode": "full",
+    "diff_scope": {
+      "active": false,
+      "mode": "full"
+    },
+    "instruction": "Perform an authorized source-code security assessment of this local repository. Test only local isolated services and mocks. Do not contact deployed endpoints, use real credentials, or change cloud resources. Trace attacker-controlled input through actual guards to a security-sensitive sink. Validate candidate findings with a minimal local regression test or reproducible local PoC. Distinguish demonstrated vulnerabilities from assumptions and incomplete validation. Record file locations, prerequisites, impact, and remediation. Prioritize a few complete end-to-end paths within the turn budget; report untested coverage honestly.\n\nScenario: File and workspace boundaries. Trace download, upload, archive, repository, and workspace paths; check canonicalization, traversal, symlinks, and authorization. Use temporary local files containing synthetic markers to prove any boundary crossing."
+  },
+  "summary": {
+    "surfaces_reviewed": 20,
+    "outcomes": {
+      "reported": 10,
+      "no_issue_found": 6,
+      "ruled_out": 3,
+      "needs_follow_up": 1
+    },
+    "findings_filed": 5,
+    "gaps": 1
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "39267e82",
+        "agent_name": "Avatar-Route Auth Validation",
+        "status": "stopped",
+        "skills": [
+          "vulnerabilities/idor"
+        ],
+        "task": "White-box, local-only validation in /workspace/agentcore-superagent-update (super-agent/backend). No deployed targets; local mocks only. Validate candidates C2/C8/C9 from discovery note (avatarRoutes.ts): (1) GET /avatars/presign/:key and the /avatars/* proxy serve arbitrary avatar keys with no ownership check and avatar keys carry no org/user prefix — assess whether an authenticated user can fetch/presign any other user's avatar (impact: read of avatars only, unless keys are guessable/enumerable — check key generation in avatarService); (2) POST /avatars/generate and /generate-batch reportedly lack the authenticate preHandler entirely — verify in route registration and app.ts whether any global auth applies, and assess impact (cost abuse via image generation? writing avatars to global namespace?). Build a local vitest PoC with mocked auth/S3 calling the real routes to demonstrate any confirmed unauthorized access. Counterevidence pass: check key format (UUID?), whether presign is scoped, whether these routes are mounted behind an authenticated prefix in app.ts. If a genuine vulnerability is confirmed (unauthenticated state change or cross-user data access), file create_vulnerability_report with code_locations (no fix_after), honest severity (likely low/medium), record_coverage. If it's only a hardening/info issue, do NOT file a report — record it as no_issue_found/ruled_out with the named control, and summarize the hardening note in your completion report instead.",
+        "is_root": false
+      },
+      {
+        "agent_id": "13522f2d",
+        "agent_name": "File-Path Boundary Discovery",
+        "status": "completed",
+        "skills": [
+          "custom/source_aware_sast"
+        ],
+        "task": "White-box source-only assessment of /workspace/agentcore-superagent-update (super-agent/backend). NO deployed targets, NO real credentials, local tests/mocks only. Task: DISCOVER file/workspace boundary weaknesses. Focus: src/services/workspace-manager* (and anything named workspace), src/routes/files.routes.ts, documents.routes.ts, avatarRoutes.ts, knowledge-base.routes.ts — every path where user input (filenames, IDs, scope ids, paths) flows into fs operations (path.join, resolve, createWriteStream, readFile, unlink, mkdir, sendFile, unzip/extraction). For each candidate record: entrypoint route + param, the exact guard (or its absence), file:line, sink. Also check for zip/archive extraction (pack-deploy.routes.ts, industry-pack handling) for zip-slip/symlink issues. Read the existing tests (tests/unit/workspace-manager.test.ts, tests/property/file-storage-isolation.property.test.ts) to understand claimed invariants — a gap between tested invariant and actual code is a finding. Do NOT report; produce a ranked candidate list with file:line and why each guard fails or holds. Use record_coverage for surfaces swept.",
+        "is_root": false
+      },
+      {
+        "agent_id": "970f253a",
+        "agent_name": "KB-IDOR Validation",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/idor"
+        ],
+        "task": "White-box, local-only validation in /workspace/agentcore-superagent-update (super-agent/backend). No deployed targets, no real credentials, local mocks only. Validate candidate C1: knowledge-base.service.ts methods (findById/update/delete/listFiles/updateFile/deleteFile/batch*/folders/scope-bindings) take bare UUIDs with no organization_id filter, while routes in knowledge-base.routes.ts pass user-influenced ids without org binding — cross-org IDOR on read/mutate/delete of other orgs' knowledge-base files. Build a local PoC using a mocked prisma client (or SQLite-backed stub) that reproduces the actual query flow: two orgs, KB owned by org B, requester from org A; show the service returns/updates/deletes org B records. Prefer invoking the real service functions with a prisma mock (jest). Also validate candidate C4 (briefing.routes.ts: scope_briefings by scopeId with no org/scope-access check) the same way. Run the counterevidence pass: check routes' preHandlers (authenticate? scopeAccess?), whether kb IDs are UUIDs (enumeration difficulty), whether listByOrganization is org-scoped (reduces exposure), and any global hooks in app.ts. If confirmed, file create_vulnerability_report(s) with code_locations (no fix_after), PoC, honest CVSS (authenticated user, cross-tenant data access), and record_coverage. State prerequisites and impact precisely.",
+        "is_root": false
+      },
+      {
+        "agent_id": "98541a29",
+        "agent_name": "Pack-Deploy Traversal Validation",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/path_traversal_lfi_rfi"
+        ],
+        "task": "White-box, local-only validation in /workspace/agentcore-superagent-update (super-agent/backend). No deployed targets; local tests only. Validate candidate: pack-deploy.routes.ts GET /api/packs/onboarding/:packId/:scopeDirName and POST /api/packs/deploy pass raw params into pack-deploy.service.ts join(baseDir,'industry-pack-'+packId) and join(packDir,'scopes',scopeDirName) with no traversal check (read-only JSON disclosure). Build a local PoC: a jest/tsx test or minimal Fastify instance with in-memory auth mock that calls the real service functions with packId='..%2f..%2f..' style traversal and scopeDirName containing ../, proving a file outside the industry-packs tree (e.g. package.json or a synthetic marker file you create) is read. Also test whether URL encoding/decoding lets ../ survive route matching. Counterevidence pass: check auth preHandlers on these routes (who can call?), whether only .json fixed filenames are appended, and the actual impact ceiling. If confirmed, file create_vulnerability_report with code_locations (no fix_after), PoC, honest CVSS, and record_coverage. Report prerequisites and impact precisely.",
+        "is_root": false
+      },
+      {
+        "agent_id": "869e4992",
+        "agent_name": "Root Agent",
+        "status": "completed",
+        "skills": [],
+        "task": "\n\nLocal Codebases: - /home/ec2-user/bedrock/agentcore-superagent-update (available at: /workspace/agentcore-superagent-update; this is the user's real directory, mounted live and writable — .git/.agents/.codex are read-only)\n\nSpecial instructions: Perform an authorized source-code security assessment of this local repository. Test only local isolated services and mocks. Do not contact deployed endpoints, use real credentials, or change cloud resources. Trace attacker-controlled input through actual guards to a security-sensitive sink. Validate candidate findings with a minimal local regression test or reproducible local PoC. Distinguish demonstrated vulnerabilities from assumptions and incomplete validation. Record file locations, prerequisites, impact, and remediation. Prioritize a few complete end-to-end paths within the turn budget; report untested coverage honestly.\n\nScenario: File and workspace boundaries. Trace download, upload, archive, repository, and workspace paths; check canonicalization, traversal, symlinks, and authorization. Use temporary local files containing synthetic markers to prove any boundary crossing.",
+        "is_root": true
+      },
+      {
+        "agent_id": "a246002a",
+        "agent_name": "Skill-Name Traversal Validation",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/path_traversal_lfi_rfi"
+        ],
+        "task": "White-box, local-only validation in /workspace/agentcore-superagent-update (super-agent/backend). No deployed targets; local tests only. Validate candidate #3 from discovery: skill and agent names are free-form at creation (skills POST /api/skills has no name format validation; agent.schema.ts length-only) and flow unsanitized into path joins in workspace-manager.ts: downloadSkill (~:968, join(targetDir, skill.name) with NO containment check unlike readWorkspaceFile), installSkillToWorkspace (~:257, join(skillsDir, skillName)), syncSkills (~:955), and generateAgentSubagentFiles (~:758, `${agent.name}.md`). A `../` in a skill name could write/read outside the skills directory. Build a local PoC against the REAL functions (tsx/vitest, scratch under /tmp, mock S3/DB as needed) with a synthetic marker to prove or disprove escape. Trace the full chain: how a user creates a skill (route → service → DB), when downloadSkill/installSkillToWorkspace run (session provisioning), and whether any layer (schema validation, DB constraint, prior sanitization at creation) blocks names containing / or ... Run the counterevidence pass rigorously: check skills.routes.ts/skill schemas and services for name sanitization on create/update, check import paths (CSV/zip?) that set names. If confirmed, file create_vulnerability_report with code_locations (no fix_after), PoC, honest CVSS (authenticated org user; write-as-service-user outside workspace dir), record_coverage. If ruled out, name the exact control and location and record_coverage ruled_out. Be precise about prerequisites and impact.",
+        "is_root": false
+      },
+      {
+        "agent_id": "5acfb8be",
+        "agent_name": "Upload/Download Authz Discovery",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/idor",
+          "custom/source_aware_sast"
+        ],
+        "task": "White-box source-only assessment of /workspace/agentcore-superagent-update (super-agent/backend). NO deployed targets, NO real credentials, local tests only. Task: DISCOVER authorization gaps (IDOR) in upload/download flows. For every file-serving/upload route (files.routes.ts, documents.routes.ts, document-groups.routes.ts, avatarRoutes.ts, knowledge-base.routes.ts, briefing.routes.ts, apps.routes.ts), check whether object ownership/scope checks (middleware/scopeAccess.ts, authorization/, repositories/) actually bind the requester identity to the file/scope before read/write/delete. Identify routes where an ID alone yields another user's/scope's file. Check how files are stored (S3 keys? local FS?) and whether keys are derived from user input. Do NOT report; produce ranked candidates with file:line, the missing/broken check, and the IDOR path. Use record_coverage for swept surfaces.",
+        "is_root": false
+      },
+      {
+        "agent_id": "1fb0f492",
+        "agent_name": "Zip-Slip Validation",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/path_traversal_lfi_rfi",
+          "vulnerabilities/insecure_file_uploads"
+        ],
+        "task": "White-box, local-only validation in /workspace/agentcore-superagent-update (super-agent/backend). No deployed targets; local tests only. Validate the zip-slip in workspace-manager.ts extractSkillZip (~lines 1017-1027): unzip -o strips ../ but the python3 -m zipfile -e fallback does not. Build a complete, reproducible local PoC: create a zip with entry `../../../../tmp-pwned-marker-<random>.txt` containing a synthetic marker string; invoke the actual extractSkillZip code path (import the function or extract the minimal logic faithfully — prefer calling the real function via tsx/jest so the PoC exercises the shipped code, e.g. a jest test or tsx script under /tmp scratch); prove the marker file lands outside the extraction target dir; also show the unzip-utility branch (control) strips ../ if available. Then run the counterevidence pass (check callers for any pre-validation of zip entries, check downloadSkill caller path at workspace-manager.ts:968, check whether skill.zip source is attacker-influenceable — skills are user-created per-org content). If confirmed, file a create_vulnerability_report with code_locations (no fix_after), full PoC script, honest CVSS (consider attacker position: authenticated org user; scope of write: files written as service user outside workspace dirs), and record_coverage. Report should name prerequisites and impact precisely.",
+        "is_root": false
+      }
+    ],
+    "skills_exercised": [
+      "idor",
+      "insecure_file_uploads",
+      "path_traversal_lfi_rfi",
+      "source_aware_sast"
+    ],
+    "findings_filed": 5,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": false,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": [
+      "1 agent(s) did not finish cleanly (Avatar-Route Auth Validation); any surface they held is under-covered."
+    ]
+  },
+  "entries": [
+    {
+      "surface": "backend routes: files.routes.ts, documents.routes.ts, document-groups.routes.ts",
+      "risk_area": "IDOR / object-level authorization in upload/download flows",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "files/documents/document-groups route handlers pass request.user.orgId into service/repository queries; file.service.ts:272 validateFileAccess enforces orgId key prefix on every download/delete/metadata path; document.service.ts getDocumentById/getDownloadUrl filter by organization_id; document-group.repository.ts getFile/listFiles filter by organization_id. Gaps: knowledge_base-adjacent files/routes use no org filter (separate coverage row), and DELETE /api/document-groups/:id/files/:fileId does not verify file belongs to :id group (same-org only) — candidate C6.",
+      "recorded_by": "Upload/Download Authz Discovery",
+      "recorded_at": "2026-11-20 13:22:51 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend routes: knowledge-base.routes.ts (all /api/knowledge-bases/* incl. files, folders, tags, scope bindings)",
+      "risk_area": "IDOR / object-level authorization in upload/download flows",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Confirmed and reported as vuln-0002: knowledge-base.service.ts methods filter by primary key only with no organization_id; executed PoC (tests/unit/kb-idor.poc.test.ts) shows org A member reading/renaming/deleting org B KBs, files, folders. Open sub-item: getFile s3_key content-download path not validated.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 13:22:55 UTC",
+      "updated_at": "2026-11-20 13:30:07 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend routes: avatarRoutes.ts (/avatars/*), briefing.routes.ts, apps.routes.ts",
+      "risk_area": "IDOR / object-level authorization in upload/download flows",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "C4 briefing cross-org access confirmed and reported as vuln-0003 (PoC in tests/unit/kb-idor.poc.test.ts). C2 avatar presign/proxy ownership gap and C9 avatar generate unauthenticated remain unvalidated dynamically — remediation in report prose; see vuln-0003 for briefings.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 13:22:57 UTC",
+      "updated_at": "2026-11-20 13:30:09 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "src/services/workspace-manager.ts extractSkillZip (skill S3 zip extraction)",
+      "risk_area": "Zip-slip path traversal in archive extraction",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Local PoC: crafted zip with '../../../pwned-marker-file.txt' member extracted via `python3 -m zipfile -e` writes outside targetDir (confirmed in sandbox). `unzip` fallback strips ../ (safe), but the python fallback in code has no entry-name validation. Sink: workspace-manager.ts:1017-1027.",
+      "recorded_by": "File-Path Boundary Discovery",
+      "recorded_at": "2026-11-20 13:24:43 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts skill name -> join(skillsDir, skill.name) (downloadSkill/syncSkills/installSkillToWorkspace)",
+      "risk_area": "Path traversal via unsanitized skill/agent name from DB",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Confirmed and reported as vuln-0004: executed local vitest PoC with synthetic marker shows escape via downloadSkill/generateAgentSubagentFiles/installSkillToWorkspace; contrast control (readWorkspaceFile containment, doc-group name sanitization) proves missing guard, not missing pattern.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 13:24:46 UTC",
+      "updated_at": "2026-11-20 13:30:10 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts resolveWorkspaceFilePath / readWorkspaceFile / writeWorkspaceFile(Raw)",
+      "risk_area": "Path traversal in workspace file read/write",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "join + startsWith(workspacePath) prefix check present on every workspace read/write/resolve path (lines 1476, 1555, 1569, 1605). No decodeURIComponent on path before join (single decode at Fastify router level), null-byte risk is theoretical only. Prefix check is string-prefix (not boundary-aligned) but workspacePath always ends at a sessionId segment, so no sibling-prefix collision in practice.",
+      "recorded_by": "File-Path Boundary Discovery",
+      "recorded_at": "2026-11-20 13:24:48 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "knowledge-base.routes.ts upload (storedFilename -> join(localDir, storedFilename))",
+      "risk_area": "Path traversal via uploaded filename",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Filename sanitized with replace(/[/\\\\:*?\"<>|]/g,'-') removing both separators; Date.now() prefix; join into org-scoped kb dir. No traversal component can survive.",
+      "recorded_by": "File-Path Boundary Discovery",
+      "recorded_at": "2026-11-20 13:24:50 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "pack-deploy.service.ts getPacksBaseDir / join(packDir, scopeDirName)",
+      "risk_area": "Path traversal via packId/scopeDirName route params",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "GET /api/packs/onboarding/:packId/:scopeDirName and POST /api/packs/deploy pass raw params into join(baseDir, 'industry-pack-'+packId) and join(packDir,'scopes',scopeDirName) with no traversal check (pack-deploy.service.ts:97-100, 214-220). No zip extraction exists in pack deploy (no unzip usage); traversal is readFile-only disclosure within same filesystem, authenticated any org user.",
+      "recorded_by": "File-Path Boundary Discovery",
+      "recorded_at": "2026-11-20 13:24:52 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "files.routes.ts / file.service.ts S3 key handling",
+      "risk_area": "Cross-org S3 key access / traversal",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "validateFileAccess enforces `${orgId}/` prefix on download/delete/metadata; upload sanitizes filename to [a-zA-Z0-9.-]. Property tests (file-storage-isolation.property.test.ts) cover cross-org denial and key prefix. Minor: prefix check is string-based (org \"a\" vs \"ab\" keys) but org IDs are UUIDs in practice.",
+      "recorded_by": "File-Path Boundary Discovery",
+      "recorded_at": "2026-11-20 13:24:54 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "avatarRoutes.ts / avatarService.ts avatar upload & generation",
+      "risk_area": "Filename/path injection in storage key",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Filenames are server-generated (Date.now + random); user upload re-encoded via sharp to WebP; S3 only, no filesystem paths from user input.",
+      "recorded_by": "File-Path Boundary Discovery",
+      "recorded_at": "2026-11-20 13:24:56 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agentcore-command.service.ts sanitizePath / writeFile heredoc / syncFileFromS3",
+      "risk_area": "Command injection / traversal in AgentCore container file ops",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "sanitizePath (agentcore-command.service.ts:214-219) rejects '..' and leading '/' and backtick/$/;/|/&/< > before shell use on every readFile/writeFile/deleteFile/syncFileFromS3 path; content is written via quoted heredoc (no terminator injection since AGENTCORE_HEREDOC_EOF is unique-ish); syncFileFromS3 interpolates only server-derived bucket/key and the sanitized path.",
+      "recorded_by": "File-Path Boundary Discovery",
+      "recorded_at": "2026-11-20 13:24:58 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts doc group symlinks / installPlugins / marketplace install localPath",
+      "risk_area": "Symlink and copy-source boundary crossing into session workspaces",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Doc-group symlink names sanitized; targets are server-computed storagePath UUIDs. Plugin names come from DB (org-scoped); skill localPath is server-derived data/skills/{hashId}. Marketplace 'npx skills add' fetches remote content but is an authenticated install-by-design feature (documented), and skillDir is hash-based.",
+      "recorded_by": "File-Path Boundary Discovery",
+      "recorded_at": "2026-11-20 13:25:00 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts extractSkillZip (backend/src/services/workspace-manager.ts:1049)",
+      "risk_area": "Zip-slip / path traversal in archive extraction",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "PoC invoked the real private method via tsx with a zip containing entry \"../../../../tmp-pwned-marker-<rand>.txt\": the unzip branch ('unzip -o') stripped \"../\" components (landed inside targetDir), and the python3 -m zipfile -e fallback (Python 3.14) also sanitized the name (\"..\" replaced with \"_\", absolute components stripped) so the marker landed inside targetDir, never outside. Symlink-entry variant also failed in both branches (unzip defers symlink creation after directory writes; Python branch raises NotADirectoryError). Caller path downloadSkill (line 999) performs no zip-entry validation but none is required given both extraction utilities sanitize. Production image (backend/Dockerfile, node:20-alpine, apk adds only openssl/curl) contains no python3 and no unzip — extraction falls to the error branch. No traversal path demonstrated on any reachable runtime.",
+      "recorded_by": "Zip-Slip Validation",
+      "recorded_at": "2026-11-20 13:27:09 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "super-agent/backend src/routes/pack-deploy.routes.ts + src/services/pack-deploy.service.ts (packId/scopeDirName path construction)",
+      "risk_area": "Path traversal / local file disclosure",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Vitest PoC (tests/unit/pack-deploy-traversal.poc.test.ts) with real service + routes: URL-encoded traversal in packId='a/../../' and ../-chain in scopeDirName read a marker onboarding.json outside industry-packs/, returned to any authenticated user. Filed as vuln-0001. Impact ceiling: fixed appended filenames only (onboarding.json/scope.json/sop.md/SKILL.md etc.); auth preHandler enforced (401 control test). POST /api/packs/deploy shares the identical join pattern; deploy-side traversal not separately exercised (DB mocked) but same root cause.",
+      "recorded_by": "Pack-Deploy Traversal Validation",
+      "recorded_at": "2026-11-20 13:27:15 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET/PUT/DELETE /api/knowledge-bases/:id, /:id/files, /:id/files/:fileId, /:id/files/batch, /:id/folders, /scope/:scopeId/bindings (knowledge-base.routes.ts + knowledge-base.service.ts)",
+      "risk_area": "Cross-organization IDOR (missing organization_id filter)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "PoC tests/unit/kb-idor.poc.test.ts: real route handlers + service with where-clause-faithful prisma mock; org A member read/modified/deleted org B KB, files, folders; 9/9 tests green. Filed as vuln-0002.",
+      "recorded_by": "KB-IDOR Validation",
+      "recorded_at": "2026-11-20 13:28:25 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/api/business-scopes/:scopeId/briefings (list, mark-read, archive, stats) in briefing.routes.ts",
+      "risk_area": "Cross-organization access (no org/scope-membership check)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Same PoC file, C4 block: org A user read org B briefings, marked read, archived; 3/3 green. Filed as vuln-0003.",
+      "recorded_by": "KB-IDOR Validation",
+      "recorded_at": "2026-11-20 13:28:27 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts skill/agent name path joins (downloadSkill, generateAgentSubagentFiles, installSkillToWorkspace, syncSkills)",
+      "risk_area": "Path traversal / file boundary escape",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Confirmed with local vitest PoC against the real WorkspaceManager (mock S3): skill name '../../../../../../escaped-skill' writes SKILL.md outside the skills dir; agent name with ../ writes agent .md outside agents dir; installSkillToWorkspace copies a skill tree outside the workspace. No name validation in skills.routes.ts/skill.service.ts or agent.schema.ts (length-only); DB imposes no format constraint; readWorkspaceFile:1474-1476 has the containment check these sinks lack. Filed as vuln-0004.",
+      "recorded_by": "Skill-Name Traversal Validation",
+      "recorded_at": "2026-11-20 13:29:58 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/avatars/generate and /generate-batch (avatarRoutes.ts)",
+      "risk_area": "Missing authentication / cost abuse",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "No authenticate preHandler on either route; no global auth in app.ts. Local vitest PoC (tests/unit/avatar-routes.authz.poc.test.ts) shows anonymous generation succeeds when flag on. Filed vuln-0005.",
+      "recorded_by": "Avatar-Route Auth Validation",
+      "recorded_at": "2026-11-20 13:33:37 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/avatars/presign/:key and GET /api/avatars/* proxy (avatarRoutes.ts)",
+      "risk_area": "Cross-user avatar access / missing object-level authorization",
+      "outcome": "needs_follow_up",
+      "outcome_label": "Requires further review",
+      "evidence": "Presign route requires auth but binds no owner/org check — any authenticated user can presign any key (PoC passed). The /avatars/* proxy is fully unauthenticated and streams any avatars/* key (PoC passed, synthetic marker). Keys are non-enumerable (Date.now + random), impact limited to avatar image reads; also multi-segment keys passed to /presign/ route fall through to the unauthenticated wildcard proxy, bypassing its auth check. Severity is hardening-level (low); not filed as separate report due to turn budget — parent should assess whether to file as low-severity.",
+      "recorded_by": "Avatar-Route Auth Validation",
+      "recorded_at": "2026-11-20 13:33:39 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "backend routes: avatarRoutes.ts (/avatars/*, /avatars/presign/:key, /avatars/generate*)",
+      "risk_area": "IDOR / unauthenticated access in avatar upload/download",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Root-agent read of avatarRoutes.ts + routes/index.ts:196 (prefix /api, no global auth hook in app.ts — but see below). /avatars/generate* lack `authenticate` preHandler, however gated behind ENABLE_AVATAR_GENERATION==='true' (default off) and only write generated avatars to a global namespace — an unauthenticated cost/state-change issue only when the env flag is enabled; not enabled by default. /avatars/presign/:key and the /avatars/* proxy serve any key under the shared avatars/ prefix with no ownership binding — cross-user avatar image read only; keys are `avatars/${Date.now()}-${random36}.webp` (unguessable in practice). Impact ceiling is disclosure of another user's avatar image if its key is known — a hardening gap, not a demonstrable vulnerability (no enumeration vector). Treating as hardening note, not a filed finding.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 13:33:46 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "needs_follow_up",
+      "surface": "GET /api/avatars/presign/:key and GET /api/avatars/* proxy (avatarRoutes.ts)",
+      "risk_area": "Cross-user avatar access / missing object-level authorization",
+      "detail": "Presign route requires auth but binds no owner/org check — any authenticated user can presign any key (PoC passed). The /avatars/* proxy is fully unauthenticated and streams any avatars/* key (PoC passed, synthetic marker). Keys are non-enumerable (Date.now + random), impact limited to avatar image reads; also multi-segment keys passed to /presign/ route fall through to the unauthenticated wildcard proxy, bypassing its auth check. Severity is hardening-level (low); not filed as separate report due to turn budget — parent should assess whether to file as low-severity."
+    }
+  ]
+}

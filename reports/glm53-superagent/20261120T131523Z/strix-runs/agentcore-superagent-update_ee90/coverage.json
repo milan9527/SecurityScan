@@ -1,0 +1,366 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20 13:47:57 UTC",
+  "run_id": "agentcore-superagent-update_ee90",
+  "run_name": "agentcore-superagent-update_ee90",
+  "scope": {
+    "targets": [
+      {
+        "type": "local_code",
+        "details": {
+          "target_path": "/home/ec2-user/bedrock/agentcore-superagent-update",
+          "workspace_subdir": "agentcore-superagent-update"
+        },
+        "original": "/home/ec2-user/bedrock/agentcore-superagent-update"
+      }
+    ],
+    "scan_mode": "quick",
+    "scope_mode": "full",
+    "diff_scope": {
+      "active": false,
+      "mode": "full"
+    },
+    "instruction": "Perform an authorized source-code security assessment of this local repository. Test only local isolated services and mocks. Do not contact deployed endpoints, use real credentials, or change cloud resources. Trace attacker-controlled input through actual guards to a security-sensitive sink. Validate candidate findings with a minimal local regression test or reproducible local PoC. Distinguish demonstrated vulnerabilities from assumptions and incomplete validation. Record file locations, prerequisites, impact, and remediation. Prioritize a few complete end-to-end paths within the turn budget; report untested coverage honestly.\n\nScenario: Agent tool execution and untrusted content. Trace user input and retrieved content into shell, process spawning, filesystem access, and privileged tool calls. Verify execution boundaries and approvals with harmless local marker operations. Do not assume every prompt injection is a vulnerability without a demonstrated privilege boundary crossing."
+  },
+  "summary": {
+    "surfaces_reviewed": 19,
+    "outcomes": {
+      "reported": 12,
+      "no_issue_found": 3,
+      "ruled_out": 2,
+      "needs_follow_up": 2
+    },
+    "findings_filed": 11,
+    "gaps": 3
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "92a0a860",
+        "agent_name": "Agent-Execution Boundary Specialist",
+        "status": "completed",
+        "skills": [
+          "rce",
+          "llm_applications",
+          "agentic_system_security"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update (local repo, read-only analysis + LOCAL-ONLY validation). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour job: audit the AGENT TOOL EXECUTION AND APPROVAL boundary for the scenario \"Agent tool execution and untrusted content.\"\n\nCode to focus on:\n- super-agent/backend/src/services/claude-agent.service.ts (spawns Claude agent CLI; check approval/permission modes, allowed tools, how prompts are built)\n- super-agent/backend/src/services/claude-hooks.ts, conversation-hooks.ts\n- super-agent/agentcore/src/agent-runner.ts, file-watcher.ts, workspace-sync.ts (agent runtime: tool execution, Bash/file access, approvals)\n- super-agent/backend/src/services/agent-runtime-*.ts, dev-server-manager.ts, agentcore-command.service.ts\n- Anywhere user prompt or retrieved content (RAG documents, skills, web/MCP results) flows into: shell/exec/spawn, filesystem writes outside a workspace, or privileged tool calls.\n\nWhat to do:\n1. Trace how a chat message becomes an agent run: which approvalMode/permissionMode is default, what tools are enabled, whether Bash/write tools are unrestricted, and who controls those settings (are they user-settable per request — e.g. via agent create/patch routes?).\n2. Trace indirect-injection surfaces: retrieved documents/skills/web content entering the prompt, and whether tool calls are gated by a human-approval boundary or auto-approved. Per the scenario instructions: a prompt injection is NOT a finding unless you demonstrate a privilege boundary crossing (e.g. unapproved shell command executed on the host with attacker-chosen harmless marker like `touch /tmp/<marker>` or an equivalent local marker).\n3. Validation is LOCAL ONLY: you may run Node/TS snippets importing the actual repo code, spin up mocks, or construct minimal repros of the guard logic (e.g. instantiate the permission/approval logic with a fake payload). Use a harmless marker operation to prove execution. DO NOT contact AWS, deployed endpoints, or use real credentials. Do NOT modify repo files; work in /tmp for scratch.\n4. For each candidate: decide confirmed / ruled_out (name the exact control, file:line, on every reachable path) / open_proof_gap. Record coverage for every surface you assess (record_coverage).\n5. File confirmed findings with create_vulnerability_report (code_locations required, white-box). One report per distinct vulnerability. No fix_before/fix_after — remediation in prose only.\n\nnode_modules exist in backend/ so direct imports of services may work; otherwise extract the logic into a minimal local harness in /tmp. Report honestly what you validated vs assumed.",
+        "is_root": false
+      },
+      {
+        "agent_id": "57499336",
+        "agent_name": "AuthN/AuthZ Boundary Specialist",
+        "status": "completed",
+        "skills": [
+          "idor",
+          "broken_function_level_authorization",
+          "authentication_jwt"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update (local repo, read-only analysis + LOCAL-ONLY validation). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour job: audit authentication and authorization enforcement on the backend HTTP surface (Fastify), focused on cross-tenant/object-level access (IDOR/BOLA) and missing auth.\n\nCode to focus on:\n- super-agent/backend/src/middleware/auth.ts, agentAccess.ts, scopeAccess.ts, token-quota.ts\n- super-agent/backend/src/authorization/* (permissions, auth.middleware)\n- super-agent/backend/src/routes/index.ts (route registration — which routes lack auth middleware) and the route files it mounts: agents, chat, documents, files, skills/enterprise-skills, mcp, apiKeys, credential vault (credential-vault.repository / service), connectors, workflows, apps, projects, rag, audit.\n- For each route handling object IDs (agentId, documentId, scopeId, roomId, apiKeyId...): does the handler verify the caller's membership/ownership of that object before reading/writing? Look for handlers that take an id param and query the repository directly without an access check.\n\nWhat to do:\n1. Build a route inventory: route → auth required? → object-level authorization check present (file:line) or missing.\n2. Prioritize: credential vault, apiKeys, mcp configs, chat rooms, documents — these hold secrets or cross-tenant data.\n3. Validation is LOCAL ONLY: you may run unit-level repros of the guard logic (import middleware/service functions with mocked request objects in /tmp scratch) or use the repo's existing test setup (backend/tests, vitest). No network, no deployed endpoints, no real credentials. Do not modify repo files.\n4. Close each candidate: confirmed (local repro showing the guard is absent/bypassable) / ruled_out (named the enforcing middleware at file:line and verified it runs on that route) / open_proof_gap. record_coverage for assessed routes (you may group per route file).\n5. File confirmed findings with create_vulnerability_report (white-box, code_locations, no fix_after). Remediation in prose.\n\nKeep the inventory bounded: full pass on the highest-value route files, honest coverage statement for the rest. backend/node_modules present; vitest config exists.",
+        "is_root": false
+      },
+      {
+        "agent_id": "86e357a0",
+        "agent_name": "Remaining-Routes AuthZ Sweeper",
+        "status": "stopped",
+        "skills": [
+          "idor",
+          "broken_function_level_authorization"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update (local repo, read-only analysis + LOCAL-ONLY validation). Call get_threat_model on /workspace/agentcore-superagent-update first, and read coverage list (list_coverage) to avoid duplicating work.\n\nContext: a previous agent confirmed cross-tenant IDORs on knowledge-base routes (vuln-0001) and briefing routes (vuln-0002) — queries by bare record ID with no organization scoping. The pattern to hunt: repository/service queries that filter by an object ID taken from the request (params/body) WITHOUT also filtering by the caller's organization_id / membership.\n\nYour scope — the route/service files NOT yet verified handler-by-handler:\n- super-agent/backend/src/routes/: scope-memory, rehearsal, integrations, projects, workflows, tasks, enterprise-skills, skills, showcase, support, apps, execution, businessScopes, checkpoint, pack-deploy, appData, appBackend, im, avatarRoutes, briefing-already-done-skip, organizations, userGroups/membership, customer-profile/support/faq.\n- Also complete the RAG follow-up: rag-retriever.service.ts retrieveByKnowledgeBases / retrieve chains (knowledge_base_ids from request with no org filter) — attempt a local PoC-level confirmation consistent with how vuln-0001 was proven (local unit harness with mocked Prisma, no network). If it's the same root cause family as vuln-0001 but a distinct unscoped sink/route, file it as its own report; if it is the same root cause on the same objects, do NOT re-file — note it via coverage.\n\nMethod:\n1. For each route: which params/object IDs does it accept, and does the service query scope by organization_id or membership? Use rg to trace params → service → repository.\n2. Confirm the vulnerable ones with a minimal LOCAL unit harness (vitest in /tmp or direct imports with mocked Prisma — backend/node_modules present). No network, no deployed endpoints, no real creds, do not modify repo files.\n3. record_coverage per route file (or grouped) with honest outcomes: reported / ruled_out (named enforcing line) / no_issue_found / needs_follow_up.\n4. File each confirmed finding via create_vulnerability_report (white-box, code_locations, no fix_after).\n\nBe bounded: prioritize routes that expose cross-org data (projects, workflows, tasks, apps, showcase, integrations, scope-memory, checkpoint, pack-deploy). State clearly what you covered vs skipped.",
+        "is_root": false
+      },
+      {
+        "agent_id": "2ea601ea",
+        "agent_name": "Root Agent",
+        "status": "completed",
+        "skills": [],
+        "task": "\n\nLocal Codebases: - /home/ec2-user/bedrock/agentcore-superagent-update (available at: /workspace/agentcore-superagent-update; this is the user's real directory, mounted live and writable — .git/.agents/.codex are read-only)\n\nSpecial instructions: Perform an authorized source-code security assessment of this local repository. Test only local isolated services and mocks. Do not contact deployed endpoints, use real credentials, or change cloud resources. Trace attacker-controlled input through actual guards to a security-sensitive sink. Validate candidate findings with a minimal local regression test or reproducible local PoC. Distinguish demonstrated vulnerabilities from assumptions and incomplete validation. Record file locations, prerequisites, impact, and remediation. Prioritize a few complete end-to-end paths within the turn budget; report untested coverage honestly.\n\nScenario: Agent tool execution and untrusted content. Trace user input and retrieved content into shell, process spawning, filesystem access, and privileged tool calls. Verify execution boundaries and approvals with harmless local marker operations. Do not assume every prompt injection is a vulnerability without a demonstrated privilege boundary crossing.",
+        "is_root": true
+      },
+      {
+        "agent_id": "163281ed",
+        "agent_name": "Workspace/Skill Install Specialist",
+        "status": "completed",
+        "skills": [
+          "path_traversal_lfi_rfi",
+          "insecure_file_uploads",
+          "rce"
+        ],
+        "task": "Target: /workspace/agentcore-superagent-update (local repo, read-only analysis + LOCAL-ONLY validation). Call get_threat_model on /workspace/agentcore-superagent-update first.\n\nYour job: audit the WORKSPACE / SKILL / PLUGIN INSTALLATION paths for path traversal, arbitrary file write, and command-injection-adjacent issues.\n\nCode to focus on:\n- super-agent/backend/src/services/workspace-manager.ts — especially installPlugins() (git clone with user-controlled plugin.name/ref/gitUrl: `join(pluginsDir, plugin.name)` — check traversal via `../` or absolute name; `git clone --branch <ref>` with attacker-controlled ref like `--upload-pack=...`), downloadSkill() (skill.localPath copy, skill.name join), extractSkillZip() (unzip vs python3 -m zipfile fallback).\n- Who controls these values: trace back to routes/services — skill marketplace (backend/src/services/skill-marketplace.service.ts), agents.routes / agent create/patch, connectors, scope-generator.service. Is the value an authenticated user's DB-controlled field? Any authz (agentAccess/scopeAccess) in front of the route that provisions workspaces?\n- super-agent/backend/src/routes/files.routes.ts, documents.routes.ts, file.service.ts, document.service.ts — upload handling, path joins, zip extraction (zip-slip).\n- super-agent/backend/src/services/dev-server-manager.ts, rag/document-extractor.ts, apps.routes.ts, chat.routes.ts exec/spawn usage.\n\nWhat to do:\n1. Trace each user-controlled string (skill.name, skill.localPath, plugin.name, plugin.gitUrl, plugin.ref, file names, S3 keys) through every join/cp/execFile and determine: can it escape the workspace root or execute something unintended? Note: execFile with argv array mitigates shell injection, but argument injection into git (`--upload-pack`, `-o` for ssh) may still matter if reachable.\n2. Validate LOCALLY with a minimal harness (import or copy the exact functions into /tmp, run Node) proving a marker write outside the target dir (e.g. /tmp/marker-xyz). Do not contact network/S3/AWS; mock the S3 client where needed. Do not modify repo files.\n3. Close every candidate as confirmed / ruled_out (named control at file:line on every reachable path) / open_proof_gap. record_coverage for every surface assessed.\n4. File confirmed findings with create_vulnerability_report (white-box, code_locations required, no fix_after). Remediation in prose.\n\nbackend/node_modules is present, so direct imports may work. Report honestly what was validated locally vs assumed.",
+        "is_root": false
+      }
+    ],
+    "skills_exercised": [
+      "agentic_system_security",
+      "authentication_jwt",
+      "broken_function_level_authorization",
+      "idor",
+      "insecure_file_uploads",
+      "llm_applications",
+      "path_traversal_lfi_rfi",
+      "rce"
+    ],
+    "findings_filed": 11,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": false,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": [
+      "1 agent(s) did not finish cleanly (Remaining-Routes AuthZ Sweeper); any surface they held is under-covered."
+    ]
+  },
+  "entries": [
+    {
+      "surface": "connectors.routes.ts (credential vault + connectors, 23 routes)",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Every handler passes request.user.orgId to credentialVaultService/connector service; repository filters by organization_id (credential-vault.repository.ts:30-78 findFirst where {id, organization_id}). Vault routes carry authenticate/requireModifyAccess. Named control verified on all routes.",
+      "recorded_by": "AuthN/AuthZ Boundary Specialist",
+      "recorded_at": "2026-11-20 13:43:44 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "apiKeys.routes.ts, mcp.routes.ts",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "All handlers pass request.user.orgId into apiKeyService.revokeApiKey/deleteApiKey (org-scoped where) and mcpServerService.getMcpServerById(id, orgId); mcp.repository findAll filters by organizationId. Auth + requireModifyAccess present on all mutating routes.",
+      "recorded_by": "AuthN/AuthZ Boundary Specialist",
+      "recorded_at": "2026-11-20 13:43:48 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "chatRooms.routes.ts, documents.routes.ts, files.routes.ts, agents.routes.ts",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Handlers pass request.user.orgId into repositories/services which filter by organization_id (chat.repository findById where {id, organization_id}; document.service getDocumentById(id, orgId)); agents routes use orgId in where clauses. Same-org user-level (non-org) sharing is by design, not cross-tenant.",
+      "recorded_by": "AuthN/AuthZ Boundary Specialist",
+      "recorded_at": "2026-11-20 13:43:58 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "claude-agent.service.ts buildOptions (backend host-side Claude runtime)",
+      "risk_area": "Agent tool execution approval boundary — unapproved Bash/host command execution",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Real buildOptions() instantiated locally with repo .env: permissionMode=bypassPermissions, allowDangerouslySkipPermissions=true, allowedTools incl. Bash/Write/Edit/WebFetch. Only gate is PreToolUse regex denylist (claude-hooks.ts), proven bypassable locally (python3 -c marker written to /tmp after hook returned allow).",
+      "recorded_by": "Agent-Execution Boundary Specialist",
+      "recorded_at": "2026-11-20 13:44:01 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "rag.routes.ts (semantic search)",
+      "risk_area": "IDOR / cross-tenant data access via RAG retrieval",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "GET /api/rag/search and POST /api/rag/index/:fileId have only authenticate (no requireModifyAccess, no org scoping). ragRetrieverService.retrieve/retrieveByKnowledgeBases (rag-retriever.service.ts:62-80) filter only by knowledge_base_id/document_group_id with no organization_id anywhere in the chain; documentIndexerService.indexFile takes orgId but knowledge-base scoping is absent on the retrieve paths. Cross-org document-chunk content disclosure if foreign KB IDs are supplied. Partially covered by the KB IDOR family (vuln-0001); retrieve-by-KB-IDs path is a distinct unscoped query chain.",
+      "recorded_by": "AuthN/AuthZ Boundary Specialist",
+      "recorded_at": "2026-11-20 13:44:01 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agentcore/src/agent-runner.ts runAgent (AgentCore container runtime)",
+      "risk_area": "Agent tool execution approval boundary — unrestricted tool execution in container",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Static trace: hardcoded permissionMode bypassPermissions + allowDangerouslySkipPermissions, DEFAULT_TOOLS incl Bash/Write/WebSearch; the only hooks registered are PostToolUse S3-sync and Stop — no PreToolUse security hook at all, so any tool call (incl. from injected prompt content) executes without approval or filtering.",
+      "recorded_by": "Agent-Execution Boundary Specialist",
+      "recorded_at": "2026-11-20 13:44:03 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "knowledge-base.routes.ts, briefing.routes.ts",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Confirmed cross-org IDOR: knowledgeBaseService queries by bare ID with no organization scoping (findById line 69, update 80, delete 91, folder ops 190-218); briefing routes filter only business_scope_id. Local PoC tests pass (vuln-0001, vuln-0002).",
+      "recorded_by": "AuthN/AuthZ Boundary Specialist",
+      "recorded_at": "2026-11-20 13:44:04 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "claude-hooks.ts dangerousCommandBlocker / PATH_ESCAPE_PATTERNS / file_path prefix check",
+      "risk_area": "Bypassable denylist guard (control strength)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Imported real hook code and tested: python3 -c, node -e, $HOME writes pass the Bash denylist; Write file_path check uses un-normalized startsWith(cwd) so cwd/../../etc/shadow passes; ../../etc is caught only because it matches '..' regex, not by canonicalization.",
+      "recorded_by": "Agent-Execution Boundary Specialist",
+      "recorded_at": "2026-11-20 13:44:05 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Remaining backend route files (scope-memory, rehearsal, integrations, projects, workflows, tasks, skills, enterprise-skills, showcase, pack-deploy, token-usage, schedules, webhooks, checkpoint, userGroups, document-groups, support, im admin, organizations, businessScopes, scope-generator, chat, execution, agentPermissions, audit, litellm, apps, appData, appBackend, a2a, openapi, widget, im webhooks)",
+      "risk_area": "Authentication and tenant-scoped authorization",
+      "outcome": "needs_follow_up",
+      "outcome_label": "Requires further review",
+      "evidence": "Substantially resolved by follow-up sweep: projects, workflows, tasks, scope-memory, rehearsal, integrations, skills, enterprise-skills, showcase, checkpoint, pack-deploy, appData, appBackend, im, apps, organizations, avatarRoutes verified org-scoped (entry b09954); userGroups, scopeMemberships, businessScopes plugin/MCP, support group routes confirmed vulnerable and reported (vuln-0008..0011). Still only spot-checked (not per-handler verified): a2a, openapi, llm-proxy, widget, token-usage, schedules, webhooks, audit, agentPermissions, chat-session, execution, scope-generator, im admin, document-groups — all authenticate and use API-key/signature auth, but handler-level org scoping unverified.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-20 13:44:07 UTC",
+      "updated_at": "2026-11-20 13:47:30 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "agentcore-command.service.ts sanitizePath / shellEscape",
+      "risk_area": "Shell command injection in container command wrappers",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Reviewed sanitizePath (rejects .., leading /, backtick $ ; | & < >) and shellEscape ($'...' with backslash and single-quote escaping); heredoc writer uses quoted delimiter. No injected-path route found; wrappers build fixed commands with sanitized relative paths only. Reachability requires an already-authenticated chat session (AGENT_RUNTIME=agentcore), consistent with design.",
+      "recorded_by": "Agent-Execution Boundary Specialist",
+      "recorded_at": "2026-11-20 13:44:08 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "RAG / knowledge / retrieved-content flow into agent prompt (backend + agentcore container)",
+      "risk_area": "Indirect prompt injection reaching tool execution boundary",
+      "outcome": "needs_follow_up",
+      "outcome_label": "Requires further review",
+      "evidence": "Traced: container gets AUTH_TOKEN to call backend RAG search; workspace skills/SKILL.md are restored from S3 into the prompt context; user message flows verbatim as prompt. Injection reachability at the LLM layer is stochastic and cannot be validated locally without a live model — but the *consequence* boundary (unapproved tool execution) is separately confirmed as broken (see the two reported surfaces). No egress filtering on WebFetch/WebSearch exists in agentcore runtime.",
+      "recorded_by": "Agent-Execution Boundary Specialist",
+      "recorded_at": "2026-11-20 13:44:14 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts installPlugins (plugin.name/ref/gitUrl → join + git clone)",
+      "risk_area": "Path traversal + git argument injection",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "vuln-0003; route businessScopes.routes.ts:836 stores raw values; local harness confirmed clone outside workspace via ../ name and --upload-pack command execution.",
+      "recorded_by": "Workspace/Skill Install Specialist",
+      "recorded_at": "2026-11-20 13:44:31 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts downloadSkill / installSkillToWorkspace / generateAgentSubagentFiles (skill.name, localPath, generatedSkills)",
+      "risk_area": "Path traversal / arbitrary file write",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "vuln-0004; skills.routes.ts:51 create has no name validation; local harness confirmed out-of-root SKILL.md write via ../ name.",
+      "recorded_by": "Workspace/Skill Install Specialist",
+      "recorded_at": "2026-11-20 13:44:33 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "workspace-manager.ts extractSkillZip (python3 -m zipfile fallback)",
+      "risk_area": "Zip-slip arbitrary file write",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "vuln-0005; local PoC confirmed ../ member extraction outside target dir; conditional on unzip fallback path.",
+      "recorded_by": "Workspace/Skill Install Specialist",
+      "recorded_at": "2026-11-20 13:44:42 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "userGroups.routes.ts (member removal + skill/MCP access grants)",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "removeMember/grantSkillAccess/grantMcpAccess/deleteMany by bare group/skill/mcp IDs, no organization_id (vuln-0008, PoC passed).",
+      "recorded_by": "Remaining-Routes AuthZ Sweeper",
+      "recorded_at": "2026-11-20 13:47:13 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "scopeMemberships.routes.ts (member role update/remove)",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "updateRole/delete by bare membership id, no organization_id and no path-scope binding (vuln-0009, PoC passed).",
+      "recorded_by": "Remaining-Routes AuthZ Sweeper",
+      "recorded_at": "2026-11-20 13:47:15 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "businessScopes.routes.ts (plugin/MCP delete+list routes)",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "DELETE scope_plugins / scope_mcp_servers and GET lists by business_scope_id only, no organization_id (vuln-0010).",
+      "recorded_by": "Remaining-Routes AuthZ Sweeper",
+      "recorded_at": "2026-11-20 13:47:17 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "support.routes.ts (agent-group member removal)",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "removeGroupMember deletes by bare agent_group_id+user_id, no org check (vuln-0011).",
+      "recorded_by": "Remaining-Routes AuthZ Sweeper",
+      "recorded_at": "2026-11-20 13:47:18 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "projects, workflows, tasks, scope-memory, rehearsal, integrations, skills, enterprise-skills, showcase, checkpoint (GET execution), pack-deploy, appData, appBackend, im, apps, organizations, avatarRoutes routes",
+      "risk_area": "IDOR / cross-tenant object-level authorization",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Handlers consistently pass request.user.orgId into services/repositories that filter by organization_id (verified representative sinks: projectService, workflow/task services+repos, scopeMemoryRepository.findById, rehearsalService, skillService, showcaseRepository, app_data where clauses, imChannelRepository, published_apps). Exceptions reported separately (vuln-0008..0011, businessScopes deletes). RAG retriever retrieveByKnowledgeBases confirmed unscoped but is same root cause/objects as already-reported rag.routes finding (vuln coverage f4cd86) — noted, not re-filed.",
+      "recorded_by": "Remaining-Routes AuthZ Sweeper",
+      "recorded_at": "2026-11-20 13:47:21 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "needs_follow_up",
+      "surface": "Remaining backend route files (scope-memory, rehearsal, integrations, projects, workflows, tasks, skills, enterprise-skills, showcase, pack-deploy, token-usage, schedules, webhooks, checkpoint, userGroups, document-groups, support, im admin, organizations, businessScopes, scope-generator, chat, execution, agentPermissions, audit, litellm, apps, appData, appBackend, a2a, openapi, widget, im webhooks)",
+      "risk_area": "Authentication and tenant-scoped authorization",
+      "detail": "Substantially resolved by follow-up sweep: projects, workflows, tasks, scope-memory, rehearsal, integrations, skills, enterprise-skills, showcase, checkpoint, pack-deploy, appData, appBackend, im, apps, organizations, avatarRoutes verified org-scoped (entry b09954); userGroups, scopeMemberships, businessScopes plugin/MCP, support group routes confirmed vulnerable and reported (vuln-0008..0011). Still only spot-checked (not per-handler verified): a2a, openapi, llm-proxy, widget, token-usage, schedules, webhooks, audit, agentPermissions, chat-session, execution, scope-generator, im admin, document-groups — all authenticate and use API-key/signature auth, but handler-level org scoping unverified."
+    },
+    {
+      "kind": "needs_follow_up",
+      "surface": "RAG / knowledge / retrieved-content flow into agent prompt (backend + agentcore container)",
+      "risk_area": "Indirect prompt injection reaching tool execution boundary",
+      "detail": "Traced: container gets AUTH_TOKEN to call backend RAG search; workspace skills/SKILL.md are restored from S3 into the prompt context; user message flows verbatim as prompt. Injection reachability at the LLM layer is stochastic and cannot be validated locally without a live model — but the *consequence* boundary (unapproved tool execution) is separately confirmed as broken (see the two reported surfaces). No egress filtering on WebFetch/WebSearch exists in agentcore runtime."
+    },
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "insecure file uploads",
+      "detail": "Agent(s) Workspace/Skill Install Specialist were assigned the 'insecure_file_uploads' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    }
+  ]
+}
