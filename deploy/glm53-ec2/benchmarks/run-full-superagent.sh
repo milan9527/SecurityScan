@@ -11,7 +11,8 @@ export STRIX_LLM=openai/glm-5.3 STRIX_API_TYPE=chat_completions
 export LLM_API_BASE="${LLM_API_BASE:-http://127.0.0.1:18000/v1}" LLM_API_KEY=EMPTY
 export LLM_EXTRA_BODY='{"max_tokens":32768,"chat_template_kwargs":{"reasoning_effort":"low"}}'
 export STRIX_CONTEXT_TOKENS=262144 STRIX_OUTPUT_TOKENS=32768
-export STRIX_PROMPT_CACHE=false LLM_DISABLE_STREAMING=true
+export STRIX_PROMPT_CACHE=false
+export LLM_DISABLE_STREAMING="${LLM_DISABLE_STREAMING:-true}"
 export LLM_PREFLIGHT_TIMEOUT=180 LLM_TIMEOUT=600 STRIX_TELEMETRY=false
 export STRIX_RUN_RECORD_TIMINGS=true
 export STRIX_LLM_INPUT_COST_PER_MTOK=0 STRIX_LLM_OUTPUT_COST_PER_MTOK=0
@@ -19,7 +20,7 @@ start=$(date +%s)
 finish() {
   status=$?
   end=$(date +%s)
-  printf '{"start_epoch":%s,"end_epoch":%s,"elapsed_s":%s,"exit_code":%s,"mode":"deep","ttft_measured":false}\n' \
+  printf '{"start_epoch":%s,"end_epoch":%s,"elapsed_s":%s,"exit_code":%s,"mode":"deep","ttft_source":"see external performance-summary.json when available"}\n' \
     "$start" "$end" "$((end-start))" "$status" > "$OUT/status.json.tmp"
   mv "$OUT/status.json.tmp" "$OUT/status.json"
 }

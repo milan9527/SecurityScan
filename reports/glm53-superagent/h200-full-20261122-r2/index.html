@@ -1,0 +1,110 @@
+<!doctype html><meta charset="utf-8"><title>H200 Strix 性能</title><style>body{max-width:1000px;margin:40px auto;font:16px/1.6 system-ui}pre{white-space:pre-wrap}</style><pre># H200 实际 Strix 扫描性能
+
+机型：p5en.48xlarge，8 × H200，GLM-5.3 TP8，MTP 3/1/4。
+
+
+扫描状态：完整完成；扫描 E2E：3419 秒。
+成功流式请求：990；失败请求：0。
+
+| 指标 | 均值 | P50 | P95 |
+| --- | ---: | ---: | ---: |
+| TTFT（秒） | 20.139 | 16.416 | 44.885 |
+| 模型请求 E2E（秒） | 24.233 | 20.961 | 58.067 |
+
+8 卡已采集流式输出吞吐：流式流量时间窗口 **99.895 tokens/s**；
+已采集流式输出 token / 整次扫描耗时 **99.694 tokens/s**。
+两者均包含相应时间窗口内的工具与编排间隔，不是 GPU 连续解码速度。
+
+TTFT：控制端代理向上游发出请求至首个非空 reasoning/content/tool 增量抵达；首段可见正文另列。
+模型请求 E2E：请求发出至响应读完，包含排队、推理和 SSM 网络开销。
+扫描 E2E：包含 Strix 编排、模型与工具调用，不含模型权重加载。
+吞吐量为 8 卡整体，不是单卡；输出 token 使用服务端 usage（含 reasoning）。
+请求吞吐量、首个至最后一个成功流式请求的时间窗口吞吐量、流式 token / 整次扫描耗时分别列出。
+如果 usage_coverage 少于 successful_streams，token 吞吐量不完整，不能直接比较。
+Strix 自带首事件计时不作为此处 TTFT。自动发现仍需独立核验。
+所有非流式请求（包括连通性预检）均不计入模型性能分布，但包含在扫描整体耗时与 attempts 中。
+当前代理未采集非流式输出 token，因此上述 token 总数与吞吐量只覆盖成功流式请求，不代表全部扫描输出。
+若 complete_scan 为 false，以下指标仅描述中断前的部分流量，不代表完整扫描成绩。
+
+```json
+{
+  &quot;hardware&quot;: &quot;p5en.48xlarge / 8 x NVIDIA H200 / TP8&quot;,
+  &quot;model&quot;: &quot;GLM-5.3 / SGLang / MTP 3/1/4&quot;,
+  &quot;serving_config&quot;: {
+    &quot;region&quot;: &quot;ap-northeast-1&quot;,
+    &quot;sglang_version&quot;: &quot;0.5.23&quot;,
+    &quot;tensor_parallel_size&quot;: 8,
+    &quot;context_length&quot;: 262144,
+    &quot;max_running_requests&quot;: 2,
+    &quot;mem_fraction_static&quot;: 0.8,
+    &quot;chunked_prefill_size&quot;: 8192,
+    &quot;kv_cache_dtype&quot;: &quot;fp8_e4m3&quot;,
+    &quot;max_output_tokens&quot;: 32768,
+    &quot;reasoning_effort&quot;: &quot;low&quot;
+  },
+  &quot;scan_status&quot;: {
+    &quot;start_epoch&quot;: 1795348794,
+    &quot;end_epoch&quot;: 1795352213,
+    &quot;elapsed_s&quot;: 3419,
+    &quot;exit_code&quot;: 2,
+    &quot;mode&quot;: &quot;deep&quot;,
+    &quot;ttft_source&quot;: &quot;see external performance-summary.json when available&quot;
+  },
+  &quot;attempts&quot;: 1032,
+  &quot;successful_streams&quot;: 990,
+  &quot;failed_attempts&quot;: 0,
+  &quot;target_commit&quot;: &quot;0a20b8b14ab9abdf7301ec1e475be2d6dc2effde&quot;,
+  &quot;complete_scan&quot;: true,
+  &quot;non_streaming_requests_excluded_from_model_metrics&quot;: 42,
+  &quot;usage_coverage&quot;: 990,
+  &quot;token_metric_scope&quot;: &quot;successful_streaming_requests_only; non-streaming output tokens are not captured&quot;,
+  &quot;ttft_ms&quot;: {
+    &quot;n&quot;: 990,
+    &quot;mean&quot;: 20138.690652694,
+    &quot;p50&quot;: 16416.37533300309,
+    &quot;p95&quot;: 44884.999049148246
+  },
+  &quot;visible_ttft_ms&quot;: {
+    &quot;n&quot;: 132,
+    &quot;mean&quot;: 27032.535942098657,
+    &quot;p50&quot;: 16657.166210497962,
+    &quot;p95&quot;: 73598.53406480173
+  },
+  &quot;request_e2e_ms&quot;: {
+    &quot;n&quot;: 990,
+    &quot;mean&quot;: 24233.03417585754,
+    &quot;p50&quot;: 20960.780424498807,
+    &quot;p95&quot;: 58066.6274519448
+  },
+  &quot;output_tokens&quot;: 340855,
+  &quot;model_traffic_window_s&quot;: 3412.146471261978,
+  &quot;output_tokens_per_traffic_window_second&quot;: 99.89459798129216,
+  &quot;output_tokens_per_scan_second&quot;: 99.69435507458321,
+  &quot;request_output_tokens_per_second&quot;: {
+    &quot;n&quot;: 990,
+    &quot;mean&quot;: 25.76426128628277,
+    &quot;p50&quot;: 10.06628697208687,
+    &quot;p95&quot;: 112.26112493448349
+  },
+  &quot;strix&quot;: {
+    &quot;run_id&quot;: &quot;agentcore-superagent-h200_97fd&quot;,
+    &quot;status&quot;: &quot;completed&quot;,
+    &quot;llm_usage&quot;: {
+      &quot;requests&quot;: 1031,
+      &quot;input_tokens&quot;: 102415174,
+      &quot;output_tokens&quot;: 346845,
+      &quot;total_tokens&quot;: 102762019,
+      &quot;cost&quot;: 0.0
+    },
+    &quot;tool_calls&quot;: 990,
+    &quot;unverified_findings&quot;: 72,
+    &quot;severity_counts&quot;: {
+      &quot;critical&quot;: 6,
+      &quot;medium&quot;: 39,
+      &quot;high&quot;: 17,
+      &quot;low&quot;: 10
+    }
+  }
+}
+```
+</pre>

@@ -8,3 +8,7 @@ __pycache__/
 *.sqlite*
 *.pid
 reports/glm53-superagent/full-scan.lock
+reports/glm53-superagent/h200-scan.lock
+# Raw scan artifacts can contain target source, credentials and unreviewed findings.
+reports/glm53-superagent/h200-full-20261122*/strix-runs/
+reports/glm53-superagent/h200-full-20261122*/target-worktree-status.txt

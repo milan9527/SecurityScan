@@ -128,13 +128,42 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </tr>
 </tbody>
 </table>
-<p>扫描 E2E 是扫描任务总墙钟耗时，包含模型、工具和编排，<strong>不包含 GPU 启动和模型加载</strong>；单次请求 E2E 是一次模型调用从发出到完整响应的耗时。请求可能并行，不能将均值乘以请求数当作扫描总耗时。上述请求为非流式，<strong>未测得扫描内 TTFT 或 TPOT</strong>。请求成功率不代表漏洞验证准确率；发现可能重叠，不应相加为独立漏洞数。</p>
+<p>扫描 E2E 是扫描任务总墙钟耗时，包含模型、工具和编排，<strong>不包含 GPU 启动和模型加载</strong>；单次请求 E2E 是一次模型调用从发出到完整响应的耗时。请求可能并行，不能将均值乘以请求数当作扫描总耗时。上述 B200 扫描请求为非流式，<strong>未测得扫描内 TTFT 或 TPOT</strong>。请求成功率不代表漏洞验证准确率；发现可能重叠，不应相加为独立漏洞数。</p>
 <p>证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/progress-summary.json">完整仓库扫描</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-additional-full/20261121T095600Z/progress.json">补充扫描</a>。</p>
-<p><strong>H200 独立流式基准已完成，完整 Strix 扫描成绩尚待完成后汇总。</strong> 上方独立基准不代表完整扫描的耗时或吞吐。</p>
+<h3>H200 完整 Strix deep 扫描（已完成）</h3>
+<p><strong>EC2 <code>p5en.48xlarge</code>，8×NVIDIA H200，东京 <code>ap-northeast-1</code>：扫描 E2E 为 3,419 秒（56 分 59 秒）。</strong> 目标为同一仓库提交 <code>0a20b8b14ab9abdf7301ec1e475be2d6dc2effde</code>；Strix 状态 <code>completed</code>，990 次工具调用，72 条待独立核验发现（Critical 6、High 17、Medium 39、Low 10）。退出码 2 表示发现达到 fail-on 阈值，不是扫描失败。</p>
+<table>
+<thead>
+<tr>
+<th>实际扫描内指标</th>
+<th style="text-align:right">均值</th>
+<th style="text-align:right">P50</th>
+<th style="text-align:right">P95</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TTFT</td>
+<td style="text-align:right">20.139 秒</td>
+<td style="text-align:right">16.416 秒</td>
+<td style="text-align:right">44.885 秒</td>
+</tr>
+<tr>
+<td>模型请求 E2E latency</td>
+<td style="text-align:right">24.233 秒</td>
+<td style="text-align:right">20.961 秒</td>
+<td style="text-align:right">58.067 秒</td>
+</tr>
+</tbody>
+</table>
+<p>代理记录 1,032 次请求、0 次失败；上述分布覆盖 990 次成功流式请求，另外 42 次非流式请求不计入分布。已采集流式输出为 340,855 tokens，8 卡聚合输出吞吐为 <strong>99.89 tokens/s</strong>（流式流量时间窗口），或 <strong>99.69 tokens/s</strong>（除以整次扫描 E2E）。非流式输出 token 未采集，这两项仅代表已采集流式输出吞吐。</p>
+<p>TTFT 从代理发出请求计时至首个非空思考、正文或工具调用增量；模型请求 E2E 包含排队、推理和 SSM 网络开销。吞吐使用服务端 usage，流量时间窗口包含工具与编排间隔，不代表 GPU 持续解码速度；扫描 E2E 不含启动和权重加载。</p>
+<p>本轮使用 SGLang 0.5.23、TP8、MTP 3/1/4、262,144 上下文、最多 2 个运行请求、FP8 KV cache、32,768 输出上限和 low reasoning。首次运行因显存不足中断，调整显存比例至 0.80、分块预填充至 8,192 后，本轮完整完成；中断轮不计入上表。扫描期间观察到长上下文和请求排队，因此扫描内 TTFT 明显高于开头的独立流式基准。B200 历史扫描的请求数、执行路径及服务配置不同，不能用扫描总耗时之比判断两种 GPU 的纯推理速度，也不能用发现数量判断扫描准确率。</p>
+<p>证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/h200-full-20261122-r2/README.md">H200 扫描报告</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/h200-full-20261122-r2/performance-summary.json">性能汇总 JSON</a>。</p>
 <h2>本地部署与运行</h2>
 <p><a href="https://github.com/milan9527/SecurityScan/blob/main/docs/local-deployment.md">本地部署指南</a> 包含 Strix 安装、8×B200 上的 GLM-5.3 服务启动、模型连接、本地源码/GitHub/Web/API 扫描及报告查看。已有模型服务时，控制主机无需 GPU。基础启动示例未启用 MTP，与下文 MTP 实测配置有区别。</p>
 <p>控制台前端可通过 <code>npm ci</code>、<code>npm run dev</code> 本地开发；完整登录与扫描仍依赖 AWS 后端及 HTTPS 同源配置。本地 CLI 没有空闲自动停止 EC2 的机制，结束后需要单独停止 GPU 实例。详细命令与前提见上述指南。</p>
-<h2>最新测试结论（2026-11-21）</h2>
+<h2>B200 完整扫描结论（2026-11-21）</h2>
 <p><strong>完整 Strix deep 扫描已完成，用时 704 秒（11 分 44 秒）；637/637 次模型请求成功，611 次工具调用。</strong> 单次模型请求平均延迟为 <strong>4.001 秒</strong>。生成 <strong>29 条待独立核验发现</strong>：Critical 6、High 6、Medium 12、Low 4、Info 1。退出码 2 表示发现达到 fail-on 阈值；产物状态为 <code>completed</code>，不是模型调用失败。</p>
 <p>目标为 <code>agentcore-superagent-update</code> 的固定提交 <code>0a20b8b14ab9abdf7301ec1e475be2d6dc2effde</code>。完成时间为 <strong>2026-11-21 04:15 UTC</strong>，运行 ID 为 <code>agentcore-superagent-update_e35b</code>。704 秒不包含模型加载（本次约 25 分钟）。发现尚未逐项核验，也不能与历史 32 条直接相加为独立漏洞数。</p>
 <h3>演示应用部署架构</h3>
@@ -344,7 +373,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <p><strong>工具沙箱是 Docker 容器。</strong> Worker 通过宿主机 Docker daemon 创建沙箱，Worker 容器和沙箱是同一 EC2 主机上的独立容器；它不是独立虚拟机，也不运行在 GPU 实例内。容器提供工具依赖和进程、文件系统隔离，但共享宿主机内核。本演示环境适合受信任管理员使用；目标授权列表不是完整的网络出口隔离。</p>
 <p>支持的任务入口包括 GitHub 仓库、Web 和 API：仓库扫描分析源码中的认证、权限、输入处理和依赖使用；Web/API 测试根据目标和可用上下文执行 HTTP 交互与漏洞验证。具体覆盖范围取决于目标可达性、工具、凭据和执行预算，不能保证每次扫描覆盖全部漏洞类型。目前没有私有仓库凭证或专用 API 凭证输入表单。</p>
 <p>用户登录后提交授权目标，API 校验并入队；Worker 等待并调用模型，在沙箱中循环执行测试，结束后保存报告。关闭页面不会取消后台任务。管理员可在前端“授权目标”中管理仓库与 Web/API 主机列表，配置保存到 DynamoDB；其他用户无修改权限。</p>
-<p>报告中的发现需要独立复核。扫描总耗时包含模型、工具和编排开销；当前完整扫描使用非流式模型请求，不能从中得到 TTFT。本文的流式 TTFT/E2E 数值来自独立基准。</p>
+<p>报告中的发现需要独立复核。扫描总耗时包含模型、工具和编排开销；2026-11-21 的 B200 完整扫描使用非流式模型请求，未测得扫描内 TTFT；H200 实际扫描另以流式代理采集，不能混用两种口径。</p>
 <p>参考：<a href="https://docs.strix.ai/usage/cli">Strix CLI</a>、<a href="https://docs.strix.ai/llms.txt">Strix 文档索引</a>。上图描述本项目集成方式。</p>
 <h3>本轮测试部署架构</h3>
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="720" viewBox="0 0 1400 720" role="img" aria-labelledby="benchmark-title benchmark-desc">
@@ -431,7 +460,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </tbody>
 </table>
 <p>认证、路径、Webhook、工具四类源码审计，每类每并发重复 3 次，输出预算 8192、reasoning=low；24 次请求均无错误、截断或仅思考输出。并发 2 提高聚合吞吐，但单请求平均 E2E 略增。TTFT 取首个非空 reasoning/content/tool 增量，首次正文单列；E2E 从请求发出计至完整响应流结束。吞吐包含思考 tokens。</p>
-<p><strong>完整 Strix 扫描采用非流式请求，没有 TTFT 测量；上表是独立基准，不能当作完整扫描指标。</strong> 每档仅 12 个样本，P95 仅供参考；与历史实验及 InferenceX 的预算、缓存、硬件和负载不一致，不能直接排名或据此计算 MTP 加速比。Codex 对话断流仍未证实修复。</p>
+<p><strong>2026-11-21 的 B200 完整 Strix 扫描采用非流式请求，没有 TTFT 测量；上表是独立基准，不能当作完整扫描指标。</strong> 每档仅 12 个样本，P95 仅供参考；与历史实验及 InferenceX 的预算、缓存、硬件和负载不一致，不能直接排名或据此计算 MTP 加速比。Codex 对话断流仍未证实修复。</p>
 <p>证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/README.md">完整扫描摘要</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/progress-summary.json">结构化汇总</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/stream-metrics-public.jsonl">流式指标</a>。</p>
 <h3>补充完整扫描（2026-11-21）</h3>
 <table>

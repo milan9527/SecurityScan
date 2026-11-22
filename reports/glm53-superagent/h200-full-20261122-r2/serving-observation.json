@@ -1,0 +1,30 @@
+{
+  "observed_at_utc": "2026-11-22T12:13:55Z",
+  "ssm_command_id": "037eb38d-f679-417c-b969-817371fcb279",
+  "instance_type": "p5en.48xlarge",
+  "gpu_count": 8,
+  "gpu": "H200",
+  "sample_window_utc": [
+    "2026-11-22T12:13:46Z",
+    "2026-11-22T12:13:55Z"
+  ],
+  "running_requests_observed": [
+    1,
+    2
+  ],
+  "queued_requests_observed": [
+    6,
+    7,
+    8
+  ],
+  "decode_token_usage_observed": [
+    0.28,
+    0.42
+  ],
+  "decode_generation_tokens_per_second_samples": [
+    335.81,
+    65.74,
+    305.88
+  ],
+  "caveat": "Short SGLang log sample during ongoing scan; instantaneous decode rates are not complete scan throughput. Queued requests contribute to client TTFT and E2E."
+}

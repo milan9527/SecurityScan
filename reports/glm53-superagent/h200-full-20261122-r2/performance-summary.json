@@ -1,0 +1,79 @@
+{
+  "hardware": "p5en.48xlarge / 8 x NVIDIA H200 / TP8",
+  "model": "GLM-5.3 / SGLang / MTP 3/1/4",
+  "serving_config": {
+    "region": "ap-northeast-1",
+    "sglang_version": "0.5.23",
+    "tensor_parallel_size": 8,
+    "context_length": 262144,
+    "max_running_requests": 2,
+    "mem_fraction_static": 0.8,
+    "chunked_prefill_size": 8192,
+    "kv_cache_dtype": "fp8_e4m3",
+    "max_output_tokens": 32768,
+    "reasoning_effort": "low"
+  },
+  "scan_status": {
+    "start_epoch": 1795348794,
+    "end_epoch": 1795352213,
+    "elapsed_s": 3419,
+    "exit_code": 2,
+    "mode": "deep",
+    "ttft_source": "see external performance-summary.json when available"
+  },
+  "attempts": 1032,
+  "successful_streams": 990,
+  "failed_attempts": 0,
+  "target_commit": "0a20b8b14ab9abdf7301ec1e475be2d6dc2effde",
+  "complete_scan": true,
+  "non_streaming_requests_excluded_from_model_metrics": 42,
+  "usage_coverage": 990,
+  "token_metric_scope": "successful_streaming_requests_only; non-streaming output tokens are not captured",
+  "ttft_ms": {
+    "n": 990,
+    "mean": 20138.690652694,
+    "p50": 16416.37533300309,
+    "p95": 44884.999049148246
+  },
+  "visible_ttft_ms": {
+    "n": 132,
+    "mean": 27032.535942098657,
+    "p50": 16657.166210497962,
+    "p95": 73598.53406480173
+  },
+  "request_e2e_ms": {
+    "n": 990,
+    "mean": 24233.03417585754,
+    "p50": 20960.780424498807,
+    "p95": 58066.6274519448
+  },
+  "output_tokens": 340855,
+  "model_traffic_window_s": 3412.146471261978,
+  "output_tokens_per_traffic_window_second": 99.89459798129216,
+  "output_tokens_per_scan_second": 99.69435507458321,
+  "request_output_tokens_per_second": {
+    "n": 990,
+    "mean": 25.76426128628277,
+    "p50": 10.06628697208687,
+    "p95": 112.26112493448349
+  },
+  "strix": {
+    "run_id": "agentcore-superagent-h200_97fd",
+    "status": "completed",
+    "llm_usage": {
+      "requests": 1031,
+      "input_tokens": 102415174,
+      "output_tokens": 346845,
+      "total_tokens": 102762019,
+      "cost": 0.0
+    },
+    "tool_calls": 990,
+    "unverified_findings": 72,
+    "severity_counts": {
+      "critical": 6,
+      "medium": 39,
+      "high": 17,
+      "low": 10
+    }
+  }
+}
