@@ -28,14 +28,66 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </head>
 <body>
 <header><p>SECURITYSCAN · 2026-11-22</p><strong>GLM-5.3 × Strix</strong>
-<p>p6-b200.48xlarge · 8×NVIDIA B200 · 自建模型仓库扫描</p></header>
+<p>B200 / p6-b200.48xlarge · H200 / p5en.48xlarge · 独立流式性能与 Strix 扫描</p></header>
 <main>
-<div class="cards" aria-label="测试摘要">
-<div class="card"><b>637 / 637 请求</b><span>完整 Strix deep 扫描完成，用时 704 秒</span></div>
-<div class="card"><b>29 条待核验</b><span>611 次工具调用；发现数不等于已确认漏洞数</span></div>
-<div class="card"><b>4.001 秒</b><span>完整 Strix 扫描内单次模型请求 E2E 均值</span></div>
+<div class="cards" aria-label="独立流式测试摘要：并发 2，整机 8 卡">
+<div class="card"><b>447.49 / 341.99</b><span>B200 / H200 聚合输出 tokens/s · 并发 2</span></div>
+<div class="card"><b>11.111 / 15.407 秒</b><span>B200 / H200 请求 E2E 均值 · 并发 2</span></div>
+<div class="card"><b>0.337 / 0.184 秒</b><span>B200 / H200 TTFT 均值 · 并发 2</span></div>
 </div>
 <h1>GLM-5.3 自建推理与 Strix 仓库测试（更新于 2026-11-22）</h1>
+<h2>开篇结论：B200 与 H200 独立流式性能</h2>
+<p><strong>本次独立流式基准中，B200 的请求 E2E 更短、聚合输出吞吐更高；H200 的平均 TTFT 更低。</strong> 两组均为 GLM-5.3、单机 8 卡、TP=8、启用 MTP。以下是独立模型请求的测量结果，完整 Strix 扫描成绩另列于后文。</p>
+<table>
+<thead>
+<tr>
+<th>GPU / EC2 机型</th>
+<th style="text-align:right">并发</th>
+<th style="text-align:right">成功请求</th>
+<th style="text-align:right">TTFT 均值 / P95（秒）</th>
+<th style="text-align:right">请求 E2E 均值 / P95（秒）</th>
+<th style="text-align:right">聚合输出吞吐（tokens/s，整机 8 卡）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8×B200 / <code>p6-b200.48xlarge</code></td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">0.325 / 0.372</td>
+<td style="text-align:right">10.220 / 18.186</td>
+<td style="text-align:right">263.30</td>
+</tr>
+<tr>
+<td>8×B200 / <code>p6-b200.48xlarge</code></td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">0.337 / 0.423</td>
+<td style="text-align:right">11.111 / 17.318</td>
+<td style="text-align:right">447.49</td>
+</tr>
+<tr>
+<td>8×H200 / <code>p5en.48xlarge</code></td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">0.140 / 0.427</td>
+<td style="text-align:right">13.740 / 20.093</td>
+<td style="text-align:right">203.93</td>
+</tr>
+<tr>
+<td>8×H200 / <code>p5en.48xlarge</code></td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">12/12</td>
+<td style="text-align:right">0.184 / 0.692</td>
+<td style="text-align:right">15.407 / 18.931</td>
+<td style="text-align:right">341.99</td>
+</tr>
+</tbody>
+</table>
+<p>同并发下，H200 的平均请求 E2E 比 B200 长约 <strong>34.4% / 38.7%</strong>，聚合输出吞吐低约 <strong>22.5% / 23.6%</strong>（分别为并发 1 / 2）。H200 平均 TTFT 较低，但 P95 较高，不能概括为所有请求都更快开始输出。</p>
+<p>测量口径：<strong>TTFT</strong> 从发出请求到首个非空 reasoning/content/tool 增量，未必是首段可见正文；<strong>请求 E2E</strong> 从发出请求到完整响应流结束，包含通信开销；<strong>聚合输出吞吐</strong> 为该批次完成的输出 tokens（含思考）总数除以批次墙钟时间，包含整机 8 卡贡献，不是每卡吞吐，也不是完整扫描吞吐。</p>
+<p>测试覆盖认证、路径、Webhook、工具四类源码审计，每类每并发重复 3 次；每种 GPU 共 24 次正式请求，均成功且无截断，预热不计入统计。输出预算 8192、reasoning=low。B200 位于 <code>ap-south-1</code>，H200 位于 <code>ap-northeast-1</code>；两组调用路径、内核配置及实际输出长度不同，因此这些结果反映本次部署与负载，不能视为纯硬件加速比。每档仅 12 个样本，P95 仅供参考。</p>
+<p>详细配置与原始指标：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-h200-comparison/README.md">B200/H200 独立流式对照报告</a>。</p>
 <h2>Strix + GLM-5.3 实际扫描性能（2026-11-22 汇总）</h2>
 <p><strong>扫描推理机型：AWS EC2 <code>p6-b200.48xlarge</code>，单机 8×NVIDIA B200（ap-south-1）。</strong> 使用自建 GLM-5.3、SGLang 0.5.23、TP=8 和 MTP；下表为已完成的 Strix deep 扫描，工具在独立沙箱运行。</p>
 <table>
@@ -78,7 +130,7 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </table>
 <p>扫描 E2E 是扫描任务总墙钟耗时，包含模型、工具和编排，<strong>不包含 GPU 启动和模型加载</strong>；单次请求 E2E 是一次模型调用从发出到完整响应的耗时。请求可能并行，不能将均值乘以请求数当作扫描总耗时。上述请求为非流式，<strong>未测得扫描内 TTFT 或 TPOT</strong>。请求成功率不代表漏洞验证准确率；发现可能重叠，不应相加为独立漏洞数。</p>
 <p>证据：<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-superagent/full-20261121T033400Z/progress-summary.json">完整仓库扫描</a>、<a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-additional-full/20261121T095600Z/progress.json">补充扫描</a>。</p>
-<p><strong>H200 已完成的是独立流式推理基准，尚无完整 Strix 扫描成绩。</strong> 机型为 <code>p5en.48xlarge</code>（8×NVIDIA H200，ap-northeast-1）。并发 1 / 2 时，请求 E2E 均值为 <strong>13.740 / 15.407 秒</strong>，TTFT 均值为 <strong>0.140 / 0.184 秒</strong>，聚合输出吞吐为 <strong>203.93 / 341.99 tokens/s</strong>（整台 8 卡实例）。共 24 次正式请求，另有 4 次预热请求不计入统计。B200 对应独立基准 E2E 为 10.220 / 11.111 秒；两组输出长度、调用路径和内核配置存在差异，不能据此推断纯硬件速度差异。详见 <a href="https://github.com/milan9527/SecurityScan/blob/main/reports/glm53-h200-comparison/README.md">H200/B200 对照报告</a>。</p>
+<p><strong>H200 独立流式基准已完成，完整 Strix 扫描成绩尚待完成后汇总。</strong> 上方独立基准不代表完整扫描的耗时或吞吐。</p>
 <h2>本地部署与运行</h2>
 <p><a href="https://github.com/milan9527/SecurityScan/blob/main/docs/local-deployment.md">本地部署指南</a> 包含 Strix 安装、8×B200 上的 GLM-5.3 服务启动、模型连接、本地源码/GitHub/Web/API 扫描及报告查看。已有模型服务时，控制主机无需 GPU。基础启动示例未启用 MTP，与下文 MTP 实测配置有区别。</p>
 <p>控制台前端可通过 <code>npm ci</code>、<code>npm run dev</code> 本地开发；完整登录与扫描仍依赖 AWS 后端及 HTTPS 同源配置。本地 CLI 没有空闲自动停止 EC2 的机制，结束后需要单独停止 GPU 实例。详细命令与前提见上述指南。</p>

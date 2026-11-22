@@ -61,12 +61,12 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 </head>
 <body>
 <header><p>SECURITYSCAN · 2026-11-22</p><strong>GLM-5.3 × Strix</strong>
-<p>p6-b200.48xlarge · 8×NVIDIA B200 · 自建模型仓库扫描</p></header>
+<p>B200 / p6-b200.48xlarge · H200 / p5en.48xlarge · 独立流式性能与 Strix 扫描</p></header>
 <main>
-<div class="cards" aria-label="测试摘要">
-<div class="card"><b>637 / 637 请求</b><span>完整 Strix deep 扫描完成，用时 704 秒</span></div>
-<div class="card"><b>29 条待核验</b><span>611 次工具调用；发现数不等于已确认漏洞数</span></div>
-<div class="card"><b>4.001 秒</b><span>完整 Strix 扫描内单次模型请求 E2E 均值</span></div>
+<div class="cards" aria-label="独立流式测试摘要：并发 2，整机 8 卡">
+<div class="card"><b>447.49 / 341.99</b><span>B200 / H200 聚合输出 tokens/s · 并发 2</span></div>
+<div class="card"><b>11.111 / 15.407 秒</b><span>B200 / H200 请求 E2E 均值 · 并发 2</span></div>
+<div class="card"><b>0.337 / 0.184 秒</b><span>B200 / H200 TTFT 均值 · 并发 2</span></div>
 </div>
 """ + body + """
 </main>
