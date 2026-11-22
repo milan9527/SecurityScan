@@ -64,9 +64,9 @@ li{margin:9px 0}footer{max-width:1040px;margin:24px auto;padding:0 20px 32px;col
 <p>B200 / p6-b200.48xlarge · H200 / p5en.48xlarge · 独立流式性能与 Strix 扫描</p></header>
 <main>
 <div class="cards" aria-label="独立流式测试摘要：并发 2，整机 8 卡">
-<div class="card"><b>447.49 / 341.99</b><span>B200 / H200 聚合输出 tokens/s · 并发 2</span></div>
-<div class="card"><b>11.111 / 15.407 秒</b><span>B200 / H200 请求 E2E 均值 · 并发 2</span></div>
-<div class="card"><b>0.337 / 0.184 秒</b><span>B200 / H200 TTFT 均值 · 并发 2</span></div>
+<div class="card"><b>GLM-5.3 + Strix</b><span>自建 GPU 推理 · 开源 Agent 编排<br>代码扫描、漏洞分析与授权渗透测试</span></div>
+<div class="card"><b>8×B200</b><span>p6-b200.48xlarge · 并发 2<br>TTFT 均值 0.337 秒 · E2E 均值 11.111 秒<br>聚合输出 447.49 tokens/s</span></div>
+<div class="card"><b>8×H200</b><span>p5en.48xlarge · 并发 2<br>TTFT 均值 0.184 秒 · E2E 均值 15.407 秒<br>聚合输出 341.99 tokens/s</span></div>
 </div>
 """ + body + """
 </main>
