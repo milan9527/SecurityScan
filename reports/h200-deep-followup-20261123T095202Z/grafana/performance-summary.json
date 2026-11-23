@@ -1,0 +1,76 @@
+{
+  "hardware": "p5en.48xlarge / 8 x NVIDIA H200 / TP8",
+  "model": "GLM-5.3 / SGLang / MTP 3/1/4",
+  "serving_config": {
+    "region": "ap-northeast-1",
+    "sglang_version": "0.5.23",
+    "tensor_parallel_size": 8,
+    "context_length": 262144,
+    "max_running_requests": 2,
+    "mem_fraction_static": 0.8,
+    "chunked_prefill_size": 8192,
+    "kv_cache_dtype": "fp8_e4m3",
+    "max_output_tokens": 32768,
+    "reasoning_effort": "low"
+  },
+  "scan_status": {
+    "start_epoch": 1795428399,
+    "end_epoch": 1795430653,
+    "elapsed_s": 2254,
+    "exit_code": 2,
+    "mode": "deep",
+    "ttft_source": "see external performance-summary.json when available"
+  },
+  "attempts": 483,
+  "successful_streams": 482,
+  "failed_attempts": 0,
+  "target_commit": "fffbace06b623ea8a5186b28f27305277a41de8f",
+  "complete_scan": true,
+  "non_streaming_requests_excluded_from_model_metrics": 1,
+  "usage_coverage": 482,
+  "token_metric_scope": "successful_streaming_requests_only; non-streaming output tokens are not captured",
+  "ttft_ms": {
+    "n": 482,
+    "mean": 1128.8350221909402,
+    "p50": 981.0060855015763,
+    "p95": 2221.5567576546164
+  },
+  "visible_ttft_ms": {
+    "n": 45,
+    "mean": 4863.567168956635,
+    "p50": 2428.871299009188,
+    "p95": 18955.961790395657
+  },
+  "request_e2e_ms": {
+    "n": 482,
+    "mean": 2177.6840035331193,
+    "p50": 1311.3526990055107,
+    "p95": 6316.629727747195
+  },
+  "output_tokens": 93602,
+  "model_traffic_window_s": 2244.094257593155,
+  "output_tokens_per_traffic_window_second": 41.71036919830203,
+  "output_tokens_per_scan_second": 41.52706299911269,
+  "request_output_tokens_per_second": {
+    "n": 482,
+    "mean": 60.55312687419519,
+    "p50": 46.29975923801752,
+    "p95": 150.35334288023333
+  },
+  "strix": {
+    "run_id": "grafana_d22c",
+    "status": "completed",
+    "llm_usage": {
+      "requests": 482,
+      "input_tokens": 42862045,
+      "output_tokens": 93602,
+      "total_tokens": 42955647,
+      "cost": 0.0
+    },
+    "tool_calls": 482,
+    "unverified_findings": 1,
+    "severity_counts": {
+      "medium": 1
+    }
+  }
+}

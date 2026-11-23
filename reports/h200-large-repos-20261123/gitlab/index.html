@@ -1,0 +1,120 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>H200 Strix 扫描报告</title><style>body{max-width:1100px;margin:40px auto;padding:0 24px;font:16px/1.7 system-ui;color:#172b4d}table{border-collapse:collapse;display:block;overflow:auto}th,td{border:1px solid #ccd6dd;padding:8px}th{background:#edf3f8}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f5f7;padding:16px}a{color:#075cab}</style><main><h1>H200 实际 Strix 扫描性能</h1>
+<p>机型：p5en.48xlarge，8 × H200，GLM-5.3 TP8，MTP 3/1/4。</p>
+<p>扫描状态：完整完成；扫描 E2E：1193 秒。
+成功流式请求：434；失败请求：0。</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">均值</th>
+<th style="text-align:right">P50</th>
+<th style="text-align:right">P95</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TTFT（秒）</td>
+<td style="text-align:right">1.361</td>
+<td style="text-align:right">1.123</td>
+<td style="text-align:right">2.540</td>
+</tr>
+<tr>
+<td>模型请求 E2E（秒）</td>
+<td style="text-align:right">2.332</td>
+<td style="text-align:right">1.688</td>
+<td style="text-align:right">6.299</td>
+</tr>
+</tbody>
+</table>
+<p>8 卡已采集流式输出吞吐：流式流量时间窗口 <strong>61.702 tokens/s</strong>；
+已采集流式输出 token / 整次扫描耗时 <strong>61.345 tokens/s</strong>。
+两者均包含相应时间窗口内的工具与编排间隔，不是 GPU 连续解码速度。</p>
+<p>TTFT：控制端代理向上游发出请求至首个非空 reasoning/content/tool 增量抵达；首段可见正文另列。
+模型请求 E2E：请求发出至响应读完，包含排队、推理和 SSM 网络开销。
+扫描 E2E：包含 Strix 编排、模型与工具调用，不含模型权重加载。
+吞吐量为 8 卡整体，不是单卡；输出 token 使用服务端 usage（含 reasoning）。
+请求吞吐量、首个至最后一个成功流式请求的时间窗口吞吐量、流式 token / 整次扫描耗时分别列出。
+如果 usage_coverage 少于 successful_streams，token 吞吐量不完整，不能直接比较。
+Strix 自带首事件计时不作为此处 TTFT。自动发现仍需独立核验。
+所有非流式请求（包括连通性预检）均不计入模型性能分布，但包含在扫描整体耗时与 attempts 中。
+当前代理未采集非流式输出 token，因此上述 token 总数与吞吐量只覆盖成功流式请求，不代表全部扫描输出。
+若 complete_scan 为 false，以下指标仅描述中断前的部分流量，不代表完整扫描成绩。</p>
+<pre><code class="language-json">{
+  &quot;hardware&quot;: &quot;p5en.48xlarge / 8 x NVIDIA H200 / TP8&quot;,
+  &quot;model&quot;: &quot;GLM-5.3 / SGLang / MTP 3/1/4&quot;,
+  &quot;serving_config&quot;: {
+    &quot;region&quot;: &quot;ap-northeast-1&quot;,
+    &quot;sglang_version&quot;: &quot;0.5.23&quot;,
+    &quot;tensor_parallel_size&quot;: 8,
+    &quot;context_length&quot;: 262144,
+    &quot;max_running_requests&quot;: 2,
+    &quot;mem_fraction_static&quot;: 0.8,
+    &quot;chunked_prefill_size&quot;: 8192,
+    &quot;kv_cache_dtype&quot;: &quot;fp8_e4m3&quot;,
+    &quot;max_output_tokens&quot;: 32768,
+    &quot;reasoning_effort&quot;: &quot;low&quot;
+  },
+  &quot;scan_status&quot;: {
+    &quot;start_epoch&quot;: 1795420782,
+    &quot;end_epoch&quot;: 1795421975,
+    &quot;elapsed_s&quot;: 1193,
+    &quot;exit_code&quot;: 2,
+    &quot;mode&quot;: &quot;deep&quot;,
+    &quot;ttft_source&quot;: &quot;see external performance-summary.json when available&quot;
+  },
+  &quot;attempts&quot;: 435,
+  &quot;successful_streams&quot;: 434,
+  &quot;failed_attempts&quot;: 0,
+  &quot;target_commit&quot;: &quot;d7b9a6176ab4e279465ba3ee09922cde2b74de47&quot;,
+  &quot;complete_scan&quot;: true,
+  &quot;non_streaming_requests_excluded_from_model_metrics&quot;: 1,
+  &quot;usage_coverage&quot;: 434,
+  &quot;token_metric_scope&quot;: &quot;successful_streaming_requests_only; non-streaming output tokens are not captured&quot;,
+  &quot;ttft_ms&quot;: {
+    &quot;n&quot;: 434,
+    &quot;mean&quot;: 1360.6445337492478,
+    &quot;p50&quot;: 1123.0316090004635,
+    &quot;p95&quot;: 2540.3046989420545
+  },
+  &quot;visible_ttft_ms&quot;: {
+    &quot;n&quot;: 60,
+    &quot;mean&quot;: 2786.532153917748,
+    &quot;p50&quot;: 2184.3102444981923,
+    &quot;p95&quot;: 6966.105306441021
+  },
+  &quot;request_e2e_ms&quot;: {
+    &quot;n&quot;: 434,
+    &quot;mean&quot;: 2331.547961852576,
+    &quot;p50&quot;: 1688.2856910087867,
+    &quot;p95&quot;: 6298.63125949705
+  },
+  &quot;output_tokens&quot;: 73185,
+  &quot;model_traffic_window_s&quot;: 1186.0996477603912,
+  &quot;output_tokens_per_traffic_window_second&quot;: 61.70223567487678,
+  &quot;output_tokens_per_scan_second&quot;: 61.34534786253143,
+  &quot;request_output_tokens_per_second&quot;: {
+    &quot;n&quot;: 434,
+    &quot;mean&quot;: 58.461997200995036,
+    &quot;p50&quot;: 48.89797503440497,
+    &quot;p95&quot;: 128.03680434098615
+  },
+  &quot;strix&quot;: {
+    &quot;run_id&quot;: &quot;gitlab_d03d&quot;,
+    &quot;status&quot;: &quot;completed&quot;,
+    &quot;llm_usage&quot;: {
+      &quot;requests&quot;: 434,
+      &quot;input_tokens&quot;: 41639097,
+      &quot;output_tokens&quot;: 73185,
+      &quot;total_tokens&quot;: 41712282,
+      &quot;cost&quot;: 0.0
+    },
+    &quot;tool_calls&quot;: 434,
+    &quot;unverified_findings&quot;: 2,
+    &quot;severity_counts&quot;: {
+      &quot;low&quot;: 1,
+      &quot;medium&quot;: 1
+    }
+  }
+}
+</code></pre>
+</main></html>

@@ -1,0 +1,119 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>H200 Strix 扫描报告</title><style>body{max-width:1100px;margin:40px auto;padding:0 24px;font:16px/1.7 system-ui;color:#172b4d}table{border-collapse:collapse;display:block;overflow:auto}th,td{border:1px solid #ccd6dd;padding:8px}th{background:#edf3f8}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f5f7;padding:16px}a{color:#075cab}</style><main><h1>H200 实际 Strix 扫描性能</h1>
+<p>机型：p5en.48xlarge，8 × H200，GLM-5.3 TP8，MTP 3/1/4。</p>
+<p>扫描状态：完整完成；扫描 E2E：2254 秒。
+成功流式请求：482；失败请求：0。</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">均值</th>
+<th style="text-align:right">P50</th>
+<th style="text-align:right">P95</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TTFT（秒）</td>
+<td style="text-align:right">1.129</td>
+<td style="text-align:right">0.981</td>
+<td style="text-align:right">2.222</td>
+</tr>
+<tr>
+<td>模型请求 E2E（秒）</td>
+<td style="text-align:right">2.178</td>
+<td style="text-align:right">1.311</td>
+<td style="text-align:right">6.317</td>
+</tr>
+</tbody>
+</table>
+<p>8 卡已采集流式输出吞吐：流式流量时间窗口 <strong>41.710 tokens/s</strong>；
+已采集流式输出 token / 整次扫描耗时 <strong>41.527 tokens/s</strong>。
+两者均包含相应时间窗口内的工具与编排间隔，不是 GPU 连续解码速度。</p>
+<p>TTFT：控制端代理向上游发出请求至首个非空 reasoning/content/tool 增量抵达；首段可见正文另列。
+模型请求 E2E：请求发出至响应读完，包含排队、推理和 SSM 网络开销。
+扫描 E2E：包含 Strix 编排、模型与工具调用，不含模型权重加载。
+吞吐量为 8 卡整体，不是单卡；输出 token 使用服务端 usage（含 reasoning）。
+请求吞吐量、首个至最后一个成功流式请求的时间窗口吞吐量、流式 token / 整次扫描耗时分别列出。
+如果 usage_coverage 少于 successful_streams，token 吞吐量不完整，不能直接比较。
+Strix 自带首事件计时不作为此处 TTFT。自动发现仍需独立核验。
+所有非流式请求（包括连通性预检）均不计入模型性能分布，但包含在扫描整体耗时与 attempts 中。
+当前代理未采集非流式输出 token，因此上述 token 总数与吞吐量只覆盖成功流式请求，不代表全部扫描输出。
+若 complete_scan 为 false，以下指标仅描述中断前的部分流量，不代表完整扫描成绩。</p>
+<pre><code class="language-json">{
+  &quot;hardware&quot;: &quot;p5en.48xlarge / 8 x NVIDIA H200 / TP8&quot;,
+  &quot;model&quot;: &quot;GLM-5.3 / SGLang / MTP 3/1/4&quot;,
+  &quot;serving_config&quot;: {
+    &quot;region&quot;: &quot;ap-northeast-1&quot;,
+    &quot;sglang_version&quot;: &quot;0.5.23&quot;,
+    &quot;tensor_parallel_size&quot;: 8,
+    &quot;context_length&quot;: 262144,
+    &quot;max_running_requests&quot;: 2,
+    &quot;mem_fraction_static&quot;: 0.8,
+    &quot;chunked_prefill_size&quot;: 8192,
+    &quot;kv_cache_dtype&quot;: &quot;fp8_e4m3&quot;,
+    &quot;max_output_tokens&quot;: 32768,
+    &quot;reasoning_effort&quot;: &quot;low&quot;
+  },
+  &quot;scan_status&quot;: {
+    &quot;start_epoch&quot;: 1795428399,
+    &quot;end_epoch&quot;: 1795430653,
+    &quot;elapsed_s&quot;: 2254,
+    &quot;exit_code&quot;: 2,
+    &quot;mode&quot;: &quot;deep&quot;,
+    &quot;ttft_source&quot;: &quot;see external performance-summary.json when available&quot;
+  },
+  &quot;attempts&quot;: 483,
+  &quot;successful_streams&quot;: 482,
+  &quot;failed_attempts&quot;: 0,
+  &quot;target_commit&quot;: &quot;fffbace06b623ea8a5186b28f27305277a41de8f&quot;,
+  &quot;complete_scan&quot;: true,
+  &quot;non_streaming_requests_excluded_from_model_metrics&quot;: 1,
+  &quot;usage_coverage&quot;: 482,
+  &quot;token_metric_scope&quot;: &quot;successful_streaming_requests_only; non-streaming output tokens are not captured&quot;,
+  &quot;ttft_ms&quot;: {
+    &quot;n&quot;: 482,
+    &quot;mean&quot;: 1128.8350221909402,
+    &quot;p50&quot;: 981.0060855015763,
+    &quot;p95&quot;: 2221.5567576546164
+  },
+  &quot;visible_ttft_ms&quot;: {
+    &quot;n&quot;: 45,
+    &quot;mean&quot;: 4863.567168956635,
+    &quot;p50&quot;: 2428.871299009188,
+    &quot;p95&quot;: 18955.961790395657
+  },
+  &quot;request_e2e_ms&quot;: {
+    &quot;n&quot;: 482,
+    &quot;mean&quot;: 2177.6840035331193,
+    &quot;p50&quot;: 1311.3526990055107,
+    &quot;p95&quot;: 6316.629727747195
+  },
+  &quot;output_tokens&quot;: 93602,
+  &quot;model_traffic_window_s&quot;: 2244.094257593155,
+  &quot;output_tokens_per_traffic_window_second&quot;: 41.71036919830203,
+  &quot;output_tokens_per_scan_second&quot;: 41.52706299911269,
+  &quot;request_output_tokens_per_second&quot;: {
+    &quot;n&quot;: 482,
+    &quot;mean&quot;: 60.55312687419519,
+    &quot;p50&quot;: 46.29975923801752,
+    &quot;p95&quot;: 150.35334288023333
+  },
+  &quot;strix&quot;: {
+    &quot;run_id&quot;: &quot;grafana_d22c&quot;,
+    &quot;status&quot;: &quot;completed&quot;,
+    &quot;llm_usage&quot;: {
+      &quot;requests&quot;: 482,
+      &quot;input_tokens&quot;: 42862045,
+      &quot;output_tokens&quot;: 93602,
+      &quot;total_tokens&quot;: 42955647,
+      &quot;cost&quot;: 0.0
+    },
+    &quot;tool_calls&quot;: 482,
+    &quot;unverified_findings&quot;: 1,
+    &quot;severity_counts&quot;: {
+      &quot;medium&quot;: 1
+    }
+  }
+}
+</code></pre>
+</main></html>

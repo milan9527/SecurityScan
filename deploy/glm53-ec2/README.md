@@ -27,12 +27,22 @@ EBS remains the durable source. The existing DLAMI instance-store filesystem
 is reused without formatting. Stop/start erases instance-store data, so the
 approximately 704 GiB copy must be included in cold-start timing.
 
-On the GPU host, run `sudo bash install-nvme.sh` from this directory after
-ensuring no scans are active. Installation captures the original Docker
-configuration locally with mode 0600, disables its automatic restart, and
-starts the systemd service. The replacement uses the original image and
+On the GPU host, run `sudo bash install-nvme.sh glm53 --next-boot` from this
+directory for the H200 container (use `glm53-mtp-ablation` for the retained
+B200 container). The default is `--next-boot`: installation captures the
+original Docker configuration locally with mode 0600, disables its automatic
+restart, and enables the systemd service without interrupting the running
+container. On the next boot, the service stages the weights before starting
+the replacement. Use `--now` only when scans are idle and an immediate
+container switch is intended. The replacement uses the original image and
 model parameters with the Hugging Face cache bind changed to NVMe.
 Do not publish `/var/lib/glm53-nvme/original.json`; it can contain credentials.
+
+On November 23, this next-boot configuration was installed on Tokyo H200
+`i-09c41bc239b10b001` (`p5en.48xlarge`, eight H200 GPUs). Service enablement
+and the existing model's HTTP 200 health response were verified. The November 23
+scans completed with the EBS-backed container; NVMe serving and total cold-start
+time on this H200 remain to be verified after the next startup.
 
 Inspect `journalctl -u glm53-nvme.service` and
 `/var/lib/glm53-nvme/timings.jsonl` for staging, model start, and readiness.
@@ -43,7 +53,8 @@ filesystem flush. Compare total startup, not load time alone. Retries can reuse
 partial copies, so retry durations are not full cold-copy measurements.
 
 Rollback: `sudo systemctl disable --now glm53-nvme.service`, verify EBS is
-mounted, then `sudo docker start glm53-mtp-ablation`.
+mounted, then `sudo docker start glm53` on H200 or
+`sudo docker start glm53-mtp-ablation` on B200.
 This restores serving manually; reconfigure boot ownership before another restart.
 
 `benchmarks/run-scenarios.sh` runs three isolated Strix audits.

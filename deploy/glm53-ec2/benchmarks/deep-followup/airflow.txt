@@ -1,0 +1,9 @@
+This is a focused follow-up to a broad scan that filed zero findings. Zero findings is not evidence of comprehensive security.
+
+1. Trace allow_double_dot_in_ids=true through DAG/task/run IDs into all reachable log/file/storage consumers. Exercise real validation and file-handling code in a disposable directory, with default-setting controls. Distinguish nondefault prerequisites and trusted DAG-author capabilities from an untrusted API actor.
+2. Exercise authentication and authorization around FAB UI and /pluginsv2 WSGI integrations using actual middleware/components and synthetic identities. Include anonymous, low-privilege and authorized positive controls; trace whether FastAPI authentication protects mounted/plugin routes.
+3. Provider boundary review: prioritize HTTP hooks and Git/S3/GCS DAG bundles plus notifiers. Establish who can configure each input. Investigate path/archive handling, outbound URL validation, credential exposure and tenant separation; intended trusted DAG Python execution is not a vulnerability.
+4. Close missing header-injection and information-disclosure coverage. Look at reachable log/trace/error responses and template/header sinks.
+5. Deserialization: establish a concrete untrusted writer-to-reader path and permission boundaries before claiming an exploit. Do not report arbitrary Python DAG code execution as a finding.
+
+Use real source imports/framework tests rather than reimplementing simplified checks. Install sandbox dependencies and start local test components where practical, with fake secrets and bounded harmless data. Preserve runnable tests, version information, commands and test output in artifacts. Explain absent dependencies or full-stack blockers precisely. Do not modify supplied source or contact production services. Each assigned surface must end tested/ruled-out/blocked; clearly separate runtime-confirmed vulnerabilities, source-only candidates, and environment-dependent risks.

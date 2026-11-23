@@ -1,0 +1,72 @@
+{
+  "hardware": "p5en.48xlarge / 8 x NVIDIA H200 / TP8",
+  "model": "GLM-5.3 / SGLang / MTP 3/1/4",
+  "serving_config": {
+    "region": "ap-northeast-1",
+    "sglang_version": "0.5.23",
+    "tensor_parallel_size": 8,
+    "context_length": 262144,
+    "max_running_requests": 2,
+    "mem_fraction_static": 0.8,
+    "chunked_prefill_size": 8192,
+    "kv_cache_dtype": "fp8_e4m3",
+    "max_output_tokens": 32768,
+    "reasoning_effort": "low"
+  },
+  "scan_status": {
+    "start_epoch": 1795422710,
+    "end_epoch": 1795423229,
+    "elapsed_s": 519,
+    "exit_code": 0,
+    "mode": "deep",
+    "ttft_source": "see external performance-summary.json when available"
+  },
+  "attempts": 438,
+  "successful_streams": 437,
+  "failed_attempts": 0,
+  "target_commit": "fecbb16aa07c5aa7d03a454dda9577545a1df9ab",
+  "complete_scan": true,
+  "non_streaming_requests_excluded_from_model_metrics": 1,
+  "usage_coverage": 437,
+  "token_metric_scope": "successful_streaming_requests_only; non-streaming output tokens are not captured",
+  "ttft_ms": {
+    "n": 437,
+    "mean": 1291.0114650368344,
+    "p50": 1104.1334530018503,
+    "p95": 2278.2188580022184
+  },
+  "visible_ttft_ms": {
+    "n": 23,
+    "mean": 2813.625196825698,
+    "p50": 2117.1675689984113,
+    "p95": 6706.081379708483
+  },
+  "request_e2e_ms": {
+    "n": 437,
+    "mean": 2250.555517119285,
+    "p50": 1748.5785520111676,
+    "p95": 5461.174779795692
+  },
+  "output_tokens": 73200,
+  "model_traffic_window_s": 511.98160910606384,
+  "output_tokens_per_traffic_window_second": 142.97388558118234,
+  "output_tokens_per_scan_second": 141.04046242774567,
+  "request_output_tokens_per_second": {
+    "n": 437,
+    "mean": 60.42736458817966,
+    "p50": 54.24774324596825,
+    "p95": 126.32310589512123
+  },
+  "strix": {
+    "run_id": "airflow_74a0",
+    "status": "completed",
+    "llm_usage": {
+      "requests": 437,
+      "input_tokens": 42331036,
+      "output_tokens": 73200,
+      "total_tokens": 42404236,
+      "cost": 0.0
+    },
+    "tool_calls": 437
+  }
+}

@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Run as root on the GPU host, with these three files in the same directory.
-# Stop active scans and hold a bounded console experiment lease before invoking.
+# Default: configure the next boot without interrupting active scans.
+# Use --now only when scans are idle and immediate migration is intended.
 cd "$(dirname "$0")"
 original="${1:-glm53-mtp-ablation}"
+activation="${2:---next-boot}"
+[[ "$activation" == "--next-boot" || "$activation" == "--now" ]] || {
+  echo "Usage: $0 [original-container] [--next-boot|--now]" >&2
+  exit 2
+}
 mountpoint -q /model-cache
 mountpoint -q /opt/dlami/nvme
 install -d -m 700 /var/lib/glm53-nvme
@@ -14,4 +20,10 @@ if [[ ! -f /var/lib/glm53-nvme/original.json ]]; then
   /usr/local/sbin/glm53-nvme-start --capture "$original"
 fi
 systemctl daemon-reload
-systemctl enable --now glm53-nvme.service
+systemctl enable glm53-nvme.service
+# Updating restart policy does not stop the running container. Avoid its EBS
+# auto-start racing NVMe staging on the next boot.
+docker update --restart=no "$original"
+if [[ "$activation" == "--now" ]]; then
+  systemctl start glm53-nvme.service
+fi
